@@ -6,11 +6,13 @@ import { useSession } from "next-auth/react";
 import { AuthPanel } from "@/components/auth-panel";
 import { FamilyFlowApp } from "@/components/familyflow-app";
 import type { AppState } from "@/lib/familyflow";
-import type { HouseholdMember } from "@/lib/workspace";
+import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type WorkspaceResponse = {
+  currentUserId: string;
   householdName: string;
   inviteCode: string;
+  role: HouseholdRole;
   members: HouseholdMember[];
   state: AppState;
 };
@@ -80,10 +82,12 @@ export default function Page() {
 
   return (
     <FamilyFlowApp
+      currentUserId={workspace.currentUserId}
       householdName={workspace.householdName}
       inviteCode={workspace.inviteCode}
       initialState={workspace.state}
       members={workspace.members}
+      role={workspace.role}
       userName={session.user?.name ?? "Family member"}
     />
   );

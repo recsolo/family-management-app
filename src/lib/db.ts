@@ -1,11 +1,11 @@
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-const dataDir = join(process.cwd(), "data");
-mkdirSync(dataDir, { recursive: true });
+import { getDatabaseDirectory, resolveDatabasePath } from "@/lib/env";
 
-const dbPath = join(dataDir, "familyflow.db");
+mkdirSync(getDatabaseDirectory(), { recursive: true });
+
+const dbPath = resolveDatabasePath();
 export const db = new DatabaseSync(dbPath);
 
 db.exec("PRAGMA foreign_keys = ON;");

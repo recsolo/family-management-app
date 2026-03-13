@@ -1,4 +1,5 @@
 import type { DefaultSession } from "next-auth";
+import type { HouseholdRole } from "@/lib/workspace";
 
 declare module "next-auth" {
   interface Session {
@@ -7,6 +8,7 @@ declare module "next-auth" {
       householdId: string | null;
       householdName: string | null;
       householdInviteCode: string | null;
+      householdRole: HouseholdRole | null;
     };
   }
 
@@ -14,6 +16,7 @@ declare module "next-auth" {
     householdId?: string | null;
     householdName?: string | null;
     householdInviteCode?: string | null;
+    householdRole?: HouseholdRole | null;
   }
 }
 
@@ -23,5 +26,6 @@ declare module "next-auth/jwt" {
     householdId?: string | null;
     householdName?: string | null;
     householdInviteCode?: string | null;
+    householdRole?: HouseholdRole | null;
   }
 }

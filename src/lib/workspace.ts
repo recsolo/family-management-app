@@ -9,11 +9,13 @@ import {
 } from "@/lib/familyflow";
 import { db } from "@/lib/db";
 
+export type HouseholdRole = "owner" | "admin" | "member";
+
 export type HouseholdMember = {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: HouseholdRole;
 };
 
 type HouseholdRow = {
@@ -31,7 +33,18 @@ type HouseholdRow = {
   assistant_history_json: string;
   latest_meal_plan_json: string | null;
   latest_budget_coach_json: string | null;
-  role: string;
+  role: HouseholdRole;
+};
+
+type MembershipRow = {
+  household_id: string;
+  household_name: string;
+  invite_code: string;
+  role: HouseholdRole;
+};
+
+type MemberLookupRow = HouseholdMember & {
+  household_id: string;
 };
 
 type RegisterInput = {
@@ -110,6 +123,59 @@ function listHouseholdMembers(householdId: string) {
   return statement.all(householdId) as HouseholdMember[];
 }
 
+function getMembershipForUser(userId: string) {
+  const statement = db.prepare(`
+    SELECT memberships.household_id, households.name AS household_name, households.invite_code, memberships.role
+    FROM memberships
+    INNER JOIN households ON households.id = memberships.household_id
+    WHERE memberships.user_id = ?
+    LIMIT 1
+  `);
+
+  return statement.get(userId) as MembershipRow | undefined;
+}
+
+function getMemberInHousehold(householdId: string, memberId: string) {
+  const statement = db.prepare(`
+    SELECT users.id, users.name, users.email, memberships.role, memberships.household_id
+    FROM memberships
+    INNER JOIN users ON users.id = memberships.user_id
+    WHERE memberships.household_id = ? AND memberships.user_id = ?
+    LIMIT 1
+  `);
+
+  return statement.get(householdId, memberId) as MemberLookupRow | undefined;
+}
+
+function requireMembership(userId: string) {
+  const membership = getMembershipForUser(userId);
+  if (!membership) {
+    throw new Error("Workspace membership was not found.");
+  }
+
+  return membership;
+}
+
+function canManageHousehold(role: HouseholdRole) {
+  return role === "owner" || role === "admin";
+}
+
+function canManageRole(actorRole: HouseholdRole, targetRole: HouseholdRole) {
+  return actorRole === "owner" && targetRole !== "owner";
+}
+
+function canRemoveMember(actorRole: HouseholdRole, targetRole: HouseholdRole) {
+  if (targetRole === "owner") {
+    return false;
+  }
+
+  if (actorRole === "owner") {
+    return true;
+  }
+
+  return actorRole === "admin" && targetRole === "member";
+}
+
 export async function saveHouseholdState(householdId: string, state: AppState) {
   const payload = householdStatePayload(state);
   const statement = db.prepare(`
@@ -141,6 +207,72 @@ export async function regenerateInviteCode(householdId: string) {
   return nextCode;
 }
 
+export async function updateHouseholdName(userId: string, name: string) {
+  const membership = requireMembership(userId);
+  if (!canManageHousehold(membership.role)) {
+    throw new Error("Only household owners or admins can update household settings.");
+  }
+
+  const nextName = name.trim();
+  if (!nextName) {
+    throw new Error("Household name is required.");
+  }
+
+  db.prepare("UPDATE households SET name = ?, updated_at = ? WHERE id = ?").run(nextName, nowIso(), membership.household_id);
+  return nextName;
+}
+
+export async function regenerateInviteCodeForUser(userId: string) {
+  const membership = requireMembership(userId);
+  if (!canManageHousehold(membership.role)) {
+    throw new Error("Only household owners or admins can regenerate invite codes.");
+  }
+
+  return regenerateInviteCode(membership.household_id);
+}
+
+export async function updateMemberRole(userId: string, memberId: string, nextRole: HouseholdRole) {
+  if (nextRole === "owner") {
+    throw new Error("Ownership transfer is not available in this build.");
+  }
+
+  const membership = requireMembership(userId);
+  if (memberId === userId) {
+    throw new Error("Change another member's role instead of your own.");
+  }
+
+  const target = getMemberInHousehold(membership.household_id, memberId);
+  if (!target) {
+    throw new Error("That household member was not found.");
+  }
+
+  if (!canManageRole(membership.role, target.role)) {
+    throw new Error("Only the household owner can change member roles.");
+  }
+
+  db.prepare("UPDATE memberships SET role = ? WHERE household_id = ? AND user_id = ?").run(nextRole, membership.household_id, memberId);
+  return listHouseholdMembers(membership.household_id);
+}
+
+export async function removeMemberFromHousehold(userId: string, memberId: string) {
+  const membership = requireMembership(userId);
+  if (memberId === userId) {
+    throw new Error("Use your own account settings to leave a household.");
+  }
+
+  const target = getMemberInHousehold(membership.household_id, memberId);
+  if (!target) {
+    throw new Error("That household member was not found.");
+  }
+
+  if (!canRemoveMember(membership.role, target.role)) {
+    throw new Error("You do not have permission to remove that member.");
+  }
+
+  db.prepare("DELETE FROM memberships WHERE household_id = ? AND user_id = ?").run(membership.household_id, memberId);
+  return listHouseholdMembers(membership.household_id);
+}
+
 export async function getWorkspaceForUser(userId: string) {
   const statement = db.prepare(`
     SELECT households.*, memberships.role
@@ -156,6 +288,7 @@ export async function getWorkspaceForUser(userId: string) {
   }
 
   return {
+    currentUserId: userId,
     householdId: household.id,
     householdName: household.name,
     inviteCode: household.invite_code,

@@ -3,6 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 
 import { db } from "@/lib/db";
+import { getAppUrl, getAuthRuntimeConfig } from "@/lib/env";
+import type { HouseholdRole } from "@/lib/workspace";
 
 type AuthRow = {
   id: string;
@@ -12,11 +14,12 @@ type AuthRow = {
   household_id: string | null;
   household_name: string | null;
   invite_code: string | null;
+  role: HouseholdRole | null;
 };
 
 function findUserByEmail(email: string) {
   const statement = db.prepare(`
-    SELECT users.id, users.name, users.email, users.password_hash, households.id AS household_id, households.name AS household_name, households.invite_code
+    SELECT users.id, users.name, users.email, users.password_hash, households.id AS household_id, households.name AS household_name, households.invite_code, memberships.role
     FROM users
     LEFT JOIN memberships ON memberships.user_id = users.id
     LEFT JOIN households ON households.id = memberships.household_id
@@ -27,8 +30,16 @@ function findUserByEmail(email: string) {
   return statement.get(email.toLowerCase()) as AuthRow | undefined;
 }
 
+const authRuntime = getAuthRuntimeConfig();
+
+if (!process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = getAppUrl();
+}
+
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  secret: authRuntime.secret,
+  useSecureCookies: authRuntime.useSecureCookies,
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 14 },
   pages: { signIn: "/" },
   providers: [
     CredentialsProvider({
@@ -59,6 +70,7 @@ export const authOptions: NextAuthOptions = {
           householdId: user.household_id,
           householdName: user.household_name,
           householdInviteCode: user.invite_code,
+          householdRole: user.role,
         };
       },
     }),
@@ -70,6 +82,7 @@ export const authOptions: NextAuthOptions = {
         token.householdId = (user as { householdId?: string | null }).householdId ?? null;
         token.householdName = (user as { householdName?: string | null }).householdName ?? null;
         token.householdInviteCode = (user as { householdInviteCode?: string | null }).householdInviteCode ?? null;
+        token.householdRole = (user as { householdRole?: HouseholdRole | null }).householdRole ?? null;
       }
       return token;
     },
@@ -79,6 +92,7 @@ export const authOptions: NextAuthOptions = {
         session.user.householdId = typeof token.householdId === "string" ? token.householdId : null;
         session.user.householdName = typeof token.householdName === "string" ? token.householdName : null;
         session.user.householdInviteCode = typeof token.householdInviteCode === "string" ? token.householdInviteCode : null;
+        session.user.householdRole = typeof token.householdRole === "string" ? (token.householdRole as HouseholdRole) : null;
       }
       return session;
     },

@@ -1,11 +1,10 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   createId,
-  FAMILY_MEMBERS,
   getBudgetPlan,
   normalizeIngredient,
   RECIPES,
@@ -16,26 +15,40 @@ import {
   type ChatMessage,
   type MealPlan,
 } from "@/lib/familyflow";
-import type { HouseholdMember } from "@/lib/workspace";
+import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type ActiveTab = "dashboard" | "ops" | "meals" | "budget" | "family" | "ai";
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
 
 type Props = {
+  currentUserId: string;
   initialState: AppState;
   householdName: string;
   inviteCode: string;
+  role: HouseholdRole;
   userName: string;
   members: HouseholdMember[];
 };
 
-export function FamilyFlowApp({ initialState, householdName, inviteCode: initialInviteCode, userName, members }: Props) {
+export function FamilyFlowApp({
+  currentUserId,
+  initialState,
+  householdName: initialHouseholdName,
+  inviteCode: initialInviteCode,
+  role,
+  userName,
+  members,
+}: Props) {
+  const initialMemberNames = Array.from(new Set(members.map((member) => member.name.trim()).filter(Boolean)));
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [state, setState] = useState<AppState>(initialState);
+  const [householdName, setHouseholdName] = useState(initialHouseholdName);
+  const [householdNameInput, setHouseholdNameInput] = useState(initialHouseholdName);
   const [inviteCode, setInviteCode] = useState(initialInviteCode);
+  const [memberList, setMemberList] = useState(members);
   const [ingredientInput, setIngredientInput] = useState("");
   const [choreTitle, setChoreTitle] = useState("");
-  const [choreAssignee, setChoreAssignee] = useState(FAMILY_MEMBERS[0]);
+  const [choreAssignee, setChoreAssignee] = useState(initialMemberNames[0] ?? userName);
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderWhen, setReminderWhen] = useState("");
   const [reminderAudience, setReminderAudience] = useState("Family");
@@ -48,11 +61,20 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
   const [aiTask, setAiTask] = useState<AiTask>(null);
   const [saving, setSaving] = useState(false);
   const [rotatingInvite, setRotatingInvite] = useState(false);
+  const [savingHouseholdName, setSavingHouseholdName] = useState(false);
+  const [memberActionId, setMemberActionId] = useState<string | null>(null);
   const [assistantSuggestions, setAssistantSuggestions] = useState<string[]>([
     "Plan a calm weeknight for our family.",
     "Turn our chores into a simple Saturday reset.",
     "What should we prep tonight to make tomorrow easier?",
   ]);
+  const memberNames = useMemo(() => {
+    const names = memberList.map((member) => member.name.trim()).filter(Boolean);
+    return Array.from(new Set(names.length > 0 ? names : [userName]));
+  }, [memberList, userName]);
+  const canManageHousehold = role === "owner" || role === "admin";
+  const canManageRoles = role === "owner";
+  const canRemoveMembers = role === "owner" || role === "admin";
 
   const recipeMatches = useMemo(() => {
     const pantrySet = new Set(state.pantry.map(normalizeIngredient));
@@ -67,6 +89,18 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
   const budgetPlan = useMemo(() => getBudgetPlan(state.budget), [state.budget]);
   const savingsRow = budgetPlan.find((row) => row.label === "savings");
   const completedChores = state.chores.filter((chore) => chore.done).length;
+
+  useEffect(() => {
+    if (!memberNames.includes(choreAssignee)) {
+      setChoreAssignee(memberNames[0] ?? userName);
+    }
+  }, [choreAssignee, memberNames, userName]);
+
+  useEffect(() => {
+    if (reminderAudience !== "Family" && !memberNames.includes(reminderAudience)) {
+      setReminderAudience("Family");
+    }
+  }, [memberNames, reminderAudience]);
 
   async function persistState(nextState: AppState) {
     setState(nextState);
@@ -159,7 +193,12 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
 
   async function rotateInviteCode() {
     setRotatingInvite(true);
-    const response = await fetch("/api/workspace", { method: "PATCH" });
+    setSaveError(null);
+    const response = await fetch("/api/workspace", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rotate-invite" }),
+    });
     const body = (await response.json()) as { inviteCode?: string; error?: string };
     setRotatingInvite(false);
     if (!response.ok || !body.inviteCode) {
@@ -167,6 +206,68 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
       return;
     }
     setInviteCode(body.inviteCode);
+  }
+
+  async function saveHouseholdDetails(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingHouseholdName(true);
+    setSaveError(null);
+
+    const response = await fetch("/api/workspace", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rename-household", householdName: householdNameInput }),
+    });
+
+    const body = (await response.json()) as { householdName?: string; error?: string };
+    setSavingHouseholdName(false);
+    if (!response.ok || !body.householdName) {
+      setSaveError(body.error ?? "Household name could not be updated.");
+      return;
+    }
+
+    setHouseholdName(body.householdName);
+    setHouseholdNameInput(body.householdName);
+  }
+
+  async function updateMember(memberId: string, nextRole: Exclude<HouseholdRole, "owner">) {
+    setMemberActionId(memberId);
+    setSaveError(null);
+
+    const response = await fetch("/api/workspace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update-member-role", memberId, role: nextRole }),
+    });
+
+    const body = (await response.json()) as { members?: HouseholdMember[]; error?: string };
+    setMemberActionId(null);
+    if (!response.ok || !body.members) {
+      setSaveError(body.error ?? "Member role could not be updated.");
+      return;
+    }
+
+    setMemberList(body.members);
+  }
+
+  async function removeMember(memberId: string) {
+    setMemberActionId(memberId);
+    setSaveError(null);
+
+    const response = await fetch("/api/workspace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove-member", memberId }),
+    });
+
+    const body = (await response.json()) as { members?: HouseholdMember[]; error?: string };
+    setMemberActionId(null);
+    if (!response.ok || !body.members) {
+      setSaveError(body.error ?? "Member could not be removed.");
+      return;
+    }
+
+    setMemberList(body.members);
   }
 
   async function addPantryItems(event: React.FormEvent<HTMLFormElement>) {
@@ -230,14 +331,15 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
         <aside className="flex flex-col justify-between gap-8 bg-[linear-gradient(180deg,rgba(12,58,50,0.95),rgba(34,45,71,0.95))] p-8 text-stone-50">
           <div className="space-y-6">
             <div className="space-y-3">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-300">Stage 4 build</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-300">Stage 5A build</p>
               <h1 className="font-serif text-4xl">FamilyFlow AI</h1>
-              <p className="max-w-xs text-sm leading-6 text-stone-300">Persistent family workspaces with shared planning, AI help, and invite-based access.</p>
+              <p className="max-w-xs text-sm leading-6 text-stone-300">Persistent family workspaces with shared planning, AI help, invite-based access, and role-aware household management.</p>
             </div>
             <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-stone-300">Household</p>
               <h2 className="mt-2 font-serif text-2xl">{householdName}</h2>
               <p className="mt-2 text-sm text-stone-200">Signed in as {userName}</p>
+              <p className="mt-1 text-sm text-stone-200">Role: <span className="font-semibold uppercase tracking-[0.2em]">{role}</span></p>
               <p className="mt-2 text-sm text-stone-200">Invite code: <span className="font-semibold tracking-[0.25em]">{inviteCode}</span></p>
               <button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="mt-4 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25">Sign out</button>
             </div>
@@ -254,7 +356,7 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
             <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-200">
               <li>{saving ? "Saving changes to the household workspace..." : "Workspace changes are saved to the database."}</li>
               <li>AI actions use the shared household data as context.</li>
-              <li>Invite code lets more family members join this workspace.</li>
+              <li>{canManageHousehold ? "You can manage invite access and household settings from the Family tab." : "Household settings and invite access are managed by an owner or admin."}</li>
             </ul>
           </section>
         </aside>
@@ -267,16 +369,16 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
               <div className="space-y-3">
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-700">Authenticated household workspace</p>
                 <h2 className="max-w-2xl font-serif text-4xl leading-tight">One shared place for meals, money, chores, reminders, routines, and AI planning.</h2>
-                <p className="max-w-2xl text-sm leading-6 text-stone-600">Stage 4 adds authentication, database-backed persistence, invite-based households, and shared member visibility.</p>
+                <p className="max-w-2xl text-sm leading-6 text-stone-600">Stage 5A adds household roles, member management, and tighter invite controls on top of the shared workspace.</p>
               </div>
-              <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Stage 4 active</div>
+              <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Stage 5A active</div>
             </header>
 
             {activeTab === "dashboard" && (
               <div className="grid gap-5 xl:grid-cols-4">
                 <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Dinner signal</p><h3 className="mt-3 font-serif text-2xl">Best next meal</h3><p className="mt-3 text-sm leading-6 text-stone-600">{bestRecipe ? `${bestRecipe.name} matches ${bestRecipe.matches}/${bestRecipe.ingredients.length} pantry ingredients right now.` : "Add pantry items to unlock recipe suggestions."}</p></article>
                 <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Budget pulse</p><h3 className="mt-3 font-serif text-2xl">Savings target</h3><p className="mt-3 text-sm leading-6 text-stone-600">{savingsRow?.percent}% of income, or about ${savingsRow?.amount.toLocaleString()} monthly, is being reserved for savings.</p></article>
-                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Family members</p><h3 className="mt-3 font-serif text-2xl">{members.length} linked</h3><p className="mt-3 text-sm leading-6 text-stone-600">Everyone in the household can work from the same shared workspace.</p></article>
+                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Family members</p><h3 className="mt-3 font-serif text-2xl">{memberList.length} linked</h3><p className="mt-3 text-sm leading-6 text-stone-600">Roles now control who can manage invites, household settings, and member access.</p></article>
                 <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Chore board</p><h3 className="mt-3 font-serif text-2xl">{completedChores}/{state.chores.length} done</h3><p className="mt-3 text-sm leading-6 text-stone-600">Shared tasks, reminders, and routines are now database-backed.</p></article>
               </div>
             )}
@@ -288,7 +390,7 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
                   <h3 className="mt-3 font-serif text-3xl">Plan the work at home</h3>
                   <form className="mt-6 space-y-4" onSubmit={(event) => void addChore(event)}>
                     <label className="block text-sm font-medium text-stone-700">New chore<input value={choreTitle} onChange={(event) => setChoreTitle(event.target.value)} placeholder="Take out recycling" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label>
-                    <label className="block text-sm font-medium text-stone-700">Assign to<select value={choreAssignee} onChange={(event) => setChoreAssignee(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3">{FAMILY_MEMBERS.map((member) => <option key={member} value={member}>{member}</option>)}</select></label>
+                    <label className="block text-sm font-medium text-stone-700">Assign to<select value={choreAssignee} onChange={(event) => setChoreAssignee(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3">{memberNames.map((member) => <option key={member} value={member}>{member}</option>)}</select></label>
                     <button type="submit" className="rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800">Add chore</button>
                   </form>
                 </article>
@@ -305,7 +407,7 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
                       <form className="mt-6 space-y-4" onSubmit={(event) => void addReminder(event)}>
                         <label className="block text-sm font-medium text-stone-700">Reminder<input value={reminderTitle} onChange={(event) => setReminderTitle(event.target.value)} placeholder="Dentist forms in backpack" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label>
                         <label className="block text-sm font-medium text-stone-700">When<input value={reminderWhen} onChange={(event) => setReminderWhen(event.target.value)} placeholder="Fri 7:45 AM" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label>
-                        <label className="block text-sm font-medium text-stone-700">Audience<select value={reminderAudience} onChange={(event) => setReminderAudience(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3"><option value="Family">Family</option>{FAMILY_MEMBERS.map((member) => <option key={member} value={member}>{member}</option>)}</select></label>
+                        <label className="block text-sm font-medium text-stone-700">Audience<select value={reminderAudience} onChange={(event) => setReminderAudience(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3"><option value="Family">Family</option>{memberNames.map((member) => <option key={member} value={member}>{member}</option>)}</select></label>
                         <button type="submit" className="rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800">Add reminder</button>
                       </form>
                     </div>
@@ -341,8 +443,100 @@ export function FamilyFlowApp({ initialState, householdName, inviteCode: initial
 
             {activeTab === "family" && (
               <div className="grid gap-5 xl:grid-cols-[1fr_1fr_1.1fr]">
-                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Household members</p><h3 className="mt-3 font-serif text-3xl">Who has access</h3><div className="mt-5 space-y-3">{members.map((member) => <div key={member.id} className="rounded-[20px] border border-stone-200 bg-stone-50 p-4"><p className="font-semibold text-stone-900">{member.name}</p><p className="text-sm text-stone-600">{member.email}</p><p className="mt-2 text-xs font-bold uppercase tracking-[0.25em] text-emerald-700">{member.role}</p></div>)}</div></article>
-                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Invite management</p><h3 className="mt-3 font-serif text-3xl">Bring the family in</h3><p className="mt-4 text-sm leading-6 text-stone-600">Share the invite code with other family members so they can join this same workspace.</p><div className="mt-5 rounded-[24px] bg-stone-50 p-5 text-center"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Invite code</p><p className="mt-3 text-3xl font-semibold tracking-[0.3em] text-stone-900">{inviteCode}</p></div><button type="button" onClick={() => void rotateInviteCode()} disabled={rotatingInvite} className="mt-5 rounded-2xl bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60">{rotatingInvite ? "Refreshing..." : "Generate new invite code"}</button></article>
+                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
+                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Household members</p>
+                  <h3 className="mt-3 font-serif text-3xl">Who has access</h3>
+                  <p className="mt-3 text-sm leading-6 text-stone-600">
+                    Owners can update roles. Admins can manage member access for standard members. Members can view the workspace only.
+                  </p>
+                  <div className="mt-5 space-y-3">
+                    {memberList.map((member) => {
+                      const isCurrentUser = member.id === currentUserId;
+                      const canChangeRole = canManageRoles && !isCurrentUser && member.role !== "owner";
+                      const canRemoveMember = canRemoveMembers && !isCurrentUser && (role === "owner" ? member.role !== "owner" : member.role === "member");
+                      const memberBusy = memberActionId === member.id;
+
+                      return (
+                        <div key={member.id} className="rounded-[20px] border border-stone-200 bg-stone-50 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-stone-900">{member.name}{isCurrentUser ? " (you)" : ""}</p>
+                              <p className="text-sm text-stone-600">{member.email}</p>
+                            </div>
+                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-emerald-800">
+                              {member.role}
+                            </span>
+                          </div>
+                          {(canChangeRole || canRemoveMember) && (
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                              {canChangeRole && (
+                                <label className="text-sm font-medium text-stone-700">
+                                  Role
+                                  <select
+                                    value={member.role}
+                                    onChange={(event) => void updateMember(member.id, event.target.value as Exclude<HouseholdRole, "owner">)}
+                                    disabled={memberBusy}
+                                    className="ml-2 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm"
+                                  >
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                  </select>
+                                </label>
+                              )}
+                              {canRemoveMember && (
+                                <button
+                                  type="button"
+                                  onClick={() => void removeMember(member.id)}
+                                  disabled={memberBusy}
+                                  className="rounded-xl bg-stone-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {memberBusy ? "Updating..." : "Remove member"}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
+                <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
+                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Household settings</p>
+                  <h3 className="mt-3 font-serif text-3xl">Invite and identity controls</h3>
+                  <p className="mt-4 text-sm leading-6 text-stone-600">
+                    Share the invite code with family members so they join this same workspace. Owners and admins can update these settings.
+                  </p>
+                  <form className="mt-5 space-y-4" onSubmit={(event) => void saveHouseholdDetails(event)}>
+                    <label className="block text-sm font-medium text-stone-700">
+                      Household name
+                      <input
+                        value={householdNameInput}
+                        onChange={(event) => setHouseholdNameInput(event.target.value)}
+                        disabled={!canManageHousehold || savingHouseholdName}
+                        className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 disabled:cursor-not-allowed disabled:bg-stone-100"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={!canManageHousehold || savingHouseholdName}
+                      className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {savingHouseholdName ? "Saving..." : "Save household name"}
+                    </button>
+                  </form>
+                  <div className="mt-5 rounded-[24px] bg-stone-50 p-5 text-center">
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Invite code</p>
+                    <p className="mt-3 text-3xl font-semibold tracking-[0.3em] text-stone-900">{inviteCode}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void rotateInviteCode()}
+                    disabled={!canManageHousehold || rotatingInvite}
+                    className="mt-5 rounded-2xl bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {rotatingInvite ? "Refreshing..." : "Generate new invite code"}
+                  </button>
+                </article>
                 <article className="rounded-[28px] border border-stone-900/10 bg-white/85 p-6 shadow-[0_20px_45px_rgba(65,48,32,0.12)]"><p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">Routine builder</p><h3 className="mt-3 font-serif text-3xl">Add a shared routine</h3><form className="mt-5 space-y-4" onSubmit={(event) => void addRoutine(event)}><label className="block text-sm font-medium text-stone-700">Routine name<input value={routineName} onChange={(event) => setRoutineName(event.target.value)} placeholder="Saturday reset" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label><label className="block text-sm font-medium text-stone-700">Time window<input value={routineTimeWindow} onChange={(event) => setRoutineTimeWindow(event.target.value)} placeholder="9:00 AM - 10:30 AM" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label><label className="block text-sm font-medium text-stone-700">Checklist items<input value={routineItems} onChange={(event) => setRoutineItems(event.target.value)} placeholder="Laundry, wipe counters, prep snacks" className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" /></label><button type="submit" className="rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800">Add routine</button></form><div className="mt-5 space-y-3">{state.routines.map((routine) => <div key={routine.id} className="rounded-[20px] border border-stone-200 bg-stone-50 p-4"><h4 className="font-serif text-2xl">{routine.name}</h4><p className="mt-1 text-sm font-semibold text-emerald-700">{routine.timeWindow}</p><p className="mt-2 text-sm leading-6 text-stone-600">{routine.items.join(", ")}</p></div>)}</div></article>
               </div>
             )}

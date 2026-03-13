@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import type { BudgetCoach, ChatMessage, MealPlan } from "@/lib/familyflow";
 import { getWorkspaceForUser, saveHouseholdState } from "@/lib/workspace";
+import { validateAssistantPrompt } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -105,8 +106,24 @@ function getSystemPrompt(kind: RequestBody["kind"]) {
   return `${base} Answer like a supportive family operations coach.`;
 }
 
-function getUserPrompt(kind: RequestBody["kind"], prompt: string | undefined, workspace: NonNullable<Awaited<ReturnType<typeof getWorkspaceForUser>>>) {
+function getConversationHistory(history: ChatMessage[]) {
+  if (history.length === 0) {
+    return "No prior conversation.";
+  }
+
+  return history
+    .map((message) => `${message.role === "assistant" ? "Assistant" : "User"}: ${message.content}`)
+    .join("\n");
+}
+
+function getUserPrompt(
+  kind: RequestBody["kind"],
+  prompt: string | undefined,
+  workspace: NonNullable<Awaited<ReturnType<typeof getWorkspaceForUser>>>,
+  history: ChatMessage[],
+) {
   const snapshot = getStateSnapshot(workspace);
+  const conversation = getConversationHistory(history);
 
   if (kind === "meal-plan") {
     return `Create a practical 5-day meal plan using the pantry first. Keep it family-friendly and low waste.\n\nContext:\n${snapshot}`;
@@ -116,7 +133,7 @@ function getUserPrompt(kind: RequestBody["kind"], prompt: string | undefined, wo
     return `Coach this household on their current monthly budget. Highlight wins, watchouts, and next steps.\n\nContext:\n${snapshot}`;
   }
 
-  return `${prompt ?? "Help this family plan the week."}\n\nContext:\n${snapshot}`;
+  return `${prompt ?? "Help this family plan the week."}\n\nRecent conversation:\n${conversation}\n\nContext:\n${snapshot}`;
 }
 
 export async function POST(request: Request) {
@@ -136,18 +153,15 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as RequestBody;
-    const history = (body.history ?? workspace.state.assistantHistory).slice(-8).map((message) => ({
-      role: message.role,
-      content: [{ type: "input_text" as const, text: message.content }],
-    }));
+    const history = (body.history ?? workspace.state.assistantHistory).slice(-8);
+    const prompt = validateAssistantPrompt(body.prompt);
 
     const response = await client.responses.create({
       model: MODEL,
       reasoning: { effort: "minimal" },
       input: [
         { role: "system", content: [{ type: "input_text", text: getSystemPrompt(body.kind) }] },
-        ...history,
-        { role: "user", content: [{ type: "input_text", text: getUserPrompt(body.kind, body.prompt, workspace) }] },
+        { role: "user", content: [{ type: "input_text", text: getUserPrompt(body.kind, prompt, workspace, history) }] },
       ],
       text: { format: getResponseFormat(body.kind) },
     });
