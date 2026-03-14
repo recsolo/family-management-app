@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join } from "node:path";
 
 const DEFAULT_DB_PATH = join(process.cwd(), "data", "familyflow.db");
 const DEFAULT_APP_URL = "http://localhost:3000";
+const BUILD_TIME_SECRET = "build-time-secret-not-used-at-runtime";
 
 function fromFileValue(value: string) {
   const trimmed = value.slice("file:".length).replace(/^\/\//, "");
@@ -49,6 +50,10 @@ export function getAuthSecret() {
   const envSecret = process.env.NEXTAUTH_SECRET?.trim() || "";
   if (!isPlaceholderSecret(envSecret)) {
     return envSecret;
+  }
+
+  if (process.env.npm_lifecycle_event === "build") {
+    return BUILD_TIME_SECRET;
   }
 
   const secretPath = join(getDatabaseDirectory(), "auth.secret");
