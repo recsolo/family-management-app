@@ -1,34 +1,5 @@
-import { dirname, isAbsolute, join } from "node:path";
-
-const DEFAULT_DB_PATH = join(process.cwd(), "data", "familyflow.db");
-const DEFAULT_APP_URL = "http://localhost:3000";
 const BUILD_TIME_SECRET = "build-time-secret-not-used-at-runtime";
-
-function fromFileValue(value: string) {
-  const trimmed = value.slice("file:".length).replace(/^\/\//, "");
-  if (!trimmed) {
-    return DEFAULT_DB_PATH;
-  }
-
-  return isAbsolute(trimmed) ? trimmed : join(process.cwd(), trimmed);
-}
-
-export function resolveDatabasePath() {
-  const rawValue = process.env.FAMILYFLOW_DB_PATH?.trim();
-  if (!rawValue) {
-    return DEFAULT_DB_PATH;
-  }
-
-  if (rawValue.startsWith("file:")) {
-    return fromFileValue(rawValue);
-  }
-
-  return isAbsolute(rawValue) ? rawValue : join(process.cwd(), rawValue);
-}
-
-export function getDatabaseDirectory() {
-  return dirname(resolveDatabasePath());
-}
+const DEFAULT_APP_URL = "http://localhost:3000";
 
 export function getAppUrl() {
   const nextAuthUrl = process.env.NEXTAUTH_URL?.trim();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getAppUrl, resolveDatabasePath } from "@/lib/env";
+import { getAppUrl } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,8 @@ export async function GET() {
     ok: true,
     service: "familyflow-ai",
     url: getAppUrl(),
-    databasePath: resolveDatabasePath(),
+    databaseProvider: "postgresql",
+    databaseConfigured: Boolean(process.env.DATABASE_URL),
     timestamp: new Date().toISOString(),
   });
 }

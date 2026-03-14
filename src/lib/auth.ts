@@ -17,17 +17,34 @@ type AuthRow = {
   role: HouseholdRole | null;
 };
 
-function findUserByEmail(email: string) {
-  const statement = db.prepare(`
-    SELECT users.id, users.name, users.email, users.password_hash, households.id AS household_id, households.name AS household_name, households.invite_code, memberships.role
-    FROM users
-    LEFT JOIN memberships ON memberships.user_id = users.id
-    LEFT JOIN households ON households.id = memberships.household_id
-    WHERE users.email = ?
-    LIMIT 1
-  `);
+async function findUserByEmail(email: string) {
+  const user = await db.user.findUnique({
+    where: { email: email.toLowerCase() },
+    include: {
+      memberships: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        include: { household: true },
+      },
+    },
+  });
 
-  return statement.get(email.toLowerCase()) as AuthRow | undefined;
+  if (!user) {
+    return undefined;
+  }
+
+  const membership = user.memberships[0];
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    password_hash: user.passwordHash,
+    household_id: membership?.household.id ?? null,
+    household_name: membership?.household.name ?? null,
+    invite_code: membership?.household.inviteCode ?? null,
+    role: (membership?.role as HouseholdRole | undefined) ?? null,
+  } satisfies AuthRow;
 }
 
 const authRuntime = getAuthRuntimeConfig();
@@ -53,7 +70,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = findUserByEmail(credentials.email);
+        const user = await findUserByEmail(credentials.email);
         if (!user) {
           return null;
         }

@@ -1,22 +1,4 @@
 import "dotenv/config";
-import { dirname, isAbsolute, join } from "node:path";
-import { mkdirSync } from "node:fs";
-
-const cwd = process.cwd();
-
-function resolveDatabasePath() {
-  const rawValue = process.env.FAMILYFLOW_DB_PATH?.trim();
-  if (!rawValue) {
-    return join(cwd, "data", "familyflow.db");
-  }
-
-  if (rawValue.startsWith("file:")) {
-    const value = rawValue.slice("file:".length).replace(/^\/\//, "");
-    return isAbsolute(value) ? value : join(cwd, value);
-  }
-
-  return isAbsolute(rawValue) ? rawValue : join(cwd, rawValue);
-}
 
 function isPlaceholderSecret(secret) {
   return !secret || secret === "change-me-for-production";
@@ -26,18 +8,18 @@ const checks = [];
 const failures = [];
 const warnings = [];
 
+const databaseUrl = process.env.DATABASE_URL?.trim() || "";
 const nextAuthUrl = process.env.NEXTAUTH_URL?.trim() || "";
 const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim() || "";
 const nextAuthSecret = process.env.NEXTAUTH_SECRET?.trim() || "";
-const dbPath = resolveDatabasePath();
 const appKey = process.env.OPENAI_API_KEY?.trim() || "";
 
-checks.push(`Database path: ${dbPath}`);
-
-try {
-  mkdirSync(dirname(dbPath), { recursive: true });
-} catch (error) {
-  failures.push(`Database directory is not writable: ${error instanceof Error ? error.message : "unknown error"}`);
+if (!databaseUrl) {
+  failures.push("DATABASE_URL is missing.");
+} else if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
+  failures.push("DATABASE_URL must be a PostgreSQL connection string.");
+} else {
+  checks.push("DATABASE_URL: present");
 }
 
 if (!nextAuthUrl && !railwayDomain) {

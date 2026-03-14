@@ -18,35 +18,6 @@ export type HouseholdMember = {
   role: HouseholdRole;
 };
 
-type HouseholdRow = {
-  id: string;
-  name: string;
-  invite_code: string;
-  pantry_json: string;
-  budget_income: number;
-  budget_family_size: number;
-  budget_goal: string;
-  budget_style: string;
-  chores_json: string;
-  reminders_json: string;
-  routines_json: string;
-  assistant_history_json: string;
-  latest_meal_plan_json: string | null;
-  latest_budget_coach_json: string | null;
-  role: HouseholdRole;
-};
-
-type MembershipRow = {
-  household_id: string;
-  household_name: string;
-  invite_code: string;
-  role: HouseholdRole;
-};
-
-type MemberLookupRow = HouseholdMember & {
-  household_id: string;
-};
-
 type RegisterInput = {
   name: string;
   email: string;
@@ -59,6 +30,23 @@ type AttachHouseholdInput =
   | { userId: string; householdName: string }
   | { userId: string; inviteCode: string };
 
+type HouseholdRecord = {
+  id: string;
+  name: string;
+  inviteCode: string;
+  pantryJson: string;
+  budgetIncome: number;
+  budgetFamilySize: number;
+  budgetGoal: string;
+  budgetStyle: string;
+  choresJson: string;
+  remindersJson: string;
+  routinesJson: string;
+  assistantHistoryJson: string;
+  latestMealPlanJson: string | null;
+  latestBudgetCoachJson: string | null;
+};
+
 function safeParse<T>(value: string | null | undefined, fallback: T): T {
   if (!value) {
     return fallback;
@@ -69,10 +57,6 @@ function safeParse<T>(value: string | null | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
-}
-
-function nowIso() {
-  return new Date().toISOString();
 }
 
 function generateInviteCode() {
@@ -95,69 +79,69 @@ function householdStatePayload(baseState: AppState) {
   };
 }
 
-export function householdToAppState(household: HouseholdRow): AppState {
+export function householdToAppState(household: HouseholdRecord): AppState {
   const defaults = cloneDefaultState();
 
   return {
-    pantry: safeParse(household.pantry_json, defaults.pantry),
+    pantry: safeParse(household.pantryJson, defaults.pantry),
     budget: {
-      income: household.budget_income,
-      familySize: household.budget_family_size,
-      goal: household.budget_goal as AppState["budget"]["goal"],
-      style: household.budget_style as AppState["budget"]["style"],
+      income: household.budgetIncome,
+      familySize: household.budgetFamilySize,
+      goal: household.budgetGoal as AppState["budget"]["goal"],
+      style: household.budgetStyle as AppState["budget"]["style"],
     },
-    chores: safeParse(household.chores_json, defaults.chores),
-    reminders: safeParse(household.reminders_json, defaults.reminders),
-    routines: safeParse(household.routines_json, defaults.routines),
-    assistantHistory: safeParse(household.assistant_history_json, defaults.assistantHistory),
-    latestMealPlan: safeParse<MealPlan | null>(household.latest_meal_plan_json, null),
-    latestBudgetCoach: safeParse<BudgetCoach | null>(household.latest_budget_coach_json, null),
+    chores: safeParse(household.choresJson, defaults.chores),
+    reminders: safeParse(household.remindersJson, defaults.reminders),
+    routines: safeParse(household.routinesJson, defaults.routines),
+    assistantHistory: safeParse(household.assistantHistoryJson, defaults.assistantHistory),
+    latestMealPlan: safeParse<MealPlan | null>(household.latestMealPlanJson, null),
+    latestBudgetCoach: safeParse<BudgetCoach | null>(household.latestBudgetCoachJson, null),
   };
 }
 
-function listHouseholdMembers(householdId: string) {
-  const statement = db.prepare(`
-    SELECT users.id, users.name, users.email, memberships.role
-    FROM memberships
-    INNER JOIN users ON users.id = memberships.user_id
-    WHERE memberships.household_id = ?
-    ORDER BY memberships.created_at ASC
-  `);
+async function listHouseholdMembers(householdId: string) {
+  const memberships = await db.membership.findMany({
+    where: { householdId },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
 
-  return statement.all(householdId) as HouseholdMember[];
+  return memberships.map((membership) => ({
+    id: membership.user.id,
+    name: membership.user.name,
+    email: membership.user.email,
+    role: membership.role as HouseholdRole,
+  })) satisfies HouseholdMember[];
 }
 
-function getMembershipForUser(userId: string) {
-  const statement = db.prepare(`
-    SELECT memberships.household_id, households.name AS household_name, households.invite_code, memberships.role
-    FROM memberships
-    INNER JOIN households ON households.id = memberships.household_id
-    WHERE memberships.user_id = ?
-    LIMIT 1
-  `);
-
-  return statement.get(userId) as MembershipRow | undefined;
+async function getMembershipForUser(userId: string) {
+  return db.membership.findFirst({
+    where: { userId },
+    include: { household: true },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
-function getMemberInHousehold(householdId: string, memberId: string) {
-  const statement = db.prepare(`
-    SELECT users.id, users.name, users.email, memberships.role, memberships.household_id
-    FROM memberships
-    INNER JOIN users ON users.id = memberships.user_id
-    WHERE memberships.household_id = ? AND memberships.user_id = ?
-    LIMIT 1
-  `);
-
-  return statement.get(householdId, memberId) as MemberLookupRow | undefined;
+async function getMemberInHousehold(householdId: string, memberId: string) {
+  return db.membership.findUnique({
+    where: {
+      userId_householdId: {
+        userId: memberId,
+        householdId,
+      },
+    },
+    include: { user: true },
+  });
 }
 
-function findHouseholdByInviteCode(inviteCode: string) {
-  const statement = db.prepare("SELECT * FROM households WHERE invite_code = ? LIMIT 1");
-  return statement.get(inviteCode.trim().toUpperCase()) as HouseholdRow | undefined;
+async function findHouseholdByInviteCode(inviteCode: string) {
+  return db.household.findUnique({
+    where: { inviteCode: inviteCode.trim().toUpperCase() },
+  });
 }
 
-function requireMembership(userId: string) {
-  const membership = getMembershipForUser(userId);
+async function requireMembership(userId: string) {
+  const membership = await getMembershipForUser(userId);
   if (!membership) {
     throw new Error("Workspace membership was not found.");
   }
@@ -187,38 +171,43 @@ function canRemoveMember(actorRole: HouseholdRole, targetRole: HouseholdRole) {
 
 export async function saveHouseholdState(householdId: string, state: AppState) {
   const payload = householdStatePayload(state);
-  const statement = db.prepare(`
-    UPDATE households
-    SET pantry_json = ?, budget_income = ?, budget_family_size = ?, budget_goal = ?, budget_style = ?, chores_json = ?, reminders_json = ?, routines_json = ?, assistant_history_json = ?, latest_meal_plan_json = ?, latest_budget_coach_json = ?, updated_at = ?
-    WHERE id = ?
-  `);
 
-  statement.run(
-    payload.pantryJson,
-    payload.budgetIncome,
-    payload.budgetFamilySize,
-    payload.budgetGoal,
-    payload.budgetStyle,
-    payload.choresJson,
-    payload.remindersJson,
-    payload.routinesJson,
-    payload.assistantHistoryJson,
-    payload.latestMealPlanJson,
-    payload.latestBudgetCoachJson,
-    nowIso(),
-    householdId,
-  );
+  await db.household.update({
+    where: { id: householdId },
+    data: {
+      pantryJson: payload.pantryJson,
+      budgetIncome: payload.budgetIncome,
+      budgetFamilySize: payload.budgetFamilySize,
+      budgetGoal: payload.budgetGoal,
+      budgetStyle: payload.budgetStyle,
+      choresJson: payload.choresJson,
+      remindersJson: payload.remindersJson,
+      routinesJson: payload.routinesJson,
+      assistantHistoryJson: payload.assistantHistoryJson,
+      latestMealPlanJson: payload.latestMealPlanJson,
+      latestBudgetCoachJson: payload.latestBudgetCoachJson,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function regenerateInviteCode(householdId: string) {
   const nextCode = generateInviteCode();
-  db.prepare("UPDATE households SET invite_code = ?, updated_at = ? WHERE id = ?").run(nextCode, nowIso(), householdId);
+
+  await db.household.update({
+    where: { id: householdId },
+    data: {
+      inviteCode: nextCode,
+      updatedAt: new Date(),
+    },
+  });
+
   return nextCode;
 }
 
 export async function updateHouseholdName(userId: string, name: string) {
-  const membership = requireMembership(userId);
-  if (!canManageHousehold(membership.role)) {
+  const membership = await requireMembership(userId);
+  if (!canManageHousehold(membership.role as HouseholdRole)) {
     throw new Error("Only household owners or admins can update household settings.");
   }
 
@@ -227,17 +216,24 @@ export async function updateHouseholdName(userId: string, name: string) {
     throw new Error("Household name is required.");
   }
 
-  db.prepare("UPDATE households SET name = ?, updated_at = ? WHERE id = ?").run(nextName, nowIso(), membership.household_id);
+  await db.household.update({
+    where: { id: membership.householdId },
+    data: {
+      name: nextName,
+      updatedAt: new Date(),
+    },
+  });
+
   return nextName;
 }
 
 export async function regenerateInviteCodeForUser(userId: string) {
-  const membership = requireMembership(userId);
-  if (!canManageHousehold(membership.role)) {
+  const membership = await requireMembership(userId);
+  if (!canManageHousehold(membership.role as HouseholdRole)) {
     throw new Error("Only household owners or admins can regenerate invite codes.");
   }
 
-  return regenerateInviteCode(membership.household_id);
+  return regenerateInviteCode(membership.householdId);
 }
 
 export async function updateMemberRole(userId: string, memberId: string, nextRole: HouseholdRole) {
@@ -245,208 +241,216 @@ export async function updateMemberRole(userId: string, memberId: string, nextRol
     throw new Error("Ownership transfer is not available in this build.");
   }
 
-  const membership = requireMembership(userId);
+  const membership = await requireMembership(userId);
   if (memberId === userId) {
     throw new Error("Change another member's role instead of your own.");
   }
 
-  const target = getMemberInHousehold(membership.household_id, memberId);
+  const target = await getMemberInHousehold(membership.householdId, memberId);
   if (!target) {
     throw new Error("That household member was not found.");
   }
 
-  if (!canManageRole(membership.role, target.role)) {
+  if (!canManageRole(membership.role as HouseholdRole, target.role as HouseholdRole)) {
     throw new Error("Only the household owner can change member roles.");
   }
 
-  db.prepare("UPDATE memberships SET role = ? WHERE household_id = ? AND user_id = ?").run(nextRole, membership.household_id, memberId);
-  return listHouseholdMembers(membership.household_id);
+  await db.membership.update({
+    where: {
+      userId_householdId: {
+        userId: memberId,
+        householdId: membership.householdId,
+      },
+    },
+    data: { role: nextRole },
+  });
+
+  return listHouseholdMembers(membership.householdId);
 }
 
 export async function removeMemberFromHousehold(userId: string, memberId: string) {
-  const membership = requireMembership(userId);
+  const membership = await requireMembership(userId);
   if (memberId === userId) {
     throw new Error("Use your own account settings to leave a household.");
   }
 
-  const target = getMemberInHousehold(membership.household_id, memberId);
+  const target = await getMemberInHousehold(membership.householdId, memberId);
   if (!target) {
     throw new Error("That household member was not found.");
   }
 
-  if (!canRemoveMember(membership.role, target.role)) {
+  if (!canRemoveMember(membership.role as HouseholdRole, target.role as HouseholdRole)) {
     throw new Error("You do not have permission to remove that member.");
   }
 
-  db.prepare("DELETE FROM memberships WHERE household_id = ? AND user_id = ?").run(membership.household_id, memberId);
-  return listHouseholdMembers(membership.household_id);
+  await db.membership.delete({
+    where: {
+      userId_householdId: {
+        userId: memberId,
+        householdId: membership.householdId,
+      },
+    },
+  });
+
+  return listHouseholdMembers(membership.householdId);
 }
 
 export async function getWorkspaceForUser(userId: string) {
-  const statement = db.prepare(`
-    SELECT households.*, memberships.role
-    FROM memberships
-    INNER JOIN households ON households.id = memberships.household_id
-    WHERE memberships.user_id = ?
-    LIMIT 1
-  `);
+  const membership = await db.membership.findFirst({
+    where: { userId },
+    include: { household: true },
+    orderBy: { createdAt: "asc" },
+  });
 
-  const household = statement.get(userId) as HouseholdRow | undefined;
-  if (!household) {
+  if (!membership) {
     return null;
   }
 
   return {
     currentUserId: userId,
-    householdId: household.id,
-    householdName: household.name,
-    inviteCode: household.invite_code,
-    role: household.role,
-    members: listHouseholdMembers(household.id),
-    state: householdToAppState(household),
+    householdId: membership.household.id,
+    householdName: membership.household.name,
+    inviteCode: membership.household.inviteCode,
+    role: membership.role as HouseholdRole,
+    members: await listHouseholdMembers(membership.household.id),
+    state: householdToAppState(membership.household),
   };
 }
 
 export async function attachUserToHousehold(input: AttachHouseholdInput) {
-  const existingMembership = getMembershipForUser(input.userId);
+  const existingMembership = await getMembershipForUser(input.userId);
   if (existingMembership) {
     throw new Error("This account is already linked to a household.");
   }
 
-  const createdAt = nowIso();
-  const membershipId = randomUUID();
+  const createdAt = new Date();
 
-  db.exec("BEGIN TRANSACTION");
-
-  try {
+  await db.$transaction(async (tx) => {
     if ("inviteCode" in input) {
-      const joinedHousehold = findHouseholdByInviteCode(input.inviteCode);
+      const joinedHousehold = await tx.household.findUnique({
+        where: { inviteCode: input.inviteCode.trim().toUpperCase() },
+      });
+
       if (!joinedHousehold) {
         throw new Error("That household invite code was not found.");
       }
 
-      db.prepare("INSERT INTO memberships (id, user_id, household_id, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
-        membershipId,
-        input.userId,
-        joinedHousehold.id,
-        "member",
-        createdAt,
-      );
-    } else {
-      const household = cloneDefaultState();
-      const payload = householdStatePayload(household);
-      const householdId = randomUUID();
+      await tx.membership.create({
+        data: {
+          id: randomUUID(),
+          userId: input.userId,
+          householdId: joinedHousehold.id,
+          role: "member",
+          createdAt,
+        },
+      });
 
-      db.prepare(`
-        INSERT INTO households (id, name, invite_code, pantry_json, budget_income, budget_family_size, budget_goal, budget_style, chores_json, reminders_json, routines_json, assistant_history_json, latest_meal_plan_json, latest_budget_coach_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        householdId,
-        input.householdName.trim(),
-        generateInviteCode(),
-        payload.pantryJson,
-        payload.budgetIncome,
-        payload.budgetFamilySize,
-        payload.budgetGoal,
-        payload.budgetStyle,
-        payload.choresJson,
-        payload.remindersJson,
-        payload.routinesJson,
-        payload.assistantHistoryJson,
-        payload.latestMealPlanJson,
-        payload.latestBudgetCoachJson,
-        createdAt,
-        createdAt,
-      );
-
-      db.prepare("INSERT INTO memberships (id, user_id, household_id, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
-        membershipId,
-        input.userId,
-        householdId,
-        "owner",
-        createdAt,
-      );
+      return;
     }
 
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+    const householdId = randomUUID();
+    const payload = householdStatePayload(cloneDefaultState());
+
+    await tx.household.create({
+      data: {
+        id: householdId,
+        name: input.householdName.trim(),
+        inviteCode: generateInviteCode(),
+        pantryJson: payload.pantryJson,
+        budgetIncome: payload.budgetIncome,
+        budgetFamilySize: payload.budgetFamilySize,
+        budgetGoal: payload.budgetGoal,
+        budgetStyle: payload.budgetStyle,
+        choresJson: payload.choresJson,
+        remindersJson: payload.remindersJson,
+        routinesJson: payload.routinesJson,
+        assistantHistoryJson: payload.assistantHistoryJson,
+        latestMealPlanJson: payload.latestMealPlanJson,
+        latestBudgetCoachJson: payload.latestBudgetCoachJson,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
+
+    await tx.membership.create({
+      data: {
+        id: randomUUID(),
+        userId: input.userId,
+        householdId,
+        role: "owner",
+        createdAt,
+      },
+    });
+  });
 
   return getWorkspaceForUser(input.userId);
 }
 
 export async function registerUser(input: RegisterInput) {
   const email = input.email.trim().toLowerCase();
-  const existing = db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").get(email) as { id: string } | undefined;
+  const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     throw new Error("An account with that email already exists.");
   }
 
-  const joinedHousehold = input.inviteCode ? findHouseholdByInviteCode(input.inviteCode) : undefined;
-
+  const joinedHousehold = input.inviteCode ? await findHouseholdByInviteCode(input.inviteCode) : undefined;
   if (input.inviteCode && !joinedHousehold) {
     throw new Error("That household invite code was not found.");
   }
 
+  const createdAt = new Date();
   const passwordHash = await hash(input.password, 10);
-  const userId = randomUUID();
-  const membershipId = randomUUID();
-  const createdAt = nowIso();
 
-  db.exec("BEGIN TRANSACTION");
+  await db.$transaction(async (tx) => {
+    const userId = randomUUID();
 
-  try {
-    db.prepare("INSERT INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
-      userId,
-      input.name.trim(),
-      email,
-      passwordHash,
-      createdAt,
-      createdAt,
-    );
+    await tx.user.create({
+      data: {
+        id: userId,
+        name: input.name.trim(),
+        email,
+        passwordHash,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
 
     let householdId = joinedHousehold?.id;
 
     if (!householdId) {
-      const household = cloneDefaultState();
-      const payload = householdStatePayload(household);
       householdId = randomUUID();
-      db.prepare(`
-        INSERT INTO households (id, name, invite_code, pantry_json, budget_income, budget_family_size, budget_goal, budget_style, chores_json, reminders_json, routines_json, assistant_history_json, latest_meal_plan_json, latest_budget_coach_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        householdId,
-        input.householdName?.trim() || `${input.name.trim()}'s household`,
-        generateInviteCode(),
-        payload.pantryJson,
-        payload.budgetIncome,
-        payload.budgetFamilySize,
-        payload.budgetGoal,
-        payload.budgetStyle,
-        payload.choresJson,
-        payload.remindersJson,
-        payload.routinesJson,
-        payload.assistantHistoryJson,
-        payload.latestMealPlanJson,
-        payload.latestBudgetCoachJson,
-        createdAt,
-        createdAt,
-      );
+      const payload = householdStatePayload(cloneDefaultState());
+
+      await tx.household.create({
+        data: {
+          id: householdId,
+          name: input.householdName?.trim() || `${input.name.trim()}'s household`,
+          inviteCode: generateInviteCode(),
+          pantryJson: payload.pantryJson,
+          budgetIncome: payload.budgetIncome,
+          budgetFamilySize: payload.budgetFamilySize,
+          budgetGoal: payload.budgetGoal,
+          budgetStyle: payload.budgetStyle,
+          choresJson: payload.choresJson,
+          remindersJson: payload.remindersJson,
+          routinesJson: payload.routinesJson,
+          assistantHistoryJson: payload.assistantHistoryJson,
+          latestMealPlanJson: payload.latestMealPlanJson,
+          latestBudgetCoachJson: payload.latestBudgetCoachJson,
+          createdAt,
+          updatedAt: createdAt,
+        },
+      });
     }
 
-    db.prepare("INSERT INTO memberships (id, user_id, household_id, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
-      membershipId,
-      userId,
-      householdId,
-      joinedHousehold ? "member" : "owner",
-      createdAt,
-    );
-
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+    await tx.membership.create({
+      data: {
+        id: randomUUID(),
+        userId,
+        householdId,
+        role: joinedHousehold ? "member" : "owner",
+        createdAt,
+      },
+    });
+  });
 }
