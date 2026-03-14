@@ -29,7 +29,7 @@ FamilyFlow AI is a staged Next.js web app for family planning. Stage 5A added ro
 ## Deployment checklist
 
 1. Set `NEXTAUTH_URL` to the final public app URL.
-2. Set `NEXTAUTH_SECRET` to a long random value of at least 32 characters.
+2. Set `NEXTAUTH_SECRET` to a long random value of at least 32 characters. The deployed app now requires this explicitly.
 3. Set `FAMILYFLOW_DB_PATH` to the SQLite file you want the app to use. If you omit it, the app defaults to `data/familyflow.db`.
 4. Set `OPENAI_API_KEY` if AI features should be enabled in production.
 5. Run `npm run check:env`.

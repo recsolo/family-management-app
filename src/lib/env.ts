@@ -1,5 +1,3 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { randomBytes } from "node:crypto";
 import { dirname, isAbsolute, join } from "node:path";
 
 const DEFAULT_DB_PATH = join(process.cwd(), "data", "familyflow.db");
@@ -56,16 +54,7 @@ export function getAuthSecret() {
     return BUILD_TIME_SECRET;
   }
 
-  const secretPath = join(getDatabaseDirectory(), "auth.secret");
-
-  if (existsSync(secretPath)) {
-    return readFileSync(secretPath, "utf8").trim();
-  }
-
-  mkdirSync(getDatabaseDirectory(), { recursive: true });
-  const generatedSecret = randomBytes(32).toString("hex");
-  writeFileSync(secretPath, `${generatedSecret}\n`, { encoding: "utf8" });
-  return generatedSecret;
+  return "";
 }
 
 export function isPlaceholderSecret(secret: string) {
