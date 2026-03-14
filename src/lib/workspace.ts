@@ -55,6 +55,10 @@ type RegisterInput = {
   inviteCode?: string;
 };
 
+type AttachHouseholdInput =
+  | { userId: string; householdName: string }
+  | { userId: string; inviteCode: string };
+
 function safeParse<T>(value: string | null | undefined, fallback: T): T {
   if (!value) {
     return fallback;
@@ -145,6 +149,11 @@ function getMemberInHousehold(householdId: string, memberId: string) {
   `);
 
   return statement.get(householdId, memberId) as MemberLookupRow | undefined;
+}
+
+function findHouseholdByInviteCode(inviteCode: string) {
+  const statement = db.prepare("SELECT * FROM households WHERE invite_code = ? LIMIT 1");
+  return statement.get(inviteCode.trim().toUpperCase()) as HouseholdRow | undefined;
 }
 
 function requireMembership(userId: string) {
@@ -298,6 +307,76 @@ export async function getWorkspaceForUser(userId: string) {
   };
 }
 
+export async function attachUserToHousehold(input: AttachHouseholdInput) {
+  const existingMembership = getMembershipForUser(input.userId);
+  if (existingMembership) {
+    throw new Error("This account is already linked to a household.");
+  }
+
+  const createdAt = nowIso();
+  const membershipId = randomUUID();
+
+  db.exec("BEGIN TRANSACTION");
+
+  try {
+    if ("inviteCode" in input) {
+      const joinedHousehold = findHouseholdByInviteCode(input.inviteCode);
+      if (!joinedHousehold) {
+        throw new Error("That household invite code was not found.");
+      }
+
+      db.prepare("INSERT INTO memberships (id, user_id, household_id, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
+        membershipId,
+        input.userId,
+        joinedHousehold.id,
+        "member",
+        createdAt,
+      );
+    } else {
+      const household = cloneDefaultState();
+      const payload = householdStatePayload(household);
+      const householdId = randomUUID();
+
+      db.prepare(`
+        INSERT INTO households (id, name, invite_code, pantry_json, budget_income, budget_family_size, budget_goal, budget_style, chores_json, reminders_json, routines_json, assistant_history_json, latest_meal_plan_json, latest_budget_coach_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        householdId,
+        input.householdName.trim(),
+        generateInviteCode(),
+        payload.pantryJson,
+        payload.budgetIncome,
+        payload.budgetFamilySize,
+        payload.budgetGoal,
+        payload.budgetStyle,
+        payload.choresJson,
+        payload.remindersJson,
+        payload.routinesJson,
+        payload.assistantHistoryJson,
+        payload.latestMealPlanJson,
+        payload.latestBudgetCoachJson,
+        createdAt,
+        createdAt,
+      );
+
+      db.prepare("INSERT INTO memberships (id, user_id, household_id, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
+        membershipId,
+        input.userId,
+        householdId,
+        "owner",
+        createdAt,
+      );
+    }
+
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  return getWorkspaceForUser(input.userId);
+}
+
 export async function registerUser(input: RegisterInput) {
   const email = input.email.trim().toLowerCase();
   const existing = db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").get(email) as { id: string } | undefined;
@@ -305,9 +384,7 @@ export async function registerUser(input: RegisterInput) {
     throw new Error("An account with that email already exists.");
   }
 
-  const joinedHousehold = input.inviteCode
-    ? (db.prepare("SELECT * FROM households WHERE invite_code = ? LIMIT 1").get(input.inviteCode.trim().toUpperCase()) as HouseholdRow | undefined)
-    : undefined;
+  const joinedHousehold = input.inviteCode ? findHouseholdByInviteCode(input.inviteCode) : undefined;
 
   if (input.inviteCode && !joinedHousehold) {
     throw new Error("That household invite code was not found.");

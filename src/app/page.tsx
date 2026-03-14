@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 
 import { AuthPanel } from "@/components/auth-panel";
 import { FamilyFlowApp } from "@/components/familyflow-app";
+import { WorkspaceRecoveryPanel } from "@/components/workspace-recovery-panel";
 import type { AppState } from "@/lib/familyflow";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
@@ -42,6 +43,7 @@ export default function Page() {
       })
       .catch((fetchError: unknown) => {
         if (!cancelled) {
+          setWorkspace(null);
           setError(fetchError instanceof Error ? fetchError.message : "Workspace load failed.");
         }
       });
@@ -66,6 +68,10 @@ export default function Page() {
 
   if (status !== "authenticated") {
     return <AuthPanel onSuccess={() => window.location.reload()} />;
+  }
+
+  if (error === "Workspace not found") {
+    return <WorkspaceRecoveryPanel error={error} onRecovered={(nextWorkspace) => { setError(null); setWorkspace(nextWorkspace); }} />;
   }
 
   if (error || !workspace) {
