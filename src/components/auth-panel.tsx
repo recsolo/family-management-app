@@ -67,101 +67,181 @@ export function AuthPanel({ onSuccess }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.75),_transparent_26%),linear-gradient(135deg,_#f7f0e3_0%,_#ead7b6_45%,_#dbe9e4_100%)] px-5 py-10 text-stone-900 lg:px-8">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr_0.9fr]">
-        <section className="rounded-[36px] bg-[linear-gradient(180deg,rgba(12,58,50,0.95),rgba(34,45,71,0.95))] p-8 text-stone-50 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-300">Stage 4</p>
-          <h1 className="mt-4 font-serif text-5xl leading-tight">FamilyFlow AI</h1>
-          <p className="mt-4 max-w-lg text-base leading-7 text-stone-200">
-            Persistent household workspaces are live now. Sign in, create a family workspace, or join one with an invite code.
-          </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-              <h2 className="font-serif text-2xl">What you get</h2>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-200">
-                <li>Shared chores, reminders, and routines</li>
-                <li>AI meal planning from pantry data</li>
-                <li>Budget coaching with household context</li>
-                <li>Invite-based family workspace access</li>
-              </ul>
+    <main className="family-stage overflow-hidden px-4 py-6 text-stone-900 sm:px-6 lg:px-8">
+      <div className="family-stage__glow family-stage__glow--one" />
+      <div className="family-stage__glow family-stage__glow--two" />
+      <div className="family-stage__glow family-stage__glow--three" />
+
+      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+        <section className="family-panel family-animate-rise overflow-hidden rounded-[42px] p-4 md:p-5">
+          <div className="family-card family-card-dark family-grid-lines rounded-[34px] p-8 md:p-10">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="family-badge family-badge-gold">White Gild edition</span>
+              <span className="rounded-full border border-[rgba(241,214,136,0.22)] bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-stone-200">
+                Household OS
+              </span>
             </div>
-            <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-              <h2 className="font-serif text-2xl">How access works</h2>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-200">
-                <li>Create a household and invite family members</li>
-                <li>Or join an existing household with its invite code</li>
-                <li>Your workspace is now saved in the database</li>
-              </ul>
+
+            <div className="mt-8 max-w-4xl">
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">FamilyFlow AI</p>
+              <h1 className="mt-5 font-serif text-6xl leading-[0.9] text-white sm:text-7xl">
+                A bright premium system for the family.
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-8 text-stone-200 sm:text-lg">
+                Meals, money, reminders, routines, and AI planning stay together in one elegant shared workspace instead of disappearing across tabs and texts.
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <span className="family-badge family-badge-gold">Pantry-first meals</span>
+              <span className="family-badge family-badge-accent">Private AI context</span>
+              <span className="family-badge family-badge-warm">Invite-based households</span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+            <article className="family-panel rounded-[30px] p-6 md:p-7">
+              <p className="family-kicker family-eyebrow">What it feels like</p>
+              <h2 className="mt-4 font-serif text-4xl leading-tight text-[var(--foreground)]">
+                Crisp, polished, and calm enough for everyday home life.
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
+                The visual system leans bright and premium, with black anchors for confidence and gold utility accents that make important actions easy to spot.
+              </p>
+            </article>
+
+            <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
+              <article className="family-side-stat">
+                <p className="family-kicker">Meals</p>
+                <h3 className="mt-3 font-serif text-3xl">Pantry smart</h3>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Lower-waste suggestions from what the house already has.</p>
+              </article>
+              <article className="family-card family-card-gold rounded-[24px] p-5">
+                <p className="family-kicker family-eyebrow">Budget</p>
+                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">Clearer money</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Coaching shaped by real household context and planning style.</p>
+              </article>
+              <article className="family-panel rounded-[24px] p-5">
+                <p className="family-kicker family-eyebrow">Ops</p>
+                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">Shared rhythm</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Chores, reminders, and routines in one calmer home base.</p>
+              </article>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-stone-900/10 bg-white/85 p-8 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
-          <div className="flex flex-wrap gap-3">
-            {[
-              ["signin", "Sign in"],
-              ["create", "Create household"],
-              ["join", "Join household"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setMode(value as Mode)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  mode === value ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+        <section className="family-panel family-animate-rise rounded-[42px] border-[rgba(228,192,92,0.22)] p-7 md:p-9">
+          <div className="family-card family-card-soft rounded-[28px] p-4">
+            <div className="flex flex-wrap gap-3">
+              {[
+                ["signin", "Sign in"],
+                ["create", "Create household"],
+                ["join", "Join household"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value as Mode)}
+                  className={`family-btn px-4 py-2 text-sm ${mode === value ? "family-btn-primary" : "family-btn-soft"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-8 grid gap-5 md:grid-cols-[1.02fr_0.98fr]">
+            <div className="family-panel rounded-[30px] p-6">
+              <p className="family-kicker family-eyebrow">
+                {mode === "signin" ? "Welcome back" : mode === "create" ? "Start your workspace" : "Join your family"}
+              </p>
+              <h2 className="mt-4 font-serif text-5xl leading-[0.98]">
+                {mode === "signin"
+                  ? "Sign in to your shared planning space."
+                  : mode === "create"
+                    ? "Create a beautiful home base for your family."
+                    : "Use your invite code to join the household."}
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
+                {mode === "signin"
+                  ? "Pick up exactly where your household left off."
+                  : mode === "create"
+                    ? "You will become the household owner and invite others afterward."
+                    : "Your account will connect to the existing family workspace."}
+              </p>
+            </div>
+
+            <div className="family-card family-card-dark rounded-[30px] rounded-bl-[64px] px-5 py-5 text-sm leading-7">
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Access note</p>
+              <p className="mt-4">
+                {mode === "signin"
+                  ? "Sign in with the account already linked to your household."
+                  : mode === "create"
+                    ? "Create the household once, then invite family members into the same shared system."
+                    : "Use the invite code from an existing household to reconnect to the same shared data."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-4">
             {(mode === "create" || mode === "join") && (
               <label className="block text-sm font-medium text-stone-700">
                 Your name
-                <input value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" />
+                <input value={name} onChange={(event) => setName(event.target.value)} className="family-input mt-2" />
               </label>
             )}
             <label className="block text-sm font-medium text-stone-700">
               Email
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} className="family-input mt-2" />
             </label>
             <label className="block text-sm font-medium text-stone-700">
               Password
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" />
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="family-input mt-2" />
             </label>
             {mode === "create" && (
               <label className="block text-sm font-medium text-stone-700">
                 Household name
-                <input value={householdName} onChange={(event) => setHouseholdName(event.target.value)} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" />
+                <input value={householdName} onChange={(event) => setHouseholdName(event.target.value)} className="family-input mt-2" />
               </label>
             )}
             {mode === "join" && (
               <label className="block text-sm font-medium text-stone-700">
                 Invite code
-                <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value.toUpperCase())} className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 uppercase tracking-[0.2em]" />
+                <input
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                  className="family-input mt-2 uppercase tracking-[0.24em]"
+                />
               </label>
             )}
           </div>
 
-          {error && <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-900">{error}</p>}
+          {error && (
+            <p className="mt-5 rounded-[22px] border border-rose-200 bg-rose-50/95 px-4 py-3 text-sm leading-6 text-rose-900">
+              {error}
+            </p>
+          )}
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (mode === "signin") {
-                void handleSignIn();
-                return;
-              }
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (mode === "signin") {
+                  void handleSignIn();
+                  return;
+                }
 
-              void handleRegister(mode);
-            }}
-            className="mt-6 rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? "Working..." : mode === "signin" ? "Sign in" : mode === "create" ? "Create workspace" : "Join household"}
-          </button>
+                void handleRegister(mode);
+              }}
+              className="family-btn family-btn-primary min-w-[13rem]"
+            >
+              {busy ? "Working..." : mode === "signin" ? "Sign in" : mode === "create" ? "Create workspace" : "Join household"}
+            </button>
+            <p className="text-sm leading-6 text-[var(--muted)]">
+              Your data stays inside the household workspace and powers the AI planning context.
+            </p>
+          </div>
         </section>
       </div>
     </main>

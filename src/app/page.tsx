@@ -57,10 +57,18 @@ export default function Page() {
 
   if (status === "loading" || loadingWorkspace) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.75),_transparent_26%),linear-gradient(135deg,_#f7f0e3_0%,_#ead7b6_45%,_#dbe9e4_100%)] p-8 text-stone-900">
-        <div className="mx-auto max-w-3xl rounded-[32px] border border-stone-900/10 bg-white/85 p-8 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-stone-500">FamilyFlow AI</p>
-          <h1 className="mt-4 font-serif text-4xl">Loading your household workspace...</h1>
+      <main className="family-stage overflow-hidden px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+        <div className="family-stage__glow family-stage__glow--one" />
+        <div className="family-stage__glow family-stage__glow--two" />
+        <div className="family-stage__glow family-stage__glow--three" />
+        <div className="mx-auto max-w-3xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
+          <div className="family-panel rounded-[32px] p-8 md:p-10">
+            <p className="family-kicker family-eyebrow">White Gild loading state</p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">Loading your household workspace...</h1>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
+              Pulling in your shared meals, budget, routines, reminders, and household context.
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -76,11 +84,16 @@ export default function Page() {
 
   if (error || !workspace) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.75),_transparent_26%),linear-gradient(135deg,_#f7f0e3_0%,_#ead7b6_45%,_#dbe9e4_100%)] p-8 text-stone-900">
-        <div className="mx-auto max-w-3xl rounded-[32px] border border-rose-200 bg-white/90 p-8 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-rose-700">Workspace error</p>
-          <h1 className="mt-4 font-serif text-4xl">We couldn&apos;t load the household workspace.</h1>
-          <p className="mt-4 text-sm leading-6 text-stone-700">{error ?? "Unknown error."}</p>
+      <main className="family-stage overflow-hidden px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+        <div className="family-stage__glow family-stage__glow--one" />
+        <div className="family-stage__glow family-stage__glow--two" />
+        <div className="family-stage__glow family-stage__glow--three" />
+        <div className="mx-auto max-w-3xl rounded-[36px] border border-rose-200/70 bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
+          <div className="family-panel rounded-[32px] border border-rose-200/80 p-8 md:p-10">
+            <p className="family-kicker text-rose-700">Workspace error</p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">We couldn&apos;t load the household workspace.</h1>
+            <p className="mt-4 text-sm leading-7 text-stone-700">{error ?? "Unknown error."}</p>
+          </div>
         </div>
       </main>
     );

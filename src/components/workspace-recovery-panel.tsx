@@ -55,69 +55,108 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.75),_transparent_26%),linear-gradient(135deg,_#f7f0e3_0%,_#ead7b6_45%,_#dbe9e4_100%)] p-8 text-stone-900">
-      <div className="mx-auto max-w-3xl rounded-[32px] border border-amber-200 bg-white/90 p-8 shadow-[0_20px_45px_rgba(65,48,32,0.12)]">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-700">Workspace recovery</p>
-        <h1 className="mt-4 font-serif text-4xl">This account is signed in, but it is not linked to a household yet.</h1>
-        <p className="mt-4 text-sm leading-6 text-stone-700">{error}</p>
+    <main className="family-stage overflow-hidden px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+      <div className="family-stage__glow family-stage__glow--one" />
+      <div className="family-stage__glow family-stage__glow--two" />
+      <div className="family-stage__glow family-stage__glow--three" />
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("create")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "create" ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700 hover:bg-stone-200"}`}
-          >
-            Create household
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("join")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "join" ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700 hover:bg-stone-200"}`}
-          >
-            Join household
-          </button>
-        </div>
+      <div className="mx-auto max-w-5xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
+        <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <section className="family-card family-card-dark family-grid-lines rounded-[32px] p-8 text-stone-50">
+            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Workspace recovery</p>
+            <h1 className="mt-4 max-w-lg font-serif text-5xl leading-tight">
+              You are signed in. Now let&apos;s reconnect you to a household.
+            </h1>
+            <p className="mt-5 max-w-lg text-base leading-7 text-stone-200">{error}</p>
 
-        <div className="mt-6 space-y-4">
-          {mode === "create" ? (
-            <label className="block text-sm font-medium text-stone-700">
-              Household name
-              <input
-                value={householdName}
-                onChange={(event) => setHouseholdName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3"
-              />
-            </label>
-          ) : (
-            <label className="block text-sm font-medium text-stone-700">
-              Invite code
-              <input
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-                className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 uppercase tracking-[0.2em]"
-              />
-            </label>
-          )}
-        </div>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
+                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Create</p>
+                <h2 className="mt-3 font-serif text-3xl">New household</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Start a fresh family workspace and become the owner for invites, roles, and settings.</p>
+              </div>
+              <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
+                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Join</p>
+                <h2 className="mt-3 font-serif text-3xl">Existing household</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Use an invite code to reconnect this account to the same shared family data.</p>
+              </div>
+            </div>
+          </section>
 
-        {recoveryError && <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-900">{recoveryError}</p>}
+          <section className="family-panel rounded-[32px] p-7">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setMode("create")}
+                className={`family-btn px-4 py-2 text-sm ${mode === "create" ? "family-btn-primary" : "family-btn-soft"}`}
+              >
+                Create household
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("join")}
+                className={`family-btn px-4 py-2 text-sm ${mode === "join" ? "family-btn-primary" : "family-btn-soft"}`}
+              >
+                Join household
+              </button>
+            </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => void handleRecover()}
-            disabled={busy}
-            className="rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? "Working..." : mode === "create" ? "Create household" : "Join household"}
-          </button>
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-700"
-          >
-            Sign out
-          </button>
+            <div className="mt-7">
+              <p className="family-kicker family-eyebrow">{mode === "create" ? "Fresh setup" : "Reconnect with code"}</p>
+              <h2 className="mt-3 font-serif text-4xl leading-tight">
+                {mode === "create" ? "Create the household shell for this account." : "Enter the invite code from your family workspace."}
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
+                This keeps the account you already authenticated with and simply restores the missing household link.
+              </p>
+            </div>
+
+            <div className="mt-7 space-y-4">
+              {mode === "create" ? (
+                <label className="block text-sm font-medium text-stone-700">
+                  Household name
+                  <input
+                    value={householdName}
+                    onChange={(event) => setHouseholdName(event.target.value)}
+                    className="family-input mt-2"
+                  />
+                </label>
+              ) : (
+                <label className="block text-sm font-medium text-stone-700">
+                  Invite code
+                  <input
+                    value={inviteCode}
+                    onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                    className="family-input mt-2 uppercase tracking-[0.24em]"
+                  />
+                </label>
+              )}
+            </div>
+
+            {recoveryError && (
+              <p className="mt-5 rounded-[22px] border border-rose-200 bg-rose-50/95 px-4 py-3 text-sm leading-6 text-rose-900">
+                {recoveryError}
+              </p>
+            )}
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void handleRecover()}
+                disabled={busy}
+                className="family-btn family-btn-primary"
+              >
+                {busy ? "Working..." : mode === "create" ? "Create household" : "Join household"}
+              </button>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="family-btn family-btn-secondary"
+              >
+                Sign out
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </main>
