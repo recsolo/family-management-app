@@ -32,6 +32,10 @@ function findUserByEmail(email: string) {
 
 const authRuntime = getAuthRuntimeConfig();
 
+if (authRuntime.secret) {
+  process.env.NEXTAUTH_SECRET = authRuntime.secret;
+}
+
 if (!process.env.NEXTAUTH_URL) {
   process.env.NEXTAUTH_URL = getAppUrl();
 }
