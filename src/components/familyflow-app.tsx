@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -15,12 +16,13 @@ import {
   type ChatMessage,
   type MealPlan,
 } from "@/lib/familyflow";
+import { getWorkspacePath, type ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
-type ActiveTab = "dashboard" | "ops" | "meals" | "budget" | "family" | "ai";
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
 
 type Props = {
+  activeTab: ActiveTab;
   currentUserId: string;
   initialState: AppState;
   householdName: string;
@@ -31,6 +33,7 @@ type Props = {
 };
 
 export function FamilyFlowApp({
+  activeTab,
   currentUserId,
   initialState,
   householdName: initialHouseholdName,
@@ -39,8 +42,8 @@ export function FamilyFlowApp({
   userName,
   members,
 }: Props) {
+  const router = useRouter();
   const initialMemberNames = Array.from(new Set(members.map((member) => member.name.trim()).filter(Boolean)));
-  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [state, setState] = useState<AppState>(initialState);
   const [householdName, setHouseholdName] = useState(initialHouseholdName);
   const [householdNameInput, setHouseholdNameInput] = useState(initialHouseholdName);
@@ -125,6 +128,10 @@ export function FamilyFlowApp({
     await persistState(nextState);
   }
 
+  function goToTab(tab: ActiveTab) {
+    router.push(getWorkspacePath(tab));
+  }
+
   async function callAi<T>(payload: { kind: "assistant" | "meal-plan" | "budget-coach"; prompt?: string; history?: ChatMessage[] }) {
     const response = await fetch("/api/assistant", {
       method: "POST",
@@ -169,7 +176,7 @@ export function FamilyFlowApp({
     try {
       const data = await callAi<MealPlan>({ kind: "meal-plan" });
       setState((current) => ({ ...current, latestMealPlan: data }));
-      setActiveTab("meals");
+      goToTab("meals");
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "The meal planner could not generate a plan.");
     } finally {
@@ -183,7 +190,7 @@ export function FamilyFlowApp({
     try {
       const data = await callAi<BudgetCoach>({ kind: "budget-coach" });
       setState((current) => ({ ...current, latestBudgetCoach: data }));
-      setActiveTab("budget");
+      goToTab("budget");
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "The budget coach could not respond.");
     } finally {
@@ -461,7 +468,7 @@ export function FamilyFlowApp({
                     key={item.value}
                     type="button"
                     aria-current={activeTab === item.value ? "page" : undefined}
-                    onClick={() => setActiveTab(item.value)}
+                    onClick={() => goToTab(item.value)}
                     className={`family-tab ${activeTab === item.value ? "family-tab-active" : ""}`}
                   >
                     <span className="family-kicker">{item.detail}</span>
@@ -495,7 +502,7 @@ export function FamilyFlowApp({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("ai")}
+                  onClick={() => goToTab("ai")}
                   className="family-btn family-btn-ghost w-full justify-between"
                 >
                   <span>Open AI Studio</span>
@@ -584,10 +591,10 @@ export function FamilyFlowApp({
                     </div>
                   )}
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => setActiveTab("meals")} className="family-btn family-btn-primary">
+                    <button type="button" onClick={() => goToTab("meals")} className="family-btn family-btn-primary">
                       Open meal planner
                     </button>
-                    <button type="button" onClick={() => setActiveTab("ai")} className="family-btn family-btn-ghost">
+                    <button type="button" onClick={() => goToTab("ai")} className="family-btn family-btn-ghost">
                       Ask assistant
                     </button>
                   </div>
@@ -600,7 +607,7 @@ export function FamilyFlowApp({
                     <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
                       {savingsPercent}% of income, or about ${savingsAmount.toLocaleString()} monthly, is being reserved for savings.
                     </p>
-                    <button type="button" onClick={() => setActiveTab("budget")} className="family-btn family-btn-secondary mt-5">
+                    <button type="button" onClick={() => goToTab("budget")} className="family-btn family-btn-secondary mt-5">
                       Open Budget Lab
                     </button>
                   </article>
