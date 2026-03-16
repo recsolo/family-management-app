@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:routes": "node scripts/verify-routed-pages.mjs",
+    "verify:app": "npm run lint && npm run build && npm run test:routes",
     "check:env": "node scripts/check-env.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy"
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.58.2",
     "prisma": "^7.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"

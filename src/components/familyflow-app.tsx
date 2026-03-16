@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
+import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import {
   createId,
   getBudgetPlan,
@@ -11,8 +12,6 @@ import {
   RECIPES,
   type AppState,
   type BudgetCoach,
-  type BudgetGoal,
-  type BudgetStyle,
   type ChatMessage,
   type MealPlan,
 } from "@/lib/familyflow";
@@ -981,8 +980,72 @@ export function FamilyFlowApp({
             </section>
 
             <section className="space-y-5">
+              <WorkspacePageSections
+                activeTab={activeTab}
+                currentUserId={currentUserId}
+                state={state}
+                memberList={memberList}
+                memberNames={memberNames}
+                role={role}
+                householdNameInput={householdNameInput}
+                setHouseholdNameInput={setHouseholdNameInput}
+                inviteCode={inviteCode}
+                canManageHousehold={canManageHousehold}
+                canManageRoles={canManageRoles}
+                canRemoveMembers={canRemoveMembers}
+                ingredientInput={ingredientInput}
+                setIngredientInput={setIngredientInput}
+                choreTitle={choreTitle}
+                setChoreTitle={setChoreTitle}
+                choreAssignee={choreAssignee}
+                setChoreAssignee={setChoreAssignee}
+                reminderTitle={reminderTitle}
+                setReminderTitle={setReminderTitle}
+                reminderWhen={reminderWhen}
+                setReminderWhen={setReminderWhen}
+                reminderAudience={reminderAudience}
+                setReminderAudience={setReminderAudience}
+                routineName={routineName}
+                setRoutineName={setRoutineName}
+                routineTimeWindow={routineTimeWindow}
+                setRoutineTimeWindow={setRoutineTimeWindow}
+                routineItems={routineItems}
+                setRoutineItems={setRoutineItems}
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                aiTask={aiTask}
+                rotatingInvite={rotatingInvite}
+                savingHouseholdName={savingHouseholdName}
+                memberActionId={memberActionId}
+                assistantSuggestions={assistantSuggestions}
+                recipeMatches={recipeMatches}
+                bestRecipe={bestRecipe}
+                budgetPlan={budgetPlan}
+                savingsPercent={savingsPercent}
+                savingsAmount={savingsAmount}
+                completedChores={completedChores}
+                openChores={openChores}
+                ownerCount={ownerCount}
+                adminCount={adminCount}
+                goToTab={goToTab}
+                handleAssistantPrompt={handleAssistantPrompt}
+                generateMealPlan={() => void generateMealPlan()}
+                generateBudgetCoach={() => void generateBudgetCoach()}
+                rotateInviteCode={() => void rotateInviteCode()}
+                saveHouseholdDetails={(event) => void saveHouseholdDetails(event)}
+                updateMember={(memberId, nextRole) => void updateMember(memberId, nextRole)}
+                removeMember={(memberId) => void removeMember(memberId)}
+                addPantryItems={(event) => void addPantryItems(event)}
+                updateBudget={(key, value) => void updateBudget(key, value)}
+                addChore={(event) => void addChore(event)}
+                toggleChore={(id) => void toggleChore(id)}
+                addReminder={(event) => void addReminder(event)}
+                removeReminder={(id) => void removeReminder(id)}
+                addRoutine={(event) => void addRoutine(event)}
+              />
 
-            {activeTab === "dashboard" && (
+              {/*
+            {false && activeTab === "dashboard" && (
               <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <article className="family-card family-card-dark family-animate-rise rounded-[34px] p-7">
                   <p className="family-kicker text-[rgba(241,214,136,0.76)]">Tonight&apos;s dinner signal</p>
@@ -1107,7 +1170,7 @@ export function FamilyFlowApp({
               </div>
             )}
 
-            {activeTab === "ops" && (
+            {false && activeTab === "ops" && (
               <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
                 <article className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-6 md:p-7">
                   <p className="family-kicker family-eyebrow">Chore composer</p>
@@ -1216,7 +1279,7 @@ export function FamilyFlowApp({
               </div>
             )}
 
-            {activeTab === "meals" && (
+            {false && activeTab === "meals" && (
               <div className="space-y-5">
                 <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
                   <article className="family-panel family-surface-warm family-animate-rise rounded-[28px] p-6 md:p-7"><p className="family-kicker family-eyebrow">Pantry inventory</p><h3 className="mt-4 font-serif text-4xl leading-tight">Cook from what you already have.</h3><form className="mt-6 space-y-4" onSubmit={(event) => void addPantryItems(event)}><label className="block text-sm font-medium text-stone-700">Add ingredients<input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" /></label><button type="submit" className="family-btn family-btn-primary">Add pantry items</button></form><div className="mt-6 flex flex-wrap gap-2">{state.pantry.length > 0 ? state.pantry.map((ingredient) => <span key={ingredient} className="family-badge family-badge-gold">{ingredient}</span>) : <div className="family-empty w-full rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Add a few pantry staples and the planner will start suggesting lower-waste meals.</div>}</div></article>
@@ -1226,7 +1289,7 @@ export function FamilyFlowApp({
               </div>
             )}
 
-            {activeTab === "budget" && (
+            {false && activeTab === "budget" && (
               <div className="space-y-5">
                 <div className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
                   <article className="family-panel family-animate-rise rounded-[28px] p-6 md:p-7"><p className="family-kicker family-eyebrow">Planner inputs</p><h3 className="mt-4 font-serif text-4xl leading-tight">Build a family spending plan.</h3><div className="mt-6 space-y-4"><label className="block text-sm font-medium text-stone-700">Monthly take-home income<input type="number" min="0" step="100" value={state.budget.income} onChange={(event) => void updateBudget("income", Number(event.target.value) || 0)} className="family-input mt-2" /></label><label className="block text-sm font-medium text-stone-700">Family size<input type="number" min="1" max="10" value={state.budget.familySize} onChange={(event) => void updateBudget("familySize", Number(event.target.value) || 1)} className="family-input mt-2" /></label><label className="block text-sm font-medium text-stone-700">Primary goal<select value={state.budget.goal} onChange={(event) => void updateBudget("goal", event.target.value as BudgetGoal)} className="family-select mt-2"><option value="stability">Monthly stability</option><option value="savings">Increase savings</option><option value="debt">Pay down debt</option></select></label><label className="block text-sm font-medium text-stone-700">Planning style<select value={state.budget.style} onChange={(event) => void updateBudget("style", event.target.value as BudgetStyle)} className="family-select mt-2"><option value="balanced">Balanced</option><option value="lean">Lean</option><option value="comfort">Comfort-first</option></select></label></div></article>
@@ -1236,7 +1299,7 @@ export function FamilyFlowApp({
               </div>
             )}
 
-            {activeTab === "family" && (
+            {false && activeTab === "family" && (
               <div className="grid gap-5 xl:grid-cols-[1fr_1fr_1.1fr]">
                 <article className="family-panel family-animate-rise rounded-[28px] p-6 md:p-7">
                   <p className="family-kicker family-eyebrow">Household members</p>
@@ -1336,12 +1399,13 @@ export function FamilyFlowApp({
               </div>
             )}
 
-            {activeTab === "ai" && (
+            {false && activeTab === "ai" && (
               <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
                 <article className="family-panel family-animate-rise rounded-[28px] p-6 md:p-7"><p className="family-kicker family-eyebrow">AI Studio</p><h3 className="mt-4 font-serif text-4xl leading-tight">Talk to the family assistant.</h3><div className="mt-6 space-y-4"><div className="family-scroll max-h-[420px] space-y-3 overflow-y-auto rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,251,245,0.55)] p-4">{state.assistantHistory.length > 0 ? state.assistantHistory.map((message, index) => <div key={`${message.role}-${index}`} className={`rounded-[20px] px-4 py-3 text-sm leading-7 ${message.role === "assistant" ? "family-chat-assistant" : "family-chat-user"}`}><p className="family-kicker opacity-70">{message.role === "assistant" ? "FamilyFlow AI" : "You"}</p><p className="mt-2">{message.content}</p></div>) : <div className="family-empty rounded-[22px] p-5 text-sm leading-7 text-[var(--muted)]">Start the conversation with a weekly planning question, a school-night reset, or a pantry-to-dinner request.</div>}</div><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleAssistantPrompt(chatInput); }}><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} rows={4} placeholder="Ask for a weekly plan, meal help, school-night reset, or reminder strategy." className="family-textarea mt-2" /><button type="submit" disabled={aiTask !== null} className="family-btn family-btn-primary">{aiTask === "assistant" ? "Thinking..." : "Send to assistant"}</button></form></div></article>
                 <article className="space-y-5"><div className="family-panel family-surface-warm family-animate-rise rounded-[28px] p-6 md:p-7"><p className="family-kicker family-eyebrow">Quick prompts</p><h3 className="mt-4 font-serif text-4xl leading-tight">Start with a useful question.</h3><div className="mt-5 grid gap-3">{assistantSuggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => handleAssistantPrompt(suggestion)} disabled={aiTask !== null} className="family-btn family-btn-soft justify-start rounded-[20px] px-4 py-4 text-left text-sm font-medium">{suggestion}</button>)}</div></div><div className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-6 md:p-7"><p className="family-kicker family-eyebrow">Shared context</p><h3 className="mt-4 font-serif text-4xl leading-tight">What the assistant sees.</h3><ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]"><li>Current pantry and budget settings</li><li>Shared chores, reminders, and routines</li><li>Household workspace data from the database</li><li>Recent conversation history from this family workspace</li></ul></div></article>
               </div>
             )}
+              */}
 
             </section>
           </div>

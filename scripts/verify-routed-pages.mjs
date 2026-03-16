@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 
-const baseUrl = "https://family-management-app-production-4d5a.up.railway.app";
+const baseUrl = process.env.FAMILYFLOW_BASE_URL ?? "https://family-management-app-production-4d5a.up.railway.app";
+const browserChannel = process.env.FAMILYFLOW_BROWSER_CHANNEL ?? "msedge";
 const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
 const email = `route-check-${timestamp}@example.com`;
 const password = "FamilyFlowTest123!";
@@ -46,7 +47,7 @@ const routeChecks = [
 
 async function main() {
   const browser = await chromium.launch({
-    channel: "msedge",
+    channel: browserChannel,
     headless: true,
   });
 
@@ -67,14 +68,20 @@ async function main() {
     await page.getByRole("button", { name: "Create workspace" }).click();
 
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 30000 });
-    await page.getByText("Tonight's dinner signal").waitFor({ state: "visible", timeout: 30000 });
+    await page.getByText("Tonight's dinner signal", { exact: true }).first().waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
 
     for (const check of routeChecks) {
       await page.getByRole("button", { name: new RegExp(check.label, "i") }).first().click();
       await page.waitForURL(`${baseUrl}${check.path}`, { timeout: 15000 });
-      await page.getByText(check.expectedText, { exact: true }).waitFor({ state: "visible", timeout: 15000 });
+      await page.getByText(check.expectedText, { exact: true }).first().waitFor({
+        state: "visible",
+        timeout: 15000,
+      });
 
-      const expectedVisible = await page.getByText(check.expectedText, { exact: true }).isVisible();
+      const expectedVisible = await page.getByText(check.expectedText, { exact: true }).first().isVisible();
       const unexpectedVisible = await page.getByText(check.unexpectedText, { exact: true }).isVisible().catch(() => false);
 
       results.push({
