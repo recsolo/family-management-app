@@ -105,46 +105,46 @@ export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
 
 export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
   dashboard: {
-    eyebrow: "Household command deck",
-    headline: "Everything your family needs, arranged like a concierge desk.",
+    eyebrow: "Ready for today?",
+    headline: "See what your family needs next.",
     description:
-      "Meals, money, reminders, access, and shared progress surface from one calmer control room instead of six scattered tools.",
-    spotlight: "Best when you want the strongest next move without hunting for it.",
+      "Meals, money, reminders, and progress all show up in one easy spot.",
+    spotlight: "Start here when you want a quick check.",
   },
   ops: {
-    eyebrow: "Daily execution",
-    headline: "Run home logistics with clarity, not clutter.",
+    eyebrow: "Let's get things done",
+    headline: "Finish chores and keep reminders easy to see.",
     description:
-      "Compose chores, capture reminders, and keep the shared queue moving with interfaces that make status obvious at a glance.",
-    spotlight: "Use this view when you need to assign work quickly and keep the household aligned.",
+      "Add chores, assign jobs, and keep family reminders in one place.",
+    spotlight: "Open this page when it is time to work together.",
   },
   meals: {
-    eyebrow: "Pantry-first planning",
-    headline: "Turn what you already have into dinner decisions that feel intentional.",
+    eyebrow: "What's for dinner?",
+    headline: "Pick meals from what is already at home.",
     description:
-      "The meal planner combines pantry inventory, recipe matching, and AI-generated plans so cooking choices are easier and lower waste.",
-    spotlight: "Strongest when your pantry is current and you want a multi-day meal path.",
+      "Use the pantry, recipe matches, and AI help to make dinner easier.",
+    spotlight: "Open this page when you want meal ideas fast.",
   },
   budget: {
-    eyebrow: "Money planning",
-    headline: "Make the monthly plan feel readable, grounded, and action-ready.",
+    eyebrow: "Money made simple",
+    headline: "See a clear plan for your family money.",
     description:
-      "Budget Lab translates income, family size, and planning style into practical allocations plus coaching the household can use.",
-    spotlight: "Ideal for setting the monthly plan or pressure-testing the current one.",
+      "Budget Lab turns your numbers into a simple monthly plan and AI help.",
+    spotlight: "Open this page to check or change the budget.",
   },
   family: {
-    eyebrow: "Access and identity",
-    headline: "Keep the household workspace polished behind the scenes too.",
+    eyebrow: "Family setup",
+    headline: "Invite family and keep everyone organized.",
     description:
-      "Roles, invites, household naming, and repeatable routines live together here so the family system stays organized as it grows.",
-    spotlight: "Come here to manage access, rename the household, or shape repeatable routines.",
+      "Members, invite links, the family name, and routines all live here.",
+    spotlight: "Come here to invite family or update settings.",
   },
   ai: {
-    eyebrow: "Private assistant",
-    headline: "Ask one assistant that already understands the household context.",
+    eyebrow: "Need help?",
+    headline: "Ask FamilyFlow to help with meals, chores, and plans.",
     description:
-      "AI Studio uses the shared workspace as context, so weekly plans, meal help, and budget coaching stay grounded in real family data.",
-    spotlight: "Best when you want the assistant to synthesize everything into practical next steps.",
+      "AI Studio uses your real family data, so the answers feel useful and specific.",
+    spotlight: "Open this page when you want ideas or a quick plan.",
   },
 };
 

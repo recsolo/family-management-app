@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 
@@ -10,14 +11,27 @@ type Props = {
 type Mode = "signin" | "create" | "join";
 
 export function AuthPanel({ onSuccess }: Props) {
-  const [mode, setMode] = useState<Mode>("signin");
+  const searchParams = useSearchParams();
+  const queryMode = searchParams.get("mode");
+  const queryInviteCode = searchParams.get("inviteCode")?.toUpperCase() ?? "";
+  const inviteHouseholdName = searchParams.get("household")?.trim() ?? "";
+  const defaultMode: Mode =
+    queryMode === "create" || queryMode === "signin"
+      ? queryMode
+      : queryMode === "join" || queryInviteCode
+        ? "join"
+        : "signin";
+
+  const [modeOverride, setModeOverride] = useState<Mode | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [householdName, setHouseholdName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCodeInput, setInviteCodeInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const mode = modeOverride ?? defaultMode;
+  const inviteCode = inviteCodeInput ?? queryInviteCode;
 
   async function handleSignIn() {
     setBusy(true);
@@ -78,17 +92,17 @@ export function AuthPanel({ onSuccess }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="family-badge family-badge-gold">White Gild edition</span>
               <span className="rounded-full border border-[rgba(241,214,136,0.22)] bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-stone-200">
-                Household OS
+                Shared family app
               </span>
             </div>
 
             <div className="mt-8 max-w-4xl">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">FamilyFlow AI</p>
               <h1 className="mt-5 font-serif text-6xl leading-[0.9] text-white sm:text-7xl">
-                A bright premium system for the family.
+                Team up at home.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-stone-200 sm:text-lg">
-                Meals, money, reminders, routines, and AI planning stay together in one elegant shared workspace instead of disappearing across tabs and texts.
+                Keep meals, money, chores, reminders, routines, and AI help in one easy family space.
               </p>
             </div>
 
@@ -101,30 +115,30 @@ export function AuthPanel({ onSuccess }: Props) {
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
             <article className="family-panel rounded-[30px] p-6 md:p-7">
-              <p className="family-kicker family-eyebrow">What it feels like</p>
+              <p className="family-kicker family-eyebrow">What you can do</p>
               <h2 className="mt-4 font-serif text-4xl leading-tight text-[var(--foreground)]">
-                Crisp, polished, and calm enough for everyday home life.
+                Easy enough for everyone to use.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
-                The visual system leans bright and premium, with black anchors for confidence and gold utility accents that make important actions easy to spot.
+                It keeps family plans in one place so nobody has to hunt through texts, notes, or memory.
               </p>
             </article>
 
             <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
               <article className="family-side-stat">
                 <p className="family-kicker">Meals</p>
-                <h3 className="mt-3 font-serif text-3xl">Pantry smart</h3>
-                <p className="mt-3 text-sm leading-6 text-stone-200">Lower-waste suggestions from what the house already has.</p>
+                <h3 className="mt-3 font-serif text-3xl">Pick tonight&apos;s meal</h3>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Get meal ideas from what is already at home.</p>
               </article>
               <article className="family-card family-card-gold rounded-[24px] p-5">
                 <p className="family-kicker family-eyebrow">Budget</p>
-                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">Clearer money</h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Coaching shaped by real household context and planning style.</p>
+                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">See your money plan</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Check the plan and get AI help.</p>
               </article>
               <article className="family-panel rounded-[24px] p-5">
                 <p className="family-kicker family-eyebrow">Ops</p>
-                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">Shared rhythm</h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Chores, reminders, and routines in one calmer home base.</p>
+                <h3 className="mt-3 font-serif text-3xl text-[var(--foreground)]">Work together</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Track chores, reminders, and routines together.</p>
               </article>
             </div>
           </div>
@@ -135,13 +149,13 @@ export function AuthPanel({ onSuccess }: Props) {
             <div className="flex flex-wrap gap-3">
               {[
                 ["signin", "Sign in"],
-                ["create", "Create household"],
-                ["join", "Join household"],
+                ["create", "Create family"],
+                ["join", "Join family"],
               ].map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setMode(value as Mode)}
+                  onClick={() => setModeOverride(value as Mode)}
                   className={`family-btn px-4 py-2 text-sm ${mode === value ? "family-btn-primary" : "family-btn-soft"}`}
                 >
                   {label}
@@ -153,21 +167,23 @@ export function AuthPanel({ onSuccess }: Props) {
           <div className="mt-8 grid gap-5 md:grid-cols-[1.02fr_0.98fr]">
             <div className="family-panel rounded-[30px] p-6">
               <p className="family-kicker family-eyebrow">
-                {mode === "signin" ? "Welcome back" : mode === "create" ? "Start your workspace" : "Join your family"}
+                {mode === "signin" ? "Welcome back" : mode === "create" ? "Start here" : "Join your family"}
               </p>
               <h2 className="mt-4 font-serif text-5xl leading-[0.98]">
                 {mode === "signin"
-                  ? "Sign in to your shared planning space."
+                  ? "Jump back into your family space."
                   : mode === "create"
-                    ? "Create a beautiful home base for your family."
-                    : "Use your invite code to join the household."}
+                    ? "Create a family space."
+                    : inviteHouseholdName
+                      ? `Join ${inviteHouseholdName}.`
+                      : "Join your family."}
               </h2>
               <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
                 {mode === "signin"
-                  ? "Pick up exactly where your household left off."
+                  ? "Pick up where your family left off."
                   : mode === "create"
-                    ? "You will become the household owner and invite others afterward."
-                    : "Your account will connect to the existing family workspace."}
+                    ? "You will be the owner and can invite everyone else after setup."
+                    : "Use the link or code your family sent you."}
               </p>
             </div>
 
@@ -175,10 +191,10 @@ export function AuthPanel({ onSuccess }: Props) {
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Access note</p>
               <p className="mt-4">
                 {mode === "signin"
-                  ? "Sign in with the account already linked to your household."
+                  ? "Use the account already linked to your household."
                   : mode === "create"
-                    ? "Create the household once, then invite family members into the same shared system."
-                    : "Use the invite code from an existing household to reconnect to the same shared data."}
+                    ? "Create the family space once, then invite everyone else."
+                    : "Use the invite link or code to join the same shared space."}
               </p>
             </div>
           </div>
@@ -209,7 +225,7 @@ export function AuthPanel({ onSuccess }: Props) {
                 Invite code
                 <input
                   value={inviteCode}
-                  onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                  onChange={(event) => setInviteCodeInput(event.target.value.toUpperCase())}
                   className="family-input mt-2 uppercase tracking-[0.24em]"
                 />
               </label>
@@ -236,10 +252,10 @@ export function AuthPanel({ onSuccess }: Props) {
               }}
               className="family-btn family-btn-primary min-w-[13rem]"
             >
-              {busy ? "Working..." : mode === "signin" ? "Sign in" : mode === "create" ? "Create workspace" : "Join household"}
+              {busy ? "Working..." : mode === "signin" ? "Sign in" : mode === "create" ? "Create family space" : "Join family"}
             </button>
             <p className="text-sm leading-6 text-[var(--muted)]">
-              Your data stays inside the household workspace and powers the AI planning context.
+              Your household data stays together and powers the AI tools.
             </p>
           </div>
         </section>

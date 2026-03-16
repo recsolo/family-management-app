@@ -43,12 +43,12 @@ async function main() {
 
   try {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Create household" }).click();
+    await page.getByRole("button", { name: "Create family" }).click();
     await page.getByLabel("Your name").fill("Core Check");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByLabel("Household name").fill(householdName);
-    await page.getByRole("button", { name: "Create workspace" }).click();
+    await page.getByRole("button", { name: "Create family space" }).click();
 
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 30000 });
     results.push({ step: "create-household", ok: true, url: page.url() });
@@ -105,7 +105,7 @@ async function main() {
 
     await page.getByRole("button", { name: /AI Studio/i }).first().click();
     await page.waitForURL(`${baseUrl}/ai-studio`, { timeout: 15000 });
-    await page.getByText("Talk to the family assistant.", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
+    await page.getByText("Talk to FamilyFlow.", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
     await page.getByRole("button", { name: /Plan a calm weeknight for our family/i }).waitFor({
       state: "visible",
       timeout: 15000,

@@ -11,36 +11,36 @@ const routeChecks = [
     label: "Dashboard",
     path: "/dashboard",
     expectedText: "Tonight's dinner signal",
-    unexpectedText: "Chore composer",
+    unexpectedText: "Add a chore",
   },
   {
     label: "Family Ops",
     path: "/family-ops",
-    expectedText: "Chore composer",
-    unexpectedText: "Pantry inventory",
+    expectedText: "Add a chore",
+    unexpectedText: "What is in the kitchen?",
   },
   {
     label: "Meal Planner",
     path: "/meal-planner",
-    expectedText: "Pantry inventory",
-    unexpectedText: "Planner inputs",
+    expectedText: "What is in the kitchen?",
+    unexpectedText: "Budget settings",
   },
   {
     label: "Budget Lab",
     path: "/budget-lab",
-    expectedText: "Planner inputs",
-    unexpectedText: "Household members",
+    expectedText: "Budget settings",
+    unexpectedText: "Family members",
   },
   {
     label: "Family Room",
     path: "/family-room",
-    expectedText: "Household members",
-    unexpectedText: "Talk to the family assistant",
+    expectedText: "Family members",
+    unexpectedText: "Talk to FamilyFlow.",
   },
   {
     label: "AI Studio",
     path: "/ai-studio",
-    expectedText: "Talk to the family assistant.",
+    expectedText: "Talk to FamilyFlow.",
     unexpectedText: "Tonight's dinner signal",
   },
 ];
@@ -60,12 +60,12 @@ async function main() {
 
   try {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Create household" }).click();
+    await page.getByRole("button", { name: "Create family" }).click();
     await page.getByLabel("Your name").fill("Route Check");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByLabel("Household name").fill("Route Check Home");
-    await page.getByRole("button", { name: "Create workspace" }).click();
+    await page.getByRole("button", { name: "Create family space" }).click();
 
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 30000 });
     await page.getByText("Tonight's dinner signal", { exact: true }).first().waitFor({

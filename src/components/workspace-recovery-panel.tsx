@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 
@@ -23,11 +24,20 @@ type Props = {
 type Mode = "create" | "join";
 
 export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
-  const [mode, setMode] = useState<Mode>("create");
-  const [householdName, setHouseholdName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const searchParams = useSearchParams();
+  const queryMode = searchParams.get("mode");
+  const queryInviteCode = searchParams.get("inviteCode")?.toUpperCase() ?? "";
+  const queryHouseholdName = searchParams.get("household")?.trim() ?? "";
+  const defaultMode: Mode = queryMode === "join" || queryInviteCode ? "join" : "create";
+
+  const [modeOverride, setModeOverride] = useState<Mode | null>(null);
+  const [householdNameInput, setHouseholdNameInput] = useState<string | null>(null);
+  const [inviteCodeInput, setInviteCodeInput] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const mode = modeOverride ?? defaultMode;
+  const householdName = householdNameInput ?? queryHouseholdName;
+  const inviteCode = inviteCodeInput ?? queryInviteCode;
 
   async function handleRecover() {
     setBusy(true);
@@ -65,20 +75,20 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
           <section className="family-card family-card-dark family-grid-lines rounded-[32px] p-8 text-stone-50">
             <p className="family-kicker text-[rgba(241,214,136,0.76)]">Workspace recovery</p>
             <h1 className="mt-4 max-w-lg font-serif text-5xl leading-tight">
-              You are signed in. Now let&apos;s reconnect you to a household.
+              You are signed in. Let&apos;s get you back to your family.
             </h1>
             <p className="mt-5 max-w-lg text-base leading-7 text-stone-200">{error}</p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
                 <p className="family-kicker text-[rgba(241,214,136,0.76)]">Create</p>
-                <h2 className="mt-3 font-serif text-3xl">New household</h2>
-                <p className="mt-3 text-sm leading-6 text-stone-200">Start a fresh family workspace and become the owner for invites, roles, and settings.</p>
+                <h2 className="mt-3 font-serif text-3xl">New family space</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Start a new family space and become the owner.</p>
               </div>
               <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
                 <p className="family-kicker text-[rgba(241,214,136,0.76)]">Join</p>
-                <h2 className="mt-3 font-serif text-3xl">Existing household</h2>
-                <p className="mt-3 text-sm leading-6 text-stone-200">Use an invite code to reconnect this account to the same shared family data.</p>
+                <h2 className="mt-3 font-serif text-3xl">Existing family space</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Use an invite code to join your family again.</p>
               </div>
             </div>
           </section>
@@ -87,27 +97,27 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setMode("create")}
+                onClick={() => setModeOverride("create")}
                 className={`family-btn px-4 py-2 text-sm ${mode === "create" ? "family-btn-primary" : "family-btn-soft"}`}
               >
-                Create household
+                Create family space
               </button>
               <button
                 type="button"
-                onClick={() => setMode("join")}
+                onClick={() => setModeOverride("join")}
                 className={`family-btn px-4 py-2 text-sm ${mode === "join" ? "family-btn-primary" : "family-btn-soft"}`}
               >
-                Join household
+                Join family
               </button>
             </div>
 
             <div className="mt-7">
               <p className="family-kicker family-eyebrow">{mode === "create" ? "Fresh setup" : "Reconnect with code"}</p>
               <h2 className="mt-3 font-serif text-4xl leading-tight">
-                {mode === "create" ? "Create the household shell for this account." : "Enter the invite code from your family workspace."}
+                {mode === "create" ? "Create a family space for this account." : "Enter your family invite code."}
               </h2>
               <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-                This keeps the account you already authenticated with and simply restores the missing household link.
+                This keeps your current account and reconnects it to the right family space.
               </p>
             </div>
 
@@ -117,7 +127,7 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
                   Household name
                   <input
                     value={householdName}
-                    onChange={(event) => setHouseholdName(event.target.value)}
+                    onChange={(event) => setHouseholdNameInput(event.target.value)}
                     className="family-input mt-2"
                   />
                 </label>
@@ -126,7 +136,7 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
                   Invite code
                   <input
                     value={inviteCode}
-                    onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                    onChange={(event) => setInviteCodeInput(event.target.value.toUpperCase())}
                     className="family-input mt-2 uppercase tracking-[0.24em]"
                   />
                 </label>
@@ -146,7 +156,7 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
                 disabled={busy}
                 className="family-btn family-btn-primary"
               >
-                {busy ? "Working..." : mode === "create" ? "Create household" : "Join household"}
+                {busy ? "Working..." : mode === "create" ? "Create family space" : "Join family"}
               </button>
               <button
                 type="button"

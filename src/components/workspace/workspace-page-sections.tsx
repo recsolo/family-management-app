@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
+import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 
 import type { AppState, BudgetGoal, BudgetStyle, Recipe } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
@@ -187,13 +187,13 @@ function DashboardPage({
       <article className="family-route-shell family-route-shell--dashboard family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Daily command view</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">A cleaner read on what deserves attention next.</h3>
+            <p className="family-kicker family-eyebrow">Today&apos;s family check</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">See what&apos;s next today.</h3>
           </div>
           <div className="family-route-chip">Dashboard</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          This page is now a true overview desk: dinner signal, budget posture, shared load, and the family queue show up in one fast scan before anyone dives deeper.
+          Check meals, money, chores, and reminders here before you open a more detailed page.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <RouteMetricStrip items={dashboardMetrics} />
@@ -357,13 +357,13 @@ function OperationsPage({
       <article className="family-route-shell family-route-shell--ops family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Operations board</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Assign, clear, and move the queue forward.</h3>
+            <p className="family-kicker family-eyebrow">Chores and reminders</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Finish chores and clear reminders.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">Family Ops</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          This route is now shaped like a live execution board: create work, clear it, and keep reminders visible without leaving the operations surface.
+          Add work, clear it, and keep reminders easy to see without bouncing between screens.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <RouteMetricStrip
@@ -375,9 +375,9 @@ function OperationsPage({
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Execution note</p>
+            <p className="family-kicker family-eyebrow">Tip</p>
             <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Use chores for tangible work and reminders for time-bound details. This page is meant to make family execution feel lighter, not busier.
+              Use chores for jobs to do and reminders for things you do not want to forget.
             </p>
           </div>
         </div>
@@ -385,9 +385,9 @@ function OperationsPage({
 
       <div className="grid gap-5 xl:grid-cols-[0.94fr_1.06fr]">
         <InsightCard
-          kicker="Chore composer"
-          title="Plan the work at home."
-          body="Add work quickly, assign it clearly, and keep the whole board moving from one focused panel."
+          kicker="Add a chore"
+          title="Pick the next job."
+          body="Add a job, choose who does it, and keep the board moving."
           className="family-panel family-surface-accent"
         >
           <form className="mt-6 space-y-4" onSubmit={addChore}>
@@ -449,8 +449,8 @@ function OperationsPage({
       <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7">
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <p className="family-kicker family-eyebrow">Reminder composer</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight">Add family reminders.</h3>
+            <p className="family-kicker family-eyebrow">Add a reminder</p>
+            <h3 className="mt-4 font-serif text-4xl leading-tight">Save something important.</h3>
             <form className="mt-6 space-y-4" onSubmit={addReminder}>
               <label className="block text-sm font-medium text-stone-700">
                 Reminder
@@ -525,19 +525,19 @@ function MealsPage({
       <article className="family-route-shell family-route-shell--meals family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Pantry-first desk</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Plan meals from what is already in reach.</h3>
+            <p className="family-kicker family-eyebrow">Meal time</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Pick meals from what you already have.</h3>
           </div>
           <div className="family-route-chip">Meal Planner</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          The meals route now feels like its own dinner studio: pantry entry, recipe coverage, and AI planning all sit inside one lower-waste planning flow.
+          Add pantry items, compare recipes, and build a meal plan from one page.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
           <InsightCard
-            kicker="Pantry inventory"
-            title="Feed the planner."
-            body="Add ingredients once and let the page reuse them across recipe matching and AI planning."
+            kicker="What is in the kitchen?"
+            title="Add what you have."
+            body="Add ingredients once and use them for recipes and AI meal ideas."
             className="family-panel family-surface-warm"
           >
             <form className="mt-6 space-y-4" onSubmit={addPantryItems}>
@@ -553,7 +553,7 @@ function MealsPage({
 
           <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="family-route-notice family-route-notice--dark">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Current edge</p>
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best match</p>
               <h4 className="mt-4 font-serif text-3xl text-white">{bestRecipe ? bestRecipe.name : "No pantry leader yet"}</h4>
               <p className="mt-3 text-sm leading-7 text-stone-200">
                 {bestRecipe
@@ -562,9 +562,9 @@ function MealsPage({
               </p>
             </div>
             <div className="family-route-notice family-route-notice--gold">
-              <p className="family-kicker family-eyebrow">AI planning</p>
-              <h4 className="mt-4 font-serif text-3xl leading-tight">Turn pantry context into a multi-day plan.</h4>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Generate a plan and this page will add shopping needs, prep notes, and dinner sequencing automatically.</p>
+              <p className="family-kicker family-eyebrow">AI help</p>
+              <h4 className="mt-4 font-serif text-3xl leading-tight">Turn your pantry into a meal plan.</h4>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Generate a plan and get shopping needs, prep notes, and meal order.</p>
               <button type="button" onClick={generateMealPlan} disabled={aiTask !== null} className="family-btn family-btn-secondary mt-5">
                 {aiTask === "meal-plan" ? "Generating..." : "Generate AI meal plan"}
               </button>
@@ -577,8 +577,8 @@ function MealsPage({
         <article className="family-panel family-route-board family-route-board--meals family-animate-rise rounded-[30px] p-6 md:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="family-kicker family-eyebrow">Recipe suggestions</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Pantry-aware matches.</h3>
+              <p className="family-kicker family-eyebrow">Recipe ideas</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Meals that fit your pantry.</h3>
             </div>
             <span className="family-badge family-badge-gold">{state.pantry.length} pantry items</span>
           </div>
@@ -608,7 +608,7 @@ function MealsPage({
         </article>
 
         <article className="family-panel family-route-board family-route-board--meals-accent family-animate-rise rounded-[30px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">AI meal planner</p>
+          <p className="family-kicker family-eyebrow">AI meal plan</p>
           {state.latestMealPlan ? (
             <div className="mt-4 space-y-6">
               <div>
@@ -661,13 +661,13 @@ function BudgetPage({
       <article className="family-route-shell family-route-shell--budget family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Money briefing</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Give the monthly plan its own clear room.</h3>
+            <p className="family-kicker family-eyebrow">Money plan</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">See a simple plan for your money.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">Budget Lab</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          Budget Lab is now more obviously its own planning studio: inputs, allocations, and AI guidance stay grouped around one money decision flow.
+          Update your numbers, review the plan, and get budget help without leaving this page.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.06fr_0.94fr]">
           <RouteMetricStrip
@@ -692,9 +692,9 @@ function BudgetPage({
 
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <InsightCard
-          kicker="Planner inputs"
-          title="Build a family spending plan."
-          body="These controls stay together so the financial posture is easy to adjust without scanning through unrelated cards."
+          kicker="Budget settings"
+          title="Set the family money plan."
+          body="Change the main numbers here and the plan updates right away."
           className="family-panel"
         >
           <div className="mt-6 space-y-4">
@@ -742,8 +742,8 @@ function BudgetPage({
         <article className="family-panel family-route-board family-route-board--budget family-animate-rise rounded-[28px] p-6 md:p-7">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="family-kicker family-eyebrow">Suggested allocation</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Current monthly split.</h3>
+              <p className="family-kicker family-eyebrow">Suggested plan</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Your monthly split.</h3>
             </div>
             <span className="family-badge family-badge-gold">{budgetPlan.length} categories</span>
           </div>
@@ -760,12 +760,12 @@ function BudgetPage({
       </div>
 
       <article className="family-panel family-animate-rise rounded-[28px] p-6 md:p-7">
-        <p className="family-kicker family-eyebrow">AI budget coach</p>
+        <p className="family-kicker family-eyebrow">AI budget help</p>
         {state.latestBudgetCoach ? (
           <div className="mt-4 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-5">
               <div>
-                <h3 className="font-serif text-4xl leading-tight">Budget guidance for this household.</h3>
+                <h3 className="font-serif text-4xl leading-tight">Budget help for your family.</h3>
                 <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{state.latestBudgetCoach.summary}</p>
               </div>
               <div className="family-card family-card-dark rounded-[24px] p-5">
@@ -832,18 +832,90 @@ function FamilyPage({
   ownerCount,
   adminCount,
 }: PageProps) {
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+
+  function getInviteLink() {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    const params = new URLSearchParams({
+      mode: "join",
+      inviteCode,
+      household: householdNameInput,
+    });
+
+    return `${window.location.origin}/?${params.toString()}`;
+  }
+
+  async function copyInviteValue(value: string, message: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setShareStatus(message);
+    } catch {
+      setShareStatus("Copy failed. Please try again.");
+    }
+  }
+
+  async function handleCopyInviteLink() {
+    const inviteLink = getInviteLink();
+    if (!inviteLink) {
+      setShareStatus("Invite link is not ready yet.");
+      return;
+    }
+
+    await copyInviteValue(inviteLink, "Invite link copied.");
+  }
+
+  async function handleCopyInviteMessage() {
+    const inviteLink = getInviteLink();
+    if (!inviteLink) {
+      setShareStatus("Invite link is not ready yet.");
+      return;
+    }
+
+    const familyName = householdNameInput || "our family space";
+    const inviteMessage = `Join ${familyName} on FamilyFlow AI.\nUse invite code ${inviteCode} or open this link:\n${inviteLink}`;
+    await copyInviteValue(inviteMessage, "Invite message copied.");
+  }
+
+  async function handleShareInvite() {
+    const inviteLink = getInviteLink();
+    if (!inviteLink) {
+      setShareStatus("Invite link is not ready yet.");
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        const familyName = householdNameInput || "our family space";
+        await navigator.share({
+          title: `Join ${familyName} on FamilyFlow AI`,
+          text: `Join ${familyName} with invite code ${inviteCode}.`,
+          url: inviteLink,
+        });
+        setShareStatus("Invite shared.");
+        return;
+      } catch {
+        // Fall back to copy if the share dialog is canceled or unavailable.
+      }
+    }
+
+    await handleCopyInviteLink();
+  }
+
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--family family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Access and identity</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">A cleaner home for members, invites, and routines.</h3>
+            <p className="family-kicker family-eyebrow">Family setup</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Invite family and keep things organized.</h3>
           </div>
           <div className="family-route-chip">Family Room</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Family Room is now structured like a workspace admin suite instead of a leftover settings area, while still keeping every existing role and household action intact.
+          Manage members, share invites, and keep family routines in one place.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
           <RouteMetricStrip
@@ -854,9 +926,9 @@ function FamilyPage({
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Role model</p>
+            <p className="family-kicker family-eyebrow">Who can manage what</p>
             <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Owners can change roles. Admins can remove standard members. Everyone else stays focused on the shared family workspace.
+              Owners can change roles. Admins can remove standard members. Everyone else can use the family space.
             </p>
           </div>
         </div>
@@ -864,10 +936,10 @@ function FamilyPage({
 
       <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
         <article className="family-panel family-route-board family-route-board--family family-animate-rise rounded-[28px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">Household members</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Who has access.</h3>
+          <p className="family-kicker family-eyebrow">Family members</p>
+          <h3 className="mt-4 font-serif text-4xl leading-tight">Who is in your family space.</h3>
           <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-            Owners can update roles. Admins can manage member access for standard members. Members can view the workspace only.
+            Owners can update roles. Admins can remove standard members. Everyone else can use the app.
           </p>
           <div className="mt-5 space-y-3">
             {memberList.map((member) => {
@@ -921,14 +993,14 @@ function FamilyPage({
 
         <div className="grid gap-5">
           <InsightCard
-            kicker="Household settings"
-            title="Invite and identity controls."
-            body="Share the invite code so relatives join this same workspace. Owners and admins can update these settings."
+            kicker="Invite family"
+            title="Share your family link."
+            body="Send the link or code so family members join this same space."
             className="family-panel family-surface-warm"
           >
             <form className="mt-5 space-y-4" onSubmit={saveHouseholdDetails}>
               <label className="block text-sm font-medium text-stone-700">
-                Household name
+                Family name
                 <input
                   value={householdNameInput}
                   onChange={(event) => setHouseholdNameInput(event.target.value)}
@@ -937,20 +1009,36 @@ function FamilyPage({
                 />
               </label>
               <button type="submit" disabled={!canManageHousehold || savingHouseholdName} className="family-btn family-btn-primary">
-                {savingHouseholdName ? "Saving..." : "Save household name"}
+                {savingHouseholdName ? "Saving..." : "Save name"}
               </button>
             </form>
-            <div className="mt-5 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5 text-center">
+            <div className="mt-5 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
               <p className="family-kicker family-eyebrow">Invite code</p>
-              <p className="mt-4 font-serif text-4xl tracking-[0.3em] text-stone-900">{inviteCode}</p>
+              <p className="mt-4 text-center font-serif text-4xl tracking-[0.3em] text-stone-900">{inviteCode}</p>
+              <div className="mt-5 rounded-[20px] border border-[var(--line-soft)] bg-white/80 p-4">
+                <p className="family-kicker family-eyebrow">Family invite link</p>
+                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap Copy link or Share to send the family invite.</p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" onClick={() => void handleCopyInviteLink()} className="family-btn family-btn-primary">
+                  Copy link
+                </button>
+                <button type="button" onClick={() => void handleCopyInviteMessage()} className="family-btn family-btn-soft">
+                  Copy message
+                </button>
+                <button type="button" onClick={() => void handleShareInvite()} className="family-btn family-btn-secondary">
+                  Share
+                </button>
+              </div>
+              {shareStatus ? <p className="mt-4 text-sm leading-6 text-[var(--accent-strong)]">{shareStatus}</p> : null}
             </div>
             <button type="button" onClick={rotateInviteCode} disabled={!canManageHousehold || rotatingInvite} className="family-btn family-btn-secondary mt-5">
-              {rotatingInvite ? "Refreshing..." : "Generate new invite code"}
+              {rotatingInvite ? "Refreshing..." : "New invite code"}
             </button>
           </InsightCard>
 
           <InsightCard
-            kicker="Routine pulse"
+            kicker="Family routine"
             title={state.routines[0] ? state.routines[0].name : "No routine built yet"}
             body={
               state.routines[0]
@@ -965,8 +1053,8 @@ function FamilyPage({
       <article className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-6 md:p-7">
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <p className="family-kicker family-eyebrow">Routine builder</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight">Add a shared routine.</h3>
+            <p className="family-kicker family-eyebrow">Add a routine</p>
+            <h3 className="mt-4 font-serif text-4xl leading-tight">Build a family routine.</h3>
             <form className="mt-5 space-y-4" onSubmit={addRoutine}>
               <label className="block text-sm font-medium text-stone-700">
                 Routine name
@@ -977,7 +1065,7 @@ function FamilyPage({
                 <input value={routineTimeWindow} onChange={(event) => setRoutineTimeWindow(event.target.value)} placeholder="9:00 AM - 10:30 AM" className="family-input mt-2" />
               </label>
               <label className="block text-sm font-medium text-stone-700">
-                Checklist items
+                Steps
                 <input value={routineItems} onChange={(event) => setRoutineItems(event.target.value)} placeholder="Laundry, wipe counters, prep snacks" className="family-input mt-2" />
               </label>
               <button type="submit" className="family-btn family-btn-primary">
@@ -988,8 +1076,8 @@ function FamilyPage({
 
           <div className="family-route-column">
             <div>
-              <p className="family-kicker family-eyebrow">Existing routines</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Repeatable family rhythms.</h3>
+              <p className="family-kicker family-eyebrow">Saved routines</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Family routines you can reuse.</h3>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {state.routines.length > 0 ? (
@@ -1024,13 +1112,13 @@ function AiStudioPage({
       <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Private planning studio</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Let the assistant synthesize the whole household.</h3>
+            <p className="family-kicker family-eyebrow">FamilyFlow help</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask for help with the whole family plan.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">AI Studio</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          AI Studio is now framed as a real strategy room instead of a generic chat pane, while still using the same live household data and actions underneath.
+          Ask the assistant for help using your real family data from the rest of the app.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.94fr_1.06fr]">
           <RouteMetricStrip
@@ -1052,8 +1140,8 @@ function AiStudioPage({
 
       <div className="grid gap-5 xl:grid-cols-[1fr_0.96fr]">
         <article className="family-panel family-route-board family-route-board--ai family-animate-rise rounded-[28px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">AI Studio</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Talk to the family assistant.</h3>
+          <p className="family-kicker family-eyebrow">Chat</p>
+          <h3 className="mt-4 font-serif text-4xl leading-tight">Talk to FamilyFlow.</h3>
           <div className="mt-6 space-y-4">
             <div className="family-scroll max-h-[460px] space-y-3 overflow-y-auto rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,251,245,0.55)] p-4">
               {state.assistantHistory.length > 0 ? (
@@ -1090,9 +1178,9 @@ function AiStudioPage({
 
         <div className="space-y-5">
           <InsightCard
-            kicker="Quick prompts"
-            title="Start with a useful question."
-            body="These prompts keep the assistant grounded in actionable household planning instead of abstract brainstorming."
+            kicker="Quick ideas"
+            title="Start with a helpful question."
+            body="These prompts give you an easy way to ask for help."
             className="family-panel family-surface-warm"
           >
             <div className="mt-5 grid gap-3">
@@ -1112,8 +1200,8 @@ function AiStudioPage({
 
           <InsightCard
             kicker="Shared context"
-            title="What the assistant sees."
-            body="The assistant is working from live household context, not a blank prompt box."
+            title="What FamilyFlow can see."
+            body="The assistant uses live family info, not a blank page."
             className="family-card family-card-dark"
           >
             <ul className="mt-4 space-y-3 text-sm leading-7 text-stone-200">
