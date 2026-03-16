@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
-
 import { auth } from "@/lib/auth";
+import { createRouteContext, errorResponse, jsonWithRequestId, logRouteWarning } from "@/lib/observability";
 import { attachUserToHousehold } from "@/lib/workspace";
 import { validateHouseholdName, validateInviteCode } from "@/lib/validation";
 
 export async function POST(request: Request) {
+  const context = createRouteContext("/api/workspace/bootstrap", request);
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
   }
 
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         householdName: validateHouseholdName(body.householdName),
       });
 
-      return NextResponse.json(workspace);
+      return jsonWithRequestId(context, workspace);
     }
 
     if (body.mode === "join") {
@@ -31,12 +31,13 @@ export async function POST(request: Request) {
         inviteCode: validateInviteCode(body.inviteCode),
       });
 
-      return NextResponse.json(workspace);
+      return jsonWithRequestId(context, workspace);
     }
 
-    return NextResponse.json({ error: "Unsupported recovery action." }, { status: 400 });
+    return errorResponse(context, 400, "Unsupported recovery action.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace recovery failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    logRouteWarning(context, "Workspace recovery rejected.", { userId: session.user.id });
+    return errorResponse(context, 400, message);
   }
 }

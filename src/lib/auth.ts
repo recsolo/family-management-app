@@ -4,6 +4,7 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 
 import { db } from "@/lib/db";
 import { getAppUrl, getAuthRuntimeConfig } from "@/lib/env";
+import { consumeRateLimit, getHeaderClientId } from "@/lib/rate-limit";
 import type { HouseholdRole } from "@/lib/workspace";
 
 type AuthRow = {
@@ -65,12 +66,32 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials.password) {
           return null;
         }
 
-        const user = await findUserByEmail(credentials.email);
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+        const clientId = getHeaderClientId(request.headers);
+        const rateLimit = consumeRateLimit({
+          key: `login:${clientId}:${normalizedEmail}`,
+          windowMs: 15 * 60 * 1000,
+          max: 8,
+        });
+
+        if (!rateLimit.allowed) {
+          console.warn("[FamilyFlow]", {
+            scope: "familyflow-auth",
+            level: "warn",
+            event: "credentials_rate_limited",
+            clientId,
+            email: normalizedEmail,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          });
+          return null;
+        }
+
+        const user = await findUserByEmail(normalizedEmail);
         if (!user) {
           return null;
         }

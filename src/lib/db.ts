@@ -27,3 +27,21 @@ export const db =
 if (process.env.NODE_ENV !== "production") {
   global.familyFlowPrisma = db;
 }
+
+export async function checkDatabaseConnection() {
+  const startedAt = Date.now();
+
+  try {
+    await db.$queryRawUnsafe("SELECT 1");
+    return {
+      ok: true as const,
+      latencyMs: Date.now() - startedAt,
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      latencyMs: Date.now() - startedAt,
+      error,
+    };
+  }
+}

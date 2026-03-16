@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-
 import { auth } from "@/lib/auth";
+import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError, logRouteWarning } from "@/lib/observability";
 import {
   getWorkspaceForUser,
   regenerateInviteCodeForUser,
@@ -12,43 +11,64 @@ import {
 } from "@/lib/workspace";
 import { validateHouseholdRole, validateHouseholdName, validateWorkspaceState } from "@/lib/validation";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const context = createRouteContext("/api/workspace", request);
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
   }
 
   const workspace = await getWorkspaceForUser(session.user.id);
   if (!workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return errorResponse(context, 404, "Workspace not found");
   }
 
-  return NextResponse.json(workspace);
+  return jsonWithRequestId(context, workspace);
 }
 
 export async function PUT(request: Request) {
+  const context = createRouteContext("/api/workspace", request);
   const session = await auth();
 
   if (!session?.user?.id || !session.user.householdId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
   }
 
-  const body = (await request.json()) as { state?: unknown };
+  let body: { state?: unknown };
+  try {
+    body = (await request.json()) as { state?: unknown };
+  } catch {
+    return errorResponse(context, 400, "Invalid request payload.");
+  }
+
   if (!body.state) {
-    return NextResponse.json({ error: "Missing workspace state" }, { status: 400 });
+    return errorResponse(context, 400, "Missing workspace state");
   }
 
-  await saveHouseholdState(session.user.householdId, validateWorkspaceState(body.state));
+  try {
+    await saveHouseholdState(session.user.householdId, validateWorkspaceState(body.state));
+  } catch (error) {
+    if (error instanceof Error) {
+      logRouteWarning(context, "Workspace save rejected.", {
+        userId: session.user.id,
+      });
+      return errorResponse(context, 400, error.message);
+    }
 
-  return NextResponse.json({ ok: true });
+    logRouteError(context, error, { userId: session.user.id });
+    return errorResponse(context, 500, "Workspace changes could not be saved.");
+  }
+
+  return jsonWithRequestId(context, { ok: true });
 }
 
 export async function PATCH(request: Request) {
+  const context = createRouteContext("/api/workspace", request);
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
   }
 
   try {
@@ -58,22 +78,24 @@ export async function PATCH(request: Request) {
 
     if (body?.action === "rename-household") {
       const householdName = await updateHouseholdName(session.user.id, validateHouseholdName(body.householdName));
-      return NextResponse.json({ householdName });
+      return jsonWithRequestId(context, { householdName });
     }
 
     const inviteCode = await regenerateInviteCodeForUser(session.user.id);
-    return NextResponse.json({ inviteCode });
+    return jsonWithRequestId(context, { inviteCode });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace update failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    logRouteWarning(context, "Workspace patch rejected.", { userId: session.user.id });
+    return errorResponse(context, 400, message);
   }
 }
 
 export async function POST(request: Request) {
+  const context = createRouteContext("/api/workspace", request);
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
   }
 
   try {
@@ -82,26 +104,27 @@ export async function POST(request: Request) {
       | { action: "remove-member"; memberId?: string };
 
     if (!body.memberId) {
-      return NextResponse.json({ error: "Member ID is required." }, { status: 400 });
+      return errorResponse(context, 400, "Member ID is required.");
     }
 
     if (body.action === "update-member-role") {
       if (!body.role) {
-        return NextResponse.json({ error: "Role is required." }, { status: 400 });
+        return errorResponse(context, 400, "Role is required.");
       }
 
       const members = await updateMemberRole(session.user.id, body.memberId, validateHouseholdRole(body.role));
-      return NextResponse.json({ members });
+      return jsonWithRequestId(context, { members });
     }
 
     if (body.action === "remove-member") {
       const members = await removeMemberFromHousehold(session.user.id, body.memberId);
-      return NextResponse.json({ members });
+      return jsonWithRequestId(context, { members });
     }
 
-    return NextResponse.json({ error: "Unsupported member action." }, { status: 400 });
+    return errorResponse(context, 400, "Unsupported member action.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Household member update failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    logRouteWarning(context, "Workspace member action rejected.", { userId: session.user.id });
+    return errorResponse(context, 400, message);
   }
 }

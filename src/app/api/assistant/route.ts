@@ -1,8 +1,9 @@
 import OpenAI from "openai";
-import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import type { BudgetCoach, ChatMessage, MealPlan } from "@/lib/familyflow";
+import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError, logRouteWarning } from "@/lib/observability";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceForUser, saveHouseholdState } from "@/lib/workspace";
 import { validateAssistantPrompt } from "@/lib/validation";
 
@@ -19,6 +20,8 @@ type RequestBody = {
   prompt?: string;
   history?: ChatMessage[];
 };
+
+const SUPPORTED_KINDS = new Set<RequestBody["kind"]>(["assistant", "meal-plan", "budget-coach"]);
 
 const assistantSchema = {
   type: "object",
@@ -137,24 +140,53 @@ function getUserPrompt(
 }
 
 export async function POST(request: Request) {
+  const context = createRouteContext("/api/assistant", request);
+
   if (!client) {
-    return NextResponse.json({ error: "OPENAI_API_KEY is not set. Add it to .env.local to enable AI features." }, { status: 503 });
+    return errorResponse(context, 503, "OPENAI_API_KEY is not set. Add it to deployment variables or .env.local to enable AI features.");
   }
 
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse(context, 401, "Unauthorized");
+  }
+
+  const rateLimit = consumeRateLimit({
+    key: `ai:${session.user.id}`,
+    windowMs: 5 * 60 * 1000,
+    max: 24,
+  });
+
+  if (!rateLimit.allowed) {
+    logRouteWarning(context, "AI request rate limited.", {
+      userId: session.user.id,
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    });
+    const response = errorResponse(context, 429, "Too many AI requests. Please wait a moment and try again.");
+    response.headers.set("Retry-After", String(rateLimit.retryAfterSeconds));
+    return response;
   }
 
   const workspace = await getWorkspaceForUser(session.user.id);
   if (!workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return errorResponse(context, 404, "Workspace not found");
   }
 
+  let body: RequestBody;
   try {
-    const body = (await request.json()) as RequestBody;
-    const history = (body.history ?? workspace.state.assistantHistory).slice(-8);
-    const prompt = validateAssistantPrompt(body.prompt);
+    body = (await request.json()) as RequestBody;
+  } catch {
+    return errorResponse(context, 400, "Invalid request payload.");
+  }
+
+  if (!body?.kind || !SUPPORTED_KINDS.has(body.kind)) {
+    return errorResponse(context, 400, "Unsupported AI request.");
+  }
+
+  let prompt: string | undefined;
+  try {
+    const history = Array.isArray(body.history) ? body.history.slice(-8) : workspace.state.assistantHistory.slice(-8);
+    prompt = validateAssistantPrompt(body.prompt);
 
     const response = await client.responses.create({
       model: MODEL,
@@ -168,7 +200,11 @@ export async function POST(request: Request) {
 
     const outputText = response.output_text?.trim();
     if (!outputText) {
-      return NextResponse.json({ error: "The AI response was empty." }, { status: 502 });
+      logRouteWarning(context, "AI provider returned an empty response.", {
+        kind: body.kind,
+        userId: session.user.id,
+      });
+      return errorResponse(context, 502, "The AI response was empty.");
     }
 
     const parsed = JSON.parse(outputText) as
@@ -199,9 +235,28 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ data: parsed });
+    return jsonWithRequestId(context, { data: parsed });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown AI error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof Error && error.message) {
+      const isValidationError =
+        error.message.includes("must be") ||
+        error.message.includes("required") ||
+        error.message.includes("too long");
+
+      if (isValidationError) {
+        logRouteWarning(context, "AI request validation failed.", {
+          kind: body.kind,
+          userId: session.user.id,
+        });
+        return errorResponse(context, 400, error.message);
+      }
+    }
+
+    logRouteError(context, error, {
+      kind: body.kind,
+      userId: session.user.id,
+      promptProvided: Boolean(prompt),
+    });
+    return errorResponse(context, 500, "The AI request failed. Try again in a moment.");
   }
 }
