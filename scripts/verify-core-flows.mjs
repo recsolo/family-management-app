@@ -22,7 +22,7 @@ function getCountFromText(text) {
 async function readPantryCount(page) {
   const pantryBadge = page
     .locator("article")
-    .filter({ hasText: "Recipe suggestions" })
+    .filter({ hasText: "Recipe ideas" })
     .getByText(/\d+ pantry items/i)
     .first();
   await pantryBadge.waitFor({ state: "visible", timeout: 15000 });
@@ -82,7 +82,7 @@ async function main() {
     await page.waitForFunction(
       ({ beforeCount }) => {
         const articles = [...document.querySelectorAll("article")];
-        const recipeCard = articles.find((article) => article.textContent?.includes("Recipe suggestions"));
+        const recipeCard = articles.find((article) => article.textContent?.includes("Recipe ideas"));
         const text = recipeCard?.textContent ?? "";
         const match = text.match(/(\d+)\s+pantry items/i);
         return match ? Number(match[1]) >= beforeCount + 2 : false;
