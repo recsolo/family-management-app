@@ -1,7 +1,22 @@
-import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError, logRouteWarning } from "@/lib/observability";
+﻿import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError, logRouteWarning } from "@/lib/observability";
 
 const GEOCODE_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_API_URL = "https://api.open-meteo.com/v1/forecast";
+
+async function geocodeLocation(searchTerm: string) {
+  const geocodeUrl = new URL(GEOCODE_API_URL);
+  geocodeUrl.searchParams.set("name", searchTerm);
+  geocodeUrl.searchParams.set("count", "1");
+  geocodeUrl.searchParams.set("language", "en");
+  geocodeUrl.searchParams.set("format", "json");
+
+  return fetch(geocodeUrl, {
+    cache: "no-store",
+    headers: {
+      "User-Agent": "FamilyFlowAI/1.0",
+    },
+  });
+}
 
 function describeWeatherCode(code: number) {
   switch (code) {
@@ -57,18 +72,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const geocodeUrl = new URL(GEOCODE_API_URL);
-    geocodeUrl.searchParams.set("name", location);
-    geocodeUrl.searchParams.set("count", "1");
-    geocodeUrl.searchParams.set("language", "en");
-    geocodeUrl.searchParams.set("format", "json");
-
-    const geocodeResponse = await fetch(geocodeUrl, {
-      cache: "no-store",
-      headers: {
-        "User-Agent": "FamilyFlowAI/1.0",
-      },
-    });
+    let geocodeResponse = await geocodeLocation(location);
 
     if (!geocodeResponse.ok) {
       logRouteWarning(context, "Weather geocoding request failed.", { location });
@@ -85,7 +89,18 @@ export async function GET(request: Request) {
       }>;
     };
 
-    const match = geocodeBody.results?.[0];
+    let match = geocodeBody.results?.[0];
+    if (!match && location.includes(",")) {
+      const simplifiedLocation = location.split(",")[0]?.trim();
+      if (simplifiedLocation) {
+        geocodeResponse = await geocodeLocation(simplifiedLocation);
+        if (geocodeResponse.ok) {
+          const retryBody = (await geocodeResponse.json()) as typeof geocodeBody;
+          match = retryBody.results?.[0];
+        }
+      }
+    }
+
     if (!match) {
       return errorResponse(context, 404, "We could not find that weather location.");
     }
