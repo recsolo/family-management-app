@@ -952,6 +952,187 @@ a {
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 241, 224, 0.94));
 }
 
+.family-meals-form-card,
+.family-ops-form-card {
+  overflow: hidden;
+}
+
+.family-pantry-shelf {
+  border-top: 1px solid rgba(16, 16, 16, 0.08);
+  padding-top: 1.25rem;
+}
+
+.family-pantry-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.6rem 0.95rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--foreground);
+  box-shadow: var(--shadow-soft);
+}
+
+.family-meals-match-card,
+.family-meals-ai-card {
+  min-height: 100%;
+}
+
+.family-recipe-card {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.6rem;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.family-recipe-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(228, 192, 92, 0.28);
+  box-shadow: var(--shadow-panel);
+}
+
+.family-recipe-card-top {
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 239, 221, 0.95));
+  border-color: rgba(228, 192, 92, 0.24);
+}
+
+.family-recipe-meter {
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.08);
+}
+
+.family-recipe-meter__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(243, 218, 143, 0.98), rgba(210, 165, 59, 0.94));
+}
+
+.family-meal-plan-shell {
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 241, 224, 0.94));
+}
+
+.family-meal-day {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.6rem;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.family-meal-day__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.family-shopping-card {
+  border: 1px solid rgba(228, 192, 92, 0.24);
+  border-radius: 1.6rem;
+  background: linear-gradient(180deg, rgba(250, 241, 210, 0.96), rgba(255, 255, 255, 0.94));
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.family-ops-hint {
+  border-radius: 1.4rem;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1rem;
+}
+
+.family-ops-board-shell {
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 246, 236, 0.94));
+}
+
+.family-ops-chore-card {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 1.55rem;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1.2rem;
+  text-align: left;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.family-ops-chore-card::before {
+  content: "";
+  position: absolute;
+  inset: 1rem auto 1rem 0.95rem;
+  width: 0.3rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(243, 218, 143, 0.98), rgba(210, 165, 59, 0.94));
+}
+
+.family-ops-chore-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(228, 192, 92, 0.28);
+  box-shadow: var(--shadow-panel);
+}
+
+.family-ops-chore-card > div,
+.family-ops-chore-card > p {
+  margin-left: 0.8rem;
+}
+
+.family-ops-chore-card-done {
+  border-color: rgba(228, 192, 92, 0.28);
+  background: linear-gradient(180deg, rgba(250, 241, 210, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.family-reminder-shell {
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 241, 224, 0.94));
+}
+
+.family-reminder-form-card {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-soft);
+}
+
+.family-reminder-card {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.6rem;
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.12), transparent 24%),
+    rgba(255, 255, 255, 0.8);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.family-reminder-time {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.08);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
 .family-route-column {
   display: flex;
   flex-direction: column;
@@ -960,6 +1141,10 @@ a {
 @media (min-width: 900px) {
   .family-route-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .family-meal-day__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

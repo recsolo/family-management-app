@@ -390,7 +390,7 @@ function OperationsPage({
           kicker="Add a chore"
           title="Pick the next job."
           body="Add a job, choose who does it, and keep the board moving."
-          className="family-panel family-surface-accent"
+          className="family-panel family-surface-accent family-ops-form-card"
         >
           <form className="mt-6 space-y-4" onSubmit={addChore}>
             <label className="block text-sm font-medium text-stone-700">
@@ -408,16 +408,23 @@ function OperationsPage({
               </select>
             </label>
             <button type="submit" className="family-btn family-btn-primary">
-              Add chore
+              Add to board
             </button>
           </form>
+          <div className="family-ops-hint mt-5">
+            <p className="family-kicker family-eyebrow">Quick rule</p>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              Keep chores short and easy to understand so everyone knows what to do fast.
+            </p>
+          </div>
         </InsightCard>
 
-        <article className="family-panel family-route-board family-route-board--ops family-animate-rise rounded-[28px] p-6 md:p-7">
+        <article className="family-panel family-route-board family-route-board--ops family-animate-rise rounded-[28px] p-6 md:p-7 family-ops-board-shell">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="family-kicker family-eyebrow">Today&apos;s chores</p>
               <h3 className="mt-4 font-serif text-4xl leading-tight">Shared completion board.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap any card to move it from open to done.</p>
             </div>
             <span className="family-badge family-badge-gold">{openChores} open</span>
           </div>
@@ -428,7 +435,7 @@ function OperationsPage({
                   key={chore.id}
                   type="button"
                   onClick={() => toggleChore(chore.id)}
-                  className={`w-full rounded-[24px] border p-5 text-left transition ${chore.done ? "border-[rgba(228,192,92,0.34)] bg-[rgba(250,241,210,0.86)]" : "border-[var(--line-soft)] bg-white/80 hover:border-[rgba(228,192,92,0.28)]"}`}
+                  className={`family-ops-chore-card ${chore.done ? "family-ops-chore-card-done" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -439,6 +446,9 @@ function OperationsPage({
                     </div>
                     <span className={`family-badge ${chore.done ? "family-badge-accent" : "family-badge-gold"}`}>{chore.done ? "Done" : "Open"}</span>
                   </div>
+                  <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                    {chore.done ? "Nice work. This one is already cleared." : "Press this card when the job is finished."}
+                  </p>
                 </button>
               ))
             ) : (
@@ -448,9 +458,9 @@ function OperationsPage({
         </article>
       </div>
 
-      <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7">
+      <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7 family-reminder-shell">
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-          <div>
+          <div className="family-reminder-form-card rounded-[28px] p-5 md:p-6">
             <p className="family-kicker family-eyebrow">Add a reminder</p>
             <h3 className="mt-4 font-serif text-4xl leading-tight">Save something important.</h3>
             <form className="mt-6 space-y-4" onSubmit={addReminder}>
@@ -474,7 +484,7 @@ function OperationsPage({
                 </select>
               </label>
               <button type="submit" className="family-btn family-btn-primary">
-                Add reminder
+                Save reminder
               </button>
             </form>
           </div>
@@ -487,13 +497,12 @@ function OperationsPage({
             <div className="mt-6 space-y-4">
               {state.reminders.length > 0 ? (
                 state.reminders.map((reminder) => (
-                  <div key={reminder.id} className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
+                  <div key={reminder.id} className="family-reminder-card">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h4 className="font-serif text-2xl">{reminder.title}</h4>
-                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                          {reminder.when} / {reminder.audience}
-                        </p>
+                        <p className="family-reminder-time mt-3">{reminder.when}</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">For {reminder.audience}</p>
                       </div>
                       <button type="button" onClick={() => removeReminder(reminder.id)} className="family-btn family-btn-secondary px-3 py-2 text-xs uppercase tracking-[0.2em]">
                         Clear
@@ -540,7 +549,7 @@ function MealsPage({
             kicker="What is in the kitchen?"
             title="Add what you have."
             body="Add ingredients once and use them for recipes and AI meal ideas."
-            className="family-panel family-surface-warm"
+            className="family-panel family-surface-warm family-meals-form-card"
           >
             <form className="mt-6 space-y-4" onSubmit={addPantryItems}>
               <label className="block text-sm font-medium text-stone-700">
@@ -551,10 +560,30 @@ function MealsPage({
                 Add pantry items
               </button>
             </form>
+            <div className="family-pantry-shelf mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="family-kicker family-eyebrow">Pantry shelf</p>
+                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">These are the ingredients your meal page can already work with.</p>
+                </div>
+                <span className="family-badge family-badge-gold">{state.pantry.length} items</span>
+              </div>
+              {state.pantry.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {state.pantry.map((item) => (
+                    <span key={item} className="family-pantry-chip">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState className="mt-4">Add a few staples and this shelf will start filling in.</EmptyState>
+              )}
+            </div>
           </InsightCard>
 
           <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="family-route-notice family-route-notice--dark">
+            <div className="family-route-notice family-route-notice--dark family-meals-match-card">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best match</p>
               <h4 className="mt-4 font-serif text-3xl text-white">{bestRecipe ? bestRecipe.name : "No pantry leader yet"}</h4>
               <p className="mt-3 text-sm leading-7 text-stone-200">
@@ -562,8 +591,17 @@ function MealsPage({
                   ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients are already covered. Missing: ${bestRecipe.missing.length > 0 ? bestRecipe.missing.join(", ") : "nothing extra needed"}.`
                   : "Once the pantry has a few staples, this route becomes the fastest path from ingredients to dinner."}
               </p>
+              {bestRecipe ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {bestRecipe.ingredients.map((ingredient) => (
+                    <span key={ingredient} className="family-badge bg-white/10 text-stone-100">
+                      {ingredient}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <div className="family-route-notice family-route-notice--gold">
+            <div className="family-route-notice family-route-notice--gold family-meals-ai-card">
               <p className="family-kicker family-eyebrow">AI help</p>
               <h4 className="mt-4 font-serif text-3xl leading-tight">Turn your pantry into a meal plan.</h4>
               <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Generate a plan and get shopping needs, prep notes, and meal order.</p>
@@ -581,12 +619,13 @@ function MealsPage({
             <div>
               <p className="family-kicker family-eyebrow">Recipe ideas</p>
               <h3 className="mt-4 font-serif text-4xl leading-tight">Meals that fit your pantry.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">The top card is the strongest current match, then everything else follows behind it.</p>
             </div>
             <span className="family-badge family-badge-gold">{state.pantry.length} pantry items</span>
           </div>
-          <div className="mt-6 space-y-4">
-            {recipeMatches.map((recipe) => (
-              <article key={recipe.name} className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
+          <div className="mt-6 grid gap-4">
+            {recipeMatches.map((recipe, index) => (
+              <article key={recipe.name} className={`family-recipe-card ${index === 0 ? "family-recipe-card-top" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4 className="font-serif text-2xl">{recipe.name}</h4>
@@ -597,6 +636,9 @@ function MealsPage({
                 <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
                   {recipe.missing.length > 0 ? `Still needed: ${recipe.missing.join(", ")}.` : "You already have everything needed for this recipe."}
                 </p>
+                <div className="family-recipe-meter mt-4">
+                  <div className="family-recipe-meter__fill" style={{ width: `${(recipe.matches / recipe.ingredients.length) * 100}%` }} />
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {recipe.tags.map((tag) => (
                     <span key={tag} className="family-badge family-badge-warm">
@@ -609,7 +651,7 @@ function MealsPage({
           </div>
         </article>
 
-        <article className="family-panel family-route-board family-route-board--meals-accent family-animate-rise rounded-[30px] p-6 md:p-7">
+        <article className="family-panel family-route-board family-route-board--meals-accent family-animate-rise rounded-[30px] p-6 md:p-7 family-meal-plan-shell">
           <p className="family-kicker family-eyebrow">AI meal plan</p>
           {state.latestMealPlan ? (
             <div className="mt-4 space-y-6">
@@ -619,17 +661,30 @@ function MealsPage({
               </div>
               <div className="space-y-4">
                 {state.latestMealPlan.meals.map((meal) => (
-                  <div key={`${meal.day}-${meal.recipe}`} className="rounded-[24px] border border-[var(--line-soft)] bg-white/76 p-5">
-                    <p className="family-kicker family-eyebrow">{meal.day}</p>
-                    <h4 className="mt-3 font-serif text-2xl">{meal.recipe}</h4>
+                  <div key={`${meal.day}-${meal.recipe}`} className="family-meal-day">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="family-kicker family-eyebrow">{meal.day}</p>
+                        <h4 className="mt-3 font-serif text-2xl">{meal.recipe}</h4>
+                      </div>
+                      <span className="family-badge family-badge-gold">{meal.missingIngredients.length > 0 ? "Needs a few extras" : "Ready to cook"}</span>
+                    </div>
                     <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{meal.whyItFits}</p>
-                    <p className="mt-4 text-sm leading-6 text-stone-700">Uses: {meal.usesIngredients.join(", ")}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Missing: {meal.missingIngredients.length > 0 ? meal.missingIngredients.join(", ") : "Nothing extra needed"}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Prep note: {meal.prepNote}</p>
+                    <div className="family-meal-day__grid mt-4">
+                      <div>
+                        <p className="family-kicker family-eyebrow">Uses</p>
+                        <p className="mt-2 text-sm leading-7 text-stone-700">{meal.usesIngredients.join(", ")}</p>
+                      </div>
+                      <div>
+                        <p className="family-kicker family-eyebrow">Missing</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{meal.missingIngredients.length > 0 ? meal.missingIngredients.join(", ") : "Nothing extra needed"}</p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm leading-6 text-[var(--muted)]">Prep note: {meal.prepNote}</p>
                   </div>
                 ))}
               </div>
-              <div className="rounded-[24px] border border-[var(--line-soft)] bg-white/76 p-5">
+              <div className="family-shopping-card">
                 <p className="family-kicker family-eyebrow">Shopping list</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {state.latestMealPlan.shoppingList.map((item) => (
