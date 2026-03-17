@@ -24,6 +24,7 @@ type LeftRailProps = {
   activeTab: ActiveTab;
   aiTask: AiTask;
   onNavigate: (tab: ActiveTab) => void;
+  onOpenAiChatFocus: () => void;
   onGenerateMealPlan: () => void;
   onGenerateBudgetCoach: () => void;
 };
@@ -75,9 +76,12 @@ export function WorkspaceLeftRail({
   activeTab,
   aiTask,
   onNavigate,
+  onOpenAiChatFocus,
   onGenerateMealPlan,
   onGenerateBudgetCoach,
 }: LeftRailProps) {
+  const activeNav = navigation.find((item) => item.value === activeTab) ?? navigation[0];
+
   return (
     <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
       <section className="family-panel family-animate-rise rounded-[38px] p-4">
@@ -118,20 +122,37 @@ export function WorkspaceLeftRail({
       </section>
 
       <section className="family-card family-command family-animate-rise rounded-[34px] p-3">
-        <p className="px-3 pt-2 family-kicker family-eyebrow">Navigate the workspace</p>
+        <div className="family-nav-status mx-1 rounded-[24px] p-4">
+          <p className="family-kicker family-eyebrow">You are here</p>
+          <h2 className="mt-3 font-serif text-3xl leading-tight">{activeNav.label}</h2>
+          <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{activeNav.detail} is the page on screen right now.</p>
+        </div>
         <nav className="mt-3 space-y-3" aria-label="Primary">
-          {navigation.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              aria-current={activeTab === item.value ? "page" : undefined}
-              onClick={() => onNavigate(item.value)}
-              className={`family-tab ${activeTab === item.value ? "family-tab-active" : ""}`}
-            >
-              <span className="family-kicker">{item.detail}</span>
-              <span className="mt-2 block font-serif text-2xl leading-tight">{item.label}</span>
-            </button>
-          ))}
+          {navigation.map((item) => {
+            const isActive = activeTab === item.value;
+
+            return (
+              <button
+                key={item.value}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => onNavigate(item.value)}
+                className={`family-tab ${isActive ? "family-tab-active" : ""}`}
+              >
+                <span className={`family-tab-beacon ${isActive ? "family-tab-beacon-active" : ""}`} aria-hidden="true" />
+                <span className="flex items-start justify-between gap-3">
+                  <span>
+                    <span className={`family-kicker ${isActive ? "text-[rgba(241,214,136,0.76)]" : ""}`}>{isActive ? "Page open now" : item.detail}</span>
+                    <span className="mt-2 block font-serif text-2xl leading-tight">{item.label}</span>
+                  </span>
+                  <span className={`family-tab-status ${isActive ? "family-tab-status-active" : ""}`}>{isActive ? "Open" : "Go"}</span>
+                </span>
+                <span className={`mt-3 block text-sm leading-7 ${isActive ? "text-stone-200" : "text-[var(--muted)]"}`}>
+                  {isActive ? "This is the page you are looking at right now." : `Switch to ${item.label}.`}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </section>
 
@@ -147,8 +168,12 @@ export function WorkspaceLeftRail({
             <span>{aiTask === "budget-coach" ? "Analyzing..." : "Review money plan"}</span>
             <span className="family-kicker text-white/70">Budget</span>
           </button>
-          <button type="button" onClick={() => onNavigate("ai")} className="family-btn family-btn-ghost w-full justify-between">
-            <span>Open AI Studio</span>
+          <button
+            type="button"
+            onClick={activeTab === "ai" ? onOpenAiChatFocus : () => onNavigate("ai")}
+            className="family-btn family-btn-ghost w-full justify-between"
+          >
+            <span>{activeTab === "ai" ? "Open chat-only view" : "Open AI Studio"}</span>
             <span className="family-kicker text-[rgba(241,214,136,0.76)]">Assistant</span>
           </button>
         </div>

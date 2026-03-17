@@ -23,9 +23,11 @@ type WorkspaceResponse = {
 
 type Props = {
   activeTab: ActiveTab;
+  view?: "default" | "focus-chat";
+  redirectPath?: string;
 };
 
-export function WorkspaceShell({ activeTab }: Props) {
+export function WorkspaceShell({ activeTab, view = "default", redirectPath }: Props) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
@@ -86,7 +88,7 @@ export function WorkspaceShell({ activeTab }: Props) {
     return (
       <AuthPanel
         onSuccess={() => {
-          router.replace(getWorkspacePath(activeTab));
+          router.replace(redirectPath ?? getWorkspacePath(activeTab));
           router.refresh();
         }}
       />
@@ -132,6 +134,7 @@ export function WorkspaceShell({ activeTab }: Props) {
       members={workspace.members}
       role={workspace.role}
       userName={session.user?.name ?? "Family member"}
+      view={view}
     />
   );
 }

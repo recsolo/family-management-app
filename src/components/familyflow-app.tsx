@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
+import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";
 import {
@@ -21,7 +22,7 @@ import {
   type ChatMessage,
   type MealPlan,
 } from "@/lib/familyflow";
-import { getWorkspacePath, type ActiveTab } from "@/lib/workspace-tabs";
+import { getWorkspacePath, WORKSPACE_AI_CHAT_PATH, type ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
@@ -35,6 +36,7 @@ type Props = {
   role: HouseholdRole;
   userName: string;
   members: HouseholdMember[];
+  view?: "default" | "focus-chat";
 };
 
 export function FamilyFlowApp({
@@ -46,6 +48,7 @@ export function FamilyFlowApp({
   role,
   userName,
   members,
+  view = "default",
 }: Props) {
   const router = useRouter();
   const initialMemberNames = Array.from(new Set(members.map((member) => member.name.trim()).filter(Boolean)));
@@ -137,6 +140,10 @@ export function FamilyFlowApp({
 
   function goToTab(tab: ActiveTab) {
     router.push(getWorkspacePath(tab));
+  }
+
+  function openAiChatFocus() {
+    router.push(WORKSPACE_AI_CHAT_PATH);
   }
 
   async function callAi<T>(payload: { kind: "assistant" | "meal-plan" | "budget-coach"; prompt?: string; history?: ChatMessage[] }) {
@@ -442,6 +449,35 @@ export function FamilyFlowApp({
     },
   });
 
+  if (view === "focus-chat") {
+    return (
+      <main className="family-stage family-chat-focus-page overflow-hidden text-[var(--foreground)]">
+        <div className="family-stage__glow family-stage__glow--one" />
+        <div className="family-stage__glow family-stage__glow--two" />
+        <div className="family-stage__glow family-stage__glow--three" />
+
+        <div className="mx-auto max-w-[1220px] px-4 py-6 sm:px-6 lg:px-8">
+          {(aiError || saveError) && (
+            <div className="family-card mb-5 rounded-[30px] border border-rose-200 bg-rose-50/95 p-4 text-sm leading-7 text-rose-900">
+              {aiError ?? saveError}
+            </div>
+          )}
+
+          <AssistantChatPanel
+            history={state.assistantHistory}
+            chatInput={chatInput}
+            onChatInputChange={(value) => setChatInput(value)}
+            onSubmitPrompt={handleAssistantPrompt}
+            aiTask={aiTask}
+            assistantSuggestions={assistantSuggestions}
+            mode="focus"
+            onBackToStudio={() => goToTab("ai")}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="family-stage overflow-hidden text-[var(--foreground)]">
       <div className="family-stage__glow family-stage__glow--one" />
@@ -468,6 +504,7 @@ export function FamilyFlowApp({
             activeTab={activeTab}
             aiTask={aiTask}
             onNavigate={goToTab}
+            onOpenAiChatFocus={openAiChatFocus}
             onGenerateMealPlan={() => {
               void generateMealPlan();
             }}
@@ -535,6 +572,7 @@ export function FamilyFlowApp({
                 ownerCount={ownerCount}
                 adminCount={adminCount}
                 goToTab={goToTab}
+                openAiChatFocus={openAiChatFocus}
                 handleAssistantPrompt={handleAssistantPrompt}
                 generateMealPlan={() => {
                   void generateMealPlan();

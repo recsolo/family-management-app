@@ -7,6 +7,8 @@ export const WORKSPACE_TAB_ROUTES = {
   ai: "/ai-studio",
 } as const;
 
+export const WORKSPACE_AI_CHAT_PATH = "/ai-chat";
+
 export type ActiveTab = keyof typeof WORKSPACE_TAB_ROUTES;
 
 export function getWorkspacePath(tab: ActiveTab) {

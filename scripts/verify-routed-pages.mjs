@@ -91,6 +91,20 @@ async function main() {
         url: page.url(),
       });
     }
+
+    await page.getByRole("button", { name: /Open chat-only view/i }).first().click();
+    await page.waitForURL(`${baseUrl}/ai-chat`, { timeout: 15000 });
+    await page.getByText("Just you and FamilyFlow.", { exact: true }).first().waitFor({
+      state: "visible",
+      timeout: 15000,
+    });
+
+    results.push({
+      path: "/ai-chat",
+      expectedVisible: await page.getByText("Just you and FamilyFlow.", { exact: true }).first().isVisible(),
+      unexpectedVisible: await page.getByText("Navigate the workspace", { exact: true }).isVisible().catch(() => false),
+      url: page.url(),
+    });
   } finally {
     await browser.close();
   }

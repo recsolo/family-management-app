@@ -361,6 +361,8 @@ a {
 }
 
 .family-tab {
+  position: relative;
+  overflow: hidden;
   display: block;
   width: 100%;
   border: 1px solid rgba(16, 16, 16, 0.08);
@@ -377,15 +379,60 @@ a {
 }
 
 .family-tab:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) translateX(2px);
   border-color: rgba(228, 192, 92, 0.28);
   box-shadow: 0 16px 32px rgba(16, 16, 16, 0.08);
 }
 
 .family-tab-active {
-  border-color: rgba(228, 192, 92, 0.36);
-  background: linear-gradient(180deg, rgba(250, 241, 210, 0.98), rgba(255, 255, 255, 0.96));
-  box-shadow: 0 18px 32px rgba(184, 135, 31, 0.12);
+  border-color: rgba(228, 192, 92, 0.4);
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.18), transparent 28%),
+    linear-gradient(160deg, rgba(11, 11, 11, 0.99), rgba(31, 31, 31, 0.98));
+  color: white;
+  box-shadow: 0 24px 42px rgba(16, 16, 16, 0.2);
+  transform: translateX(8px);
+}
+
+.family-tab-beacon {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.45rem;
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color 180ms ease;
+}
+
+.family-tab-beacon-active {
+  background: linear-gradient(180deg, rgba(243, 218, 143, 0.98), rgba(210, 165, 59, 0.94));
+}
+
+.family-tab-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+.family-tab-status-active {
+  border-color: rgba(241, 214, 136, 0.18);
+  background: linear-gradient(135deg, rgba(243, 218, 143, 0.98), rgba(210, 165, 59, 0.94));
+  color: #111111;
+}
+
+.family-nav-status {
+  border: 1px solid rgba(228, 192, 92, 0.22);
+  background: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(247, 239, 221, 0.94));
+  box-shadow: var(--shadow-soft);
 }
 
 .family-stat-card {
@@ -559,6 +606,85 @@ a {
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.08);
   padding: 1rem;
+}
+
+.family-chat-focus-page {
+  min-height: 100vh;
+}
+
+.family-chat-shell {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(249, 244, 232, 0.96));
+  box-shadow: var(--shadow-panel);
+}
+
+.family-chat-shell-focus {
+  min-height: calc(100vh - 3rem);
+  padding: 1.5rem;
+}
+
+.family-chat-shell__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.family-chat-seed {
+  border: 1px solid rgba(228, 192, 92, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--foreground);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.family-chat-seed:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(228, 192, 92, 0.32);
+  box-shadow: var(--shadow-soft);
+}
+
+.family-chat-seed:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.family-chat-stream {
+  margin-top: 1.25rem;
+  display: flex;
+  max-height: 480px;
+  min-height: 360px;
+  flex-direction: column;
+  gap: 0.85rem;
+  overflow-y: auto;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.6rem;
+  background: rgba(255, 251, 245, 0.65);
+  padding: 1rem;
+}
+
+.family-chat-stream-focus {
+  max-height: none;
+  min-height: 58vh;
+}
+
+.family-chat-compose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .family-animate-rise {

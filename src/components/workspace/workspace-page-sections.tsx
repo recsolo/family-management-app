@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 
+import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
 import type { AppState, BudgetGoal, BudgetStyle, Recipe } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
@@ -73,6 +74,7 @@ type WorkspacePageSectionsProps = {
   ownerCount: number;
   adminCount: number;
   goToTab: (tab: ActiveTab) => void;
+  openAiChatFocus: () => void;
   handleAssistantPrompt: (prompt: string) => void;
   generateMealPlan: () => void;
   generateBudgetCoach: () => void;
@@ -1106,6 +1108,7 @@ function AiStudioPage({
   handleAssistantPrompt,
   aiTask,
   assistantSuggestions,
+  openAiChatFocus,
 }: PageProps) {
   return (
     <div className="space-y-5">
@@ -1130,51 +1133,25 @@ function AiStudioPage({
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Best use</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Use this route when the family needs synthesis: turning meals, money, reminders, and chores into one practical weekly plan.
-            </p>
+            <p className="family-kicker family-eyebrow">Chat tip</p>
+            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">Need a cleaner chat room? Open the chat-only view and the rest of the page disappears.</p>
+            <button type="button" onClick={openAiChatFocus} className="family-btn family-btn-primary mt-4">
+              Open chat-only view
+            </button>
           </div>
         </div>
       </article>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_0.96fr]">
-        <article className="family-panel family-route-board family-route-board--ai family-animate-rise rounded-[28px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">Chat</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Talk to FamilyFlow.</h3>
-          <div className="mt-6 space-y-4">
-            <div className="family-scroll max-h-[460px] space-y-3 overflow-y-auto rounded-[24px] border border-[var(--line-soft)] bg-[rgba(255,251,245,0.55)] p-4">
-              {state.assistantHistory.length > 0 ? (
-                state.assistantHistory.map((message, index) => (
-                  <div key={`${message.role}-${index}`} className={`rounded-[20px] px-4 py-3 text-sm leading-7 ${message.role === "assistant" ? "family-chat-assistant" : "family-chat-user"}`}>
-                    <p className="family-kicker opacity-70">{message.role === "assistant" ? "FamilyFlow AI" : "You"}</p>
-                    <p className="mt-2">{message.content}</p>
-                  </div>
-                ))
-              ) : (
-                <EmptyState>Start the conversation with a weekly planning question, a school-night reset, or a pantry-to-dinner request.</EmptyState>
-              )}
-            </div>
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleAssistantPrompt(chatInput);
-              }}
-            >
-              <textarea
-                value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-                rows={4}
-                placeholder="Ask for a weekly plan, meal help, school-night reset, or reminder strategy."
-                className="family-textarea mt-2"
-              />
-              <button type="submit" disabled={aiTask !== null} className="family-btn family-btn-primary">
-                {aiTask === "assistant" ? "Thinking..." : "Send to assistant"}
-              </button>
-            </form>
-          </div>
-        </article>
+        <AssistantChatPanel
+          history={state.assistantHistory}
+          chatInput={chatInput}
+          onChatInputChange={(value) => setChatInput(value)}
+          onSubmitPrompt={handleAssistantPrompt}
+          aiTask={aiTask}
+          assistantSuggestions={assistantSuggestions}
+          onOpenFocus={openAiChatFocus}
+        />
 
         <div className="space-y-5">
           <InsightCard
