@@ -479,10 +479,14 @@ function InboxPage({
           </div>
         </article>
 
-        <article className="family-panel family-surface-warm rounded-[28px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">Recent history</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Everything else you already saw.</h3>
-          <div className="mt-5 space-y-4">
+        <DisclosurePanel
+          kicker="Recent history"
+          title="Everything else you already saw."
+          summary="Keep old alerts tucked away until you want to revisit them."
+          badge={`${olderAlerts.length} seen`}
+          className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
+        >
+          <div className="space-y-4">
             {olderAlerts.length > 0 ? (
               olderAlerts.slice(0, 12).map((notification) => (
                 <button key={notification.id} type="button" onClick={() => openNotification(notification)} className="family-inbox-card w-full text-left">
@@ -503,7 +507,7 @@ function InboxPage({
               <EmptyState>Once you start clearing alerts, the recent history feed will show them here.</EmptyState>
             )}
           </div>
-        </article>
+        </DisclosurePanel>
       </div>
     </div>
   );
@@ -931,13 +935,14 @@ function BudgetPage({
       </article>
 
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <InsightCard
+        <DisclosurePanel
           kicker="Budget settings"
           title="Set the family money plan."
-          body="Change the main numbers here and the plan updates right away."
-          className="family-panel"
+          summary="Open the settings only when you want to change the numbers."
+          badge="Money inputs"
+          className="family-panel rounded-[28px] p-5 md:p-6"
         >
-          <div className="mt-6 space-y-4">
+          <div className="space-y-4">
             <label className="block text-sm font-medium text-stone-700">
               Monthly take-home income
               <input
@@ -977,7 +982,7 @@ function BudgetPage({
               </select>
             </label>
           </div>
-        </InsightCard>
+        </DisclosurePanel>
 
         <article className="family-panel family-route-board family-route-board--budget family-animate-rise rounded-[28px] p-6 md:p-7">
           <div className="flex items-start justify-between gap-4">
@@ -999,10 +1004,15 @@ function BudgetPage({
         </article>
       </div>
 
-      <article className="family-panel family-animate-rise rounded-[28px] p-6 md:p-7">
-        <p className="family-kicker family-eyebrow">AI budget help</p>
+      <DisclosurePanel
+        kicker="AI budget help"
+        title="Budget help for your family."
+        summary="Open the coaching notes when you want AI guidance instead of raw numbers."
+        badge={state.latestBudgetCoach ? "Coach ready" : "No report"}
+        className="family-panel family-animate-rise rounded-[28px] p-5 md:p-6"
+      >
         {state.latestBudgetCoach ? (
-          <div className="mt-4 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-5">
               <div>
                 <h3 className="font-serif text-4xl leading-tight">Budget help for your family.</h3>
@@ -1037,9 +1047,9 @@ function BudgetPage({
             </div>
           </div>
         ) : (
-          <EmptyState className="mt-4">Generate budget coaching and the assistant will review the current household plan and suggest next actions.</EmptyState>
+          <EmptyState>Generate budget coaching and the assistant will review the current household plan and suggest next actions.</EmptyState>
         )}
-      </article>
+      </DisclosurePanel>
     </div>
   );
 }

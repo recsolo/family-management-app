@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
-import { MemberProfilePage } from "@/components/workspace/member-profile-page";
+import { MemberProfilePage } from "@/components/workspace/member-profile-page-compact";
 import { PartnerSpacePage } from "@/components/workspace/partner-space-page";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 
+import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
 import type { AppState } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
@@ -182,10 +183,14 @@ export function PartnerSpacePage({
       </article>
 
       {canConfigurePartnerSpace ? (
-        <article className="family-panel rounded-[28px] p-6">
-          <p className="family-kicker family-eyebrow">Choose the pair</p>
-          <h3 className="mt-3 font-serif text-4xl leading-tight">Decide who uses this private page.</h3>
-          <form className="family-profile-form-grid mt-5" onSubmit={savePair}>
+        <DisclosurePanel
+          kicker="Choose the pair"
+          title="Decide who uses this private page."
+          summary="Keep the partner picker tucked away after the pair is set."
+          badge={partnerSpace ? "Configured" : "Setup"}
+          className="family-panel rounded-[28px] p-5 md:p-6"
+        >
+          <form className="family-profile-form-grid" onSubmit={savePair}>
             <select value={pairA} onChange={(event) => setPairA(event.target.value)} className="family-select">
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
@@ -207,7 +212,7 @@ export function PartnerSpacePage({
           <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
             Only the selected pair should use the private messages, date-night plans, and private rewards on this page.
           </p>
-        </article>
+        </DisclosurePanel>
       ) : null}
 
       {!partnerSpace ? (
@@ -281,10 +286,14 @@ export function PartnerSpacePage({
 
           {activeTab === "date-night" ? (
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
-              <article className="family-panel rounded-[28px] p-6">
-                <p className="family-kicker family-eyebrow">Date night planner</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Save ideas before life gets busy.</h3>
-                <form className="family-profile-form-grid mt-5" onSubmit={submitDatePlan}>
+              <DisclosurePanel
+                kicker="Date night planner"
+                title="Save ideas before life gets busy."
+                summary="Open this builder only when you want to add a fresh date idea."
+                badge={`${partnerSpace.datePlans.length} saved`}
+                className="family-panel rounded-[28px] p-5 md:p-6"
+              >
+                <form className="family-profile-form-grid" onSubmit={submitDatePlan}>
                   <input value={dateTitle} onChange={(event) => setDateTitle(event.target.value)} placeholder="Sunset walk and dessert" className="family-input" />
                   <input value={dateWhen} onChange={(event) => setDateWhen(event.target.value)} placeholder="Friday 7:30 PM" className="family-input" />
                   <input value={dateLocation} onChange={(event) => setDateLocation(event.target.value)} placeholder="Downtown or at home" className="family-input" />
@@ -299,7 +308,7 @@ export function PartnerSpacePage({
                     Save date plan
                   </button>
                 </form>
-              </article>
+              </DisclosurePanel>
 
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Saved plans</p>
@@ -334,10 +343,14 @@ export function PartnerSpacePage({
 
           {activeTab === "private-rewards" ? (
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
-              <article className="family-panel rounded-[28px] p-6">
-                <p className="family-kicker family-eyebrow">Private rewards</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Turn points into playful rewards.</h3>
-                <form className="family-profile-form-grid mt-5" onSubmit={submitReward}>
+              <DisclosurePanel
+                kicker="Private rewards"
+                title="Turn points into playful rewards."
+                summary="Open this builder when you want to add something new to the private reward shelf."
+                badge={`${partnerSpace.privateRewards.length} saved`}
+                className="family-panel rounded-[28px] p-5 md:p-6"
+              >
+                <form className="family-profile-form-grid" onSubmit={submitReward}>
                   <input value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} placeholder="Late-sleep Saturday" className="family-input" />
                   <input type="number" min="1" value={rewardCost} onChange={(event) => setRewardCost(event.target.value)} placeholder="Points cost" className="family-input" />
                   <textarea value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} rows={4} placeholder="Keep it romantic, relaxing, playful, or just for the two of you." className="family-textarea family-profile-form-grid__wide" />
@@ -345,7 +358,7 @@ export function PartnerSpacePage({
                     Save private reward
                   </button>
                 </form>
-              </article>
+              </DisclosurePanel>
 
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Reward shelf</p>
@@ -384,10 +397,14 @@ export function PartnerSpacePage({
 
           {activeTab === "closer" ? (
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
-              <article className="family-panel rounded-[28px] p-6">
-                <p className="family-kicker family-eyebrow">Closer together</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Save little notes that matter.</h3>
-                <form className="mt-5 space-y-4" onSubmit={submitConnectionNote}>
+              <DisclosurePanel
+                kicker="Closer together"
+                title="Save little notes that matter."
+                summary="Open this space when you want to add a fresh note or look at simple closeness ideas."
+                badge={`${partnerSpace.connectionNotes.length} notes`}
+                className="family-panel rounded-[28px] p-5 md:p-6"
+              >
+                <form className="space-y-4" onSubmit={submitConnectionNote}>
                   <input value={noteTitle} onChange={(event) => setNoteTitle(event.target.value)} placeholder="What I loved today" className="family-input" />
                   <textarea
                     value={noteContent}
@@ -409,7 +426,7 @@ export function PartnerSpacePage({
                     <li>Celebrate small wins, not just big milestones.</li>
                   </ul>
                 </div>
-              </article>
+              </DisclosurePanel>
 
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Saved notes</p>
