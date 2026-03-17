@@ -66,7 +66,7 @@ async function main() {
     await page.waitForURL(`${baseUrl}/family-ops`, { timeout: 15000 });
 
     await page.getByLabel("New chore").fill(choreTitle);
-    await page.getByRole("button", { name: "Add chore" }).click();
+    await page.getByRole("button", { name: "Add to board" }).click();
     await page.getByText(choreTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "add-chore", ok: true });
 
@@ -79,7 +79,7 @@ async function main() {
 
     await page.getByLabel("Reminder").fill(reminderTitle);
     await page.getByLabel("When").fill("Fri 7:45 AM");
-    await page.getByRole("button", { name: "Add reminder" }).click();
+    await page.getByRole("button", { name: "Save reminder" }).click();
     await page.getByText(reminderTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "add-reminder", ok: true });
 
@@ -150,7 +150,7 @@ async function main() {
     await page.getByRole("button", { name: /AI Studio/i }).first().click();
     await page.waitForURL(`${baseUrl}/ai-studio`, { timeout: 15000 });
     await page.getByText("Talk to FamilyFlow.", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
-    await page.getByRole("button", { name: /Plan a calm weeknight for our family/i }).waitFor({
+    await page.getByRole("button", { name: /Plan a calm weeknight for our family/i }).first().waitFor({
       state: "visible",
       timeout: 15000,
     });
