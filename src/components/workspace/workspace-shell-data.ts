@@ -1,4 +1,4 @@
-import type { AppState, Recipe } from "@/lib/familyflow";
+import { getTodayKey, type AppState, type Recipe } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember } from "@/lib/workspace";
 
@@ -95,11 +95,12 @@ type BuildWorkspaceShellDataArgs = {
 };
 
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
-  { value: "dashboard", label: "Dashboard", detail: "Command deck" },
+  { value: "dashboard", label: "Today", detail: "Today at a glance" },
   { value: "ops", label: "Family Ops", detail: "Chores and reminders" },
   { value: "meals", label: "Meal Planner", detail: "Pantry and recipes" },
   { value: "budget", label: "Budget Lab", detail: "Money plan" },
   { value: "family", label: "Family Room", detail: "Members and access" },
+  { value: "partner", label: "Partner Space", detail: "Private connection page" },
   { value: "ai", label: "AI Studio", detail: "Assistant" },
 ];
 
@@ -139,6 +140,13 @@ export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
       "Members, invite links, the family name, and routines all live here.",
     spotlight: "Come here to invite family or update settings.",
   },
+  partner: {
+    eyebrow: "Private grown-up space",
+    headline: "Stay close, chat privately, and plan time together.",
+    description:
+      "Use Partner Space for private messages, date ideas, and rewards that stay between the chosen pair.",
+    spotlight: "Open this page for connection, planning, and private rewards.",
+  },
   ai: {
     eyebrow: "Need help?",
     headline: "Ask FamilyFlow to help with meals, chores, and plans.",
@@ -158,7 +166,6 @@ export function buildWorkspaceShellData({
   savingsPercent,
   savingsAmount,
   primarySuggestion,
-  saving,
   assistantSuggestions,
   aiTask,
   inviteCode,
@@ -173,6 +180,15 @@ export function buildWorkspaceShellData({
   const firstReminder = state.reminders[0];
   const firstRoutine = state.routines[0];
   const latestMeal = state.latestMealPlan?.meals[0];
+  const todayKey = getTodayKey();
+  const todaysEvents = state.memberProfiles.flatMap((profile) =>
+    profile.calendarEvents
+      .filter((event) => event.date === todayKey)
+      .map((event) => ({
+        ...event,
+        memberName: memberList.find((member) => member.id === profile.memberId)?.name ?? "Family member",
+      })),
+  );
   const nextMove =
     state.pantry.length === 0
       ? "Add pantry staples to unlock pantry-first meal suggestions."
@@ -216,6 +232,13 @@ export function buildWorkspaceShellData({
           { label: "Admins", value: adminCount },
           { label: "Shared wins", value: state.familyAchievements.length },
         ];
+      case "partner":
+        return [
+          { label: "Pair", value: state.partnerSpace?.memberIds.length === 2 ? "Ready" : "Set up" },
+          { label: "Private notes", value: state.partnerSpace?.connectionNotes.length ?? 0 },
+          { label: "Date plans", value: state.partnerSpace?.datePlans.length ?? 0 },
+          { label: "Private rewards", value: state.partnerSpace?.privateRewards.length ?? 0 },
+        ];
       case "ai":
         return [
           { label: "Suggestions", value: assistantSuggestions.length },
@@ -226,10 +249,10 @@ export function buildWorkspaceShellData({
       case "dashboard":
       default:
         return [
-          { label: "Pantry items", value: state.pantry.length },
+          { label: "Dinner", value: latestMeal?.recipe ?? bestRecipe?.name ?? "Pick dinner" },
+          { label: "Today events", value: todaysEvents.length },
           { label: "Open chores", value: openChores },
           { label: "Reminders", value: state.reminders.length },
-          { label: "Members", value: memberList.length },
         ];
     }
   })();
@@ -472,6 +495,61 @@ export function buildWorkspaceShellData({
             `Shared wins: ${state.familyAchievements.length}`,
           ],
         };
+      case "partner":
+        return {
+          heroTone: "dark",
+          heroClass: "family-card family-card-dark family-grid-lines",
+          focusKicker: "Private connection",
+          focusTitle: "Keep the grown-up side of family life warm and intentional.",
+          focusBody:
+            state.partnerSpace?.memberIds.length === 2
+              ? `${state.partnerSpace.messages.length} private message${state.partnerSpace.messages.length === 1 ? "" : "s"}, ${state.partnerSpace.datePlans.length} date plan${state.partnerSpace.datePlans.length === 1 ? "" : "s"}, and ${state.partnerSpace.privateRewards.length} private reward${state.partnerSpace.privateRewards.length === 1 ? "" : "s"} are saved here.`
+              : "Choose the partner pair first, then this page becomes a private planning and connection space.",
+          focusNote: "This route is meant to feel private, playful, and more personal than the family-wide pages.",
+          featureClass: "family-card family-card-gold",
+          featureKicker: "Date night energy",
+          featureTitle: state.partnerSpace?.datePlans[0]?.title ?? "No date night on deck yet",
+          featureBody: state.partnerSpace?.datePlans[0]
+            ? `${state.partnerSpace.datePlans[0].when || "Any time"} at ${state.partnerSpace.datePlans[0].location || "a cozy spot you choose"}.`
+            : "Save a simple date plan so the page starts nudging you toward real time together.",
+          featureMeta: state.partnerSpace?.privateRewards[0]?.title
+            ? `Private reward spotlight: ${state.partnerSpace.privateRewards[0].title}`
+            : "Private rewards let the pair spend points on each other in a fun way.",
+          signalClass: "family-panel",
+          signalKicker: "Connection notes",
+          signalTitle: state.partnerSpace?.connectionNotes[0]?.title ?? "No shared note yet",
+          signalBody: state.partnerSpace?.connectionNotes[0]?.content ?? "Use this page for kind notes, date planning, and private check-ins that stay out of the main family flow.",
+          signalTags: state.partnerSpace?.memberIds.map((memberId) => memberList.find((member) => member.id === memberId)?.name ?? "Partner") ?? [],
+          railLabel: "Partner setup",
+          railDescription: "Only the chosen pair should use the private messaging, date-night, and reward tools on this page.",
+          railCards: [
+            {
+              kicker: "Private messages",
+              title: `${state.partnerSpace?.messages.length ?? 0} saved`,
+              body: "A lightweight private thread for the chosen pair.",
+              className: "family-card family-card-dark",
+            },
+            {
+              kicker: "Date plans",
+              title: `${state.partnerSpace?.datePlans.length ?? 0} ideas`,
+              body: "Keep simple plans and booked nights in one private place.",
+              className: "family-card family-card-gold",
+            },
+            {
+              kicker: "Connection notes",
+              title: `${state.partnerSpace?.connectionNotes.length ?? 0} notes`,
+              body: "Quick appreciations and warm notes help this page feel more personal.",
+              className: "family-panel",
+            },
+          ],
+          contextTitle: "What is shaping the private partner space right now.",
+          contextItems: [
+            `Partner pair configured: ${state.partnerSpace?.memberIds.length === 2 ? "yes" : "not yet"}`,
+            `Private messages: ${state.partnerSpace?.messages.length ?? 0}`,
+            `Date plans: ${state.partnerSpace?.datePlans.length ?? 0}`,
+            `Private rewards: ${state.partnerSpace?.privateRewards.length ?? 0}`,
+          ],
+        };
       case "ai":
         return {
           heroTone: "dark",
@@ -533,29 +611,28 @@ export function buildWorkspaceShellData({
         return {
           heroTone: "light",
           heroClass: "family-panel family-surface-gold",
-          focusKicker: "Household tempo",
-          focusTitle: "See what matters next without hunting for it.",
+          focusKicker: "Today at a glance",
+          focusTitle: "See chores, plans, reminders, and dinner for today.",
           focusBody: nextMove,
-          focusNote: activeMeta.spotlight,
+          focusNote: "The first page should answer what happens today without extra clutter.",
           featureClass: "family-card family-card-dark",
-          featureKicker: "Budget pulse",
-          featureTitle: "Reserve is holding steady.",
-          featureBody: `${savingsPercent}% of income, or about $${savingsAmount.toLocaleString()} monthly, is being reserved for savings.`,
-          featureMeta: `Current goal: ${state.budget.goal} with a ${state.budget.style} style.`,
-          featureAction: {
-            label: "Open Budget Lab",
-            onClick: () => actions.goToTab("budget"),
-            tone: "secondary",
-          },
+          featureKicker: "Dinner tonight",
+          featureTitle: latestMeal?.recipe ?? bestRecipe?.name ?? "Pick a dinner plan",
+          featureBody: latestMeal
+            ? latestMeal.whyItFits
+            : bestRecipe
+              ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients already line up for tonight.`
+              : "Add pantry staples or generate a meal plan so dinner is one easy call.",
+          featureMeta: latestMeal?.day ?? "Meal Planner can turn pantry items into a dinner plan fast.",
           signalClass: "family-panel",
-          signalKicker: "Tonight's dinner signal",
-          signalTitle: bestRecipe ? bestRecipe.name : "Set the pantry stage",
-          signalBody: bestRecipe
-            ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} pantry ingredients already line up for the current strongest dinner match.`
-            : "Add pantry items so dinner suggestions can start from what the house actually has.",
-          signalTags: bestRecipe ? bestRecipe.ingredients.slice(0, 4) : [],
-          railLabel: "Command deck context",
-          railDescription: "The dashboard should answer what matters most right now before the family opens a deeper workspace page.",
+          signalKicker: "Today calendar",
+          signalTitle: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "No appointments saved for today",
+          signalBody: todaysEvents[0]
+            ? `${todaysEvents[0].time ? `${todaysEvents[0].time} / ` : ""}${todaysEvents[0].detail || "Check the member profile for the full plan."}`
+            : "Add events to member profiles and they will show up here when they land today.",
+          signalTags: todaysEvents.slice(0, 3).map((event) => event.memberName),
+          railLabel: "Today context",
+          railDescription: "This page is trimmed down to what matters right now: dinner, today's events, reminders, and open chores.",
           railCards: [
             {
               kicker: "Upcoming reminder",
@@ -564,24 +641,25 @@ export function buildWorkspaceShellData({
               className: "family-panel",
             },
             {
-              kicker: "Routine signal",
-              title: firstRoutine ? firstRoutine.name : "No routine built yet",
-              body: firstRoutine ? firstRoutine.timeWindow : "Create one repeatable flow so the household has a rhythm to return to.",
+              kicker: "Tonight dinner",
+              title: latestMeal?.recipe ?? bestRecipe?.name ?? "Not picked yet",
+              body: latestMeal ? latestMeal.whyItFits : "Meal Planner helps you land on dinner without a long debate.",
               className: "family-card family-card-gold",
             },
             {
-              kicker: "Workspace status",
-              title: saving ? "Syncing now" : "All changes saved",
-              body: saving ? "The latest household changes are being persisted now." : "Everything visible here is already persisted for the household.",
+              kicker: "Today schedule",
+              title: todaysEvents.length > 0 ? `${todaysEvents.length} event${todaysEvents.length === 1 ? "" : "s"}` : "Nothing saved yet",
+              body: todaysEvents.length > 0 ? `First up: ${todaysEvents[0]?.memberName} / ${todaysEvents[0]?.title}` : "Appointments from member profiles show up here when they happen today.",
               className: "family-card family-card-dark",
             },
           ],
           contextTitle: "What is shaping the next recommendation right now.",
           contextItems: [
-            `Pantry items available: ${state.pantry.length}`,
+            `Dinner path: ${latestMeal?.recipe ?? bestRecipe?.name ?? "not chosen yet"}`,
+            `Appointments today: ${todaysEvents.length}`,
             `Open chores to plan around: ${openChores}`,
             `Reminders currently queued: ${state.reminders.length}`,
-            `Latest prompt seed: ${primarySuggestion}`,
+            firstRoutine ? `Current household routine: ${firstRoutine.name}` : "No routine is shaping today yet.",
           ],
         };
     }

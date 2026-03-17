@@ -6,15 +6,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
 import { MemberProfilePage } from "@/components/workspace/member-profile-page";
+import { PartnerSpacePage } from "@/components/workspace/partner-space-page";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";
-import {
-  WorkspaceHeroPanel,
-  WorkspaceLeftRail,
-  WorkspaceRightRail,
-} from "@/components/workspace/workspace-shell-panels";
+import { WorkspaceHeroPanel, WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
 import {
   createId,
+  type DirectMessage,
   getBudgetPlan,
   getTodayKey,
   normalizeIngredient,
@@ -173,6 +171,234 @@ export function FamilyFlowApp({
 
   function openMemberProfile(memberId: string) {
     router.push(getMemberProfilePath(memberId));
+  }
+
+  function getSortedParticipantIds(leftId: string, rightId: string) {
+    return [leftId, rightId].sort((first, second) => first.localeCompare(second));
+  }
+
+  function findDirectThread(memberId: string) {
+    const participantIds = getSortedParticipantIds(currentUserId, memberId);
+    return state.directThreads.find(
+      (thread) =>
+        thread.participantIds.length === 2 &&
+        thread.participantIds[0] === participantIds[0] &&
+        thread.participantIds[1] === participantIds[1],
+    );
+  }
+
+  async function sendDirectMessage(memberId: string, content: string) {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const message: DirectMessage = {
+      id: createId("message"),
+      senderId: currentUserId,
+      senderName: userName,
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    const participantIds = getSortedParticipantIds(currentUserId, memberId);
+
+    await updateState((current) => {
+      const existingThread = current.directThreads.find(
+        (thread) =>
+          thread.participantIds.length === 2 &&
+          thread.participantIds[0] === participantIds[0] &&
+          thread.participantIds[1] === participantIds[1],
+      );
+
+      const nextThread = existingThread
+        ? {
+            ...existingThread,
+            messages: [...existingThread.messages, message].slice(-120),
+          }
+        : {
+            id: createId("thread"),
+            participantIds,
+            messages: [message],
+          };
+
+      return {
+        ...current,
+        directThreads: existingThread
+          ? current.directThreads.map((thread) => (thread.id === existingThread.id ? nextThread : thread))
+          : [nextThread, ...current.directThreads],
+      };
+    });
+  }
+
+  async function configurePartnerSpace(memberIds: string[]) {
+    const nextMemberIds = Array.from(new Set(memberIds.filter(Boolean))).slice(0, 2);
+    if (nextMemberIds.length !== 2) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            memberIds: nextMemberIds,
+          }
+        : {
+            memberIds: nextMemberIds,
+            messages: [],
+            privateRewards: [],
+            datePlans: [],
+            connectionNotes: [],
+          },
+    }));
+  }
+
+  async function sendPartnerMessage(content: string) {
+    const trimmed = content.trim();
+    if (!trimmed || !state.partnerSpace) {
+      return;
+    }
+
+    const message: DirectMessage = {
+      id: createId("partner-message"),
+      senderId: currentUserId,
+      senderName: userName,
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            messages: [...current.partnerSpace.messages, message].slice(-160),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function addPartnerReward(reward: { title: string; detail: string; cost: number }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            privateRewards: [
+              {
+                id: createId("partner-reward"),
+                title: reward.title,
+                detail: reward.detail,
+                cost: reward.cost,
+                createdByMemberId: currentUserId,
+                createdByName: userName,
+                redemptions: 0,
+                lastRedeemedAt: null,
+              },
+              ...current.partnerSpace.privateRewards,
+            ],
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function redeemPartnerReward(rewardId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => {
+      const reward = current.partnerSpace?.privateRewards.find((entry) => entry.id === rewardId);
+      if (!reward) {
+        return current;
+      }
+
+      const currentProfile = current.memberProfiles.find((profile) => profile.memberId === currentUserId);
+      if (!currentProfile || currentProfile.pointsBalance < reward.cost) {
+        return current;
+      }
+
+      return {
+        ...current,
+        memberProfiles: current.memberProfiles.map((profile) =>
+          profile.memberId === currentUserId ? { ...profile, pointsBalance: profile.pointsBalance - reward.cost } : profile,
+        ),
+        partnerSpace: current.partnerSpace
+          ? {
+              ...current.partnerSpace,
+              privateRewards: current.partnerSpace.privateRewards.map((entry) =>
+                entry.id === rewardId
+                  ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: new Date().toISOString() }
+                  : entry,
+              ),
+            }
+          : current.partnerSpace,
+      };
+    });
+  }
+
+  async function addPartnerDatePlan(plan: {
+    title: string;
+    when: string;
+    location: string;
+    detail: string;
+    budget: string;
+    status: "idea" | "planned" | "booked";
+  }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            datePlans: [
+              {
+                id: createId("date-night"),
+                title: plan.title,
+                when: plan.when,
+                location: plan.location,
+                detail: plan.detail,
+                budget: plan.budget,
+                status: plan.status,
+              },
+              ...current.partnerSpace.datePlans,
+            ],
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function addPartnerConnectionNote(note: { title: string; content: string }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            connectionNotes: [
+              {
+                id: createId("partner-note"),
+                authorId: currentUserId,
+                authorName: userName,
+                title: note.title,
+                content: note.content,
+                createdAt: new Date().toISOString(),
+              },
+              ...current.partnerSpace.connectionNotes,
+            ].slice(0, 80),
+          }
+        : current.partnerSpace,
+    }));
   }
 
   async function updateMemberProfile(memberId: string, updater: (profile: AppState["memberProfiles"][number]) => AppState["memberProfiles"][number]) {
@@ -676,12 +902,17 @@ export function FamilyFlowApp({
   const openChores = state.chores.length - completedChores;
   const savingsPercent = savingsRow?.percent ?? 0;
   const savingsAmount = savingsRow?.amount ?? 0;
-  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
   const primarySuggestion = assistantSuggestions[0] ?? "Ask the assistant for a weekly family planning reset.";
   const ownerCount = memberList.filter((member) => member.role === "owner").length;
   const adminCount = memberList.filter((member) => member.role === "admin").length;
   const activeMember = memberProfileId ? memberList.find((member) => member.id === memberProfileId) : null;
   const activeProfile = memberProfileId ? state.memberProfiles.find((profile) => profile.memberId === memberProfileId) : null;
+  const activeDirectThread = activeMember ? findDirectThread(activeMember.id) : null;
+  const partnerMembers = state.partnerSpace?.memberIds
+    .map((memberId) => memberList.find((member) => member.id === memberId))
+    .filter((member): member is HouseholdMember => Boolean(member)) ?? [];
+  const currentUserIsPartner = Boolean(state.partnerSpace?.memberIds.includes(currentUserId));
+  const canConfigurePartnerSpace = role === "owner" || role === "admin";
   const { navigation, activeMeta, activeNav, activeHeroStats, pageProfile } = buildWorkspaceShellData({
     activeTab,
     state,
@@ -716,6 +947,12 @@ export function FamilyFlowApp({
       },
     },
   });
+  const topBarTitle =
+    view === "member-profile" && activeMember ? `${activeMember.name} profile` : activeMeta.headline;
+  const topBarDetail =
+    view === "member-profile" && activeMember
+      ? "Profile, calendar, weather, rewards, and direct messages."
+      : activeMeta.spotlight;
 
   if (view === "member-profile" && (!activeMember || !activeProfile)) {
     return (
@@ -747,6 +984,19 @@ export function FamilyFlowApp({
         <div className="family-stage__glow family-stage__glow--three" />
 
         <div className="mx-auto max-w-[1220px] px-4 py-6 sm:px-6 lg:px-8">
+          <WorkspaceTopBar
+            householdName={householdName}
+            userName={userName}
+            activeTitle="Just you and FamilyFlow"
+            activeDetail="A clean chat room with the menu tucked into the top right."
+            navigation={navigation}
+            activeTab={activeTab}
+            onNavigate={goToTab}
+            onSignOut={() => {
+              void signOut({ callbackUrl: "/" });
+            }}
+          />
+
           {(aiError || saveError) && (
             <div className="family-card mb-5 rounded-[30px] border border-rose-200 bg-rose-50/95 p-4 text-sm leading-7 text-rose-900">
               {aiError ?? saveError}
@@ -774,96 +1024,92 @@ export function FamilyFlowApp({
       <div className="family-stage__glow family-stage__glow--two" />
       <div className="family-stage__glow family-stage__glow--three" />
 
-      <div className="mx-auto max-w-[1700px] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
+        <WorkspaceTopBar
+          householdName={householdName}
+          userName={userName}
+          activeTitle={topBarTitle}
+          activeDetail={topBarDetail}
+          navigation={navigation}
+          activeTab={activeTab}
+          onNavigate={goToTab}
+          onSignOut={() => {
+            void signOut({ callbackUrl: "/" });
+          }}
+        />
+
         {(aiError || saveError) && (
           <div className="family-card mb-5 rounded-[30px] border border-rose-200 bg-rose-50/95 p-4 text-sm leading-7 text-rose-900">
             {aiError ?? saveError}
           </div>
         )}
 
-        <div className="grid gap-5 xl:grid-cols-[285px_minmax(0,1fr)_320px]">
-          <WorkspaceLeftRail
-            roleLabel={roleLabel}
-            householdName={householdName}
-            userName={userName}
-            memberCount={memberList.length}
-            inviteCode={inviteCode}
-            saving={saving}
-            primarySuggestion={primarySuggestion}
-            navigation={navigation}
-            activeTab={activeTab}
-            aiTask={aiTask}
-            onNavigate={goToTab}
-            onOpenAiChatFocus={openAiChatFocus}
-            onGenerateMealPlan={() => {
-              void generateMealPlan();
-            }}
-            onGenerateBudgetCoach={() => {
-              void generateBudgetCoach();
-            }}
-          />
-
-          <div className="space-y-5">
-            {view === "member-profile" && activeMember && activeProfile ? (
-              <MemberProfilePage
-                key={activeMember.id}
-                member={activeMember}
-                profile={activeProfile}
-                role={role}
-                currentUserId={currentUserId}
-                familyAchievements={state.familyAchievements}
-                onBackToFamilyRoom={() => goToTab("family")}
-                onSaveBasics={(headline, about) => {
-                  void saveProfileBasics(activeMember.id, headline, about);
-                }}
-                onSaveWeatherLocation={(location) => {
-                  void saveProfileWeatherLocation(activeMember.id, location);
-                }}
-                onSaveFitness={(entry) => {
-                  void saveProfileFitness(activeMember.id, entry);
-                }}
-                onShareFitness={() => {
-                  void shareProfileFitness(activeMember.id);
-                }}
-                onAddGoal={(goal) => {
-                  void addProfileGoal(activeMember.id, goal);
-                }}
-                onCompleteGoal={(goalId) => {
-                  void completeProfileGoal(activeMember.id, goalId);
-                }}
-                onShareGoal={(goalId) => {
-                  void shareProfileGoal(activeMember.id, goalId);
-                }}
-                onAddReward={(reward) => {
-                  void addProfileReward(activeMember.id, reward);
-                }}
-                onRedeemReward={(rewardId) => {
-                  void redeemProfileReward(activeMember.id, rewardId);
-                }}
-                onAddCalendarEvent={(event) => {
-                  void addProfileCalendarEvent(activeMember.id, event);
-                }}
-                onSaveAvatarUpload={(upload) => {
-                  void saveProfileAvatarUpload(activeMember.id, upload);
-                }}
-                onAddMemoryUpload={(upload) => {
-                  void addProfileMemoryUpload(activeMember.id, upload);
-                }}
-                onRemoveUpload={(uploadId) => {
-                  void removeProfileUpload(activeMember.id, uploadId);
-                }}
+        <div className="space-y-5">
+          {view === "member-profile" && activeMember && activeProfile ? (
+            <MemberProfilePage
+              key={activeMember.id}
+              member={activeMember}
+              profile={activeProfile}
+              role={role}
+              currentUserId={currentUserId}
+              familyAchievements={state.familyAchievements}
+              directMessages={activeDirectThread?.messages ?? []}
+              onBackToFamilyRoom={() => goToTab("family")}
+              onSendMessage={(content) => {
+                void sendDirectMessage(activeMember.id, content);
+              }}
+              onSaveBasics={(headline, about) => {
+                void saveProfileBasics(activeMember.id, headline, about);
+              }}
+              onSaveWeatherLocation={(location) => {
+                void saveProfileWeatherLocation(activeMember.id, location);
+              }}
+              onSaveFitness={(entry) => {
+                void saveProfileFitness(activeMember.id, entry);
+              }}
+              onShareFitness={() => {
+                void shareProfileFitness(activeMember.id);
+              }}
+              onAddGoal={(goal) => {
+                void addProfileGoal(activeMember.id, goal);
+              }}
+              onCompleteGoal={(goalId) => {
+                void completeProfileGoal(activeMember.id, goalId);
+              }}
+              onShareGoal={(goalId) => {
+                void shareProfileGoal(activeMember.id, goalId);
+              }}
+              onAddReward={(reward) => {
+                void addProfileReward(activeMember.id, reward);
+              }}
+              onRedeemReward={(rewardId) => {
+                void redeemProfileReward(activeMember.id, rewardId);
+              }}
+              onAddCalendarEvent={(event) => {
+                void addProfileCalendarEvent(activeMember.id, event);
+              }}
+              onSaveAvatarUpload={(upload) => {
+                void saveProfileAvatarUpload(activeMember.id, upload);
+              }}
+              onAddMemoryUpload={(upload) => {
+                void addProfileMemoryUpload(activeMember.id, upload);
+              }}
+              onRemoveUpload={(uploadId) => {
+                void removeProfileUpload(activeMember.id, uploadId);
+              }}
+            />
+          ) : (
+            <>
+              <WorkspaceHeroPanel
+                activeTab={activeTab}
+                aiTask={aiTask}
+                activeMeta={activeMeta}
+                activeNav={activeNav}
+                activeHeroStats={activeHeroStats}
+                pageProfile={pageProfile}
               />
-            ) : (
-              <>
-                <WorkspaceHeroPanel
-                  activeTab={activeTab}
-                  aiTask={aiTask}
-                  activeMeta={activeMeta}
-                  activeNav={activeNav}
-                  activeHeroStats={activeHeroStats}
-                  pageProfile={pageProfile}
-                />
 
+              {activeTab !== "partner" ? (
                 <section className="space-y-5">
                   <WorkspacePageSections
                     activeTab={activeTab}
@@ -957,19 +1203,39 @@ export function FamilyFlowApp({
                     }}
                   />
                 </section>
-              </>
-            )}
-          </div>
+              ) : null}
 
-          <WorkspaceRightRail
-            householdName={householdName}
-            activeNav={activeNav}
-            activeHeroStats={activeHeroStats}
-            pageProfile={pageProfile}
-            onSignOut={() => {
-              void signOut({ callbackUrl: "/" });
-            }}
-          />
+              {activeTab === "partner" ? (
+                <PartnerSpacePage
+                  currentUserId={currentUserId}
+                  canConfigurePartnerSpace={canConfigurePartnerSpace}
+                  currentUserIsPartner={currentUserIsPartner}
+                  members={memberList}
+                  memberProfiles={state.memberProfiles}
+                  partnerMembers={partnerMembers}
+                  partnerSpace={state.partnerSpace}
+                  onConfigurePartnerSpace={(memberIds) => {
+                    void configurePartnerSpace(memberIds);
+                  }}
+                  onSendMessage={(content) => {
+                    void sendPartnerMessage(content);
+                  }}
+                  onAddPrivateReward={(reward) => {
+                    void addPartnerReward(reward);
+                  }}
+                  onRedeemPrivateReward={(rewardId) => {
+                    void redeemPartnerReward(rewardId);
+                  }}
+                  onAddDatePlan={(plan) => {
+                    void addPartnerDatePlan(plan);
+                  }}
+                  onAddConnectionNote={(note) => {
+                    void addPartnerConnectionNote(note);
+                  }}
+                />
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </main>

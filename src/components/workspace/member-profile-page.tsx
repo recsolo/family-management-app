@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
-import { createId, getTodayKey, type FamilyAchievement, type FitnessLog, type MemberProfile, type ProfileUpload } from "@/lib/familyflow";
+import { createId, getTodayKey, type DirectMessage, type FamilyAchievement, type FitnessLog, type MemberProfile, type ProfileUpload } from "@/lib/familyflow";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type WeatherSnapshot = {
@@ -23,7 +23,9 @@ type Props = {
   role: HouseholdRole;
   currentUserId: string;
   familyAchievements: FamilyAchievement[];
+  directMessages: DirectMessage[];
   onBackToFamilyRoom: () => void;
+  onSendMessage: (content: string) => void;
   onSaveBasics: (headline: string, about: string) => void;
   onSaveWeatherLocation: (location: string) => void;
   onSaveFitness: (entry: FitnessLog) => void;
@@ -106,7 +108,9 @@ export function MemberProfilePage({
   role,
   currentUserId,
   familyAchievements,
+  directMessages,
   onBackToFamilyRoom,
+  onSendMessage,
   onSaveBasics,
   onSaveWeatherLocation,
   onSaveFitness,
@@ -125,6 +129,7 @@ export function MemberProfilePage({
   const todayFitness = profile.fitnessLogs.find((entry) => entry.date === todayKey);
   const avatar = profile.uploads.find((upload) => upload.id === profile.avatarUploadId) ?? null;
   const canEdit = currentUserId === member.id || role === "owner" || role === "admin";
+  const canMessageMember = currentUserId !== member.id;
   const familyFeed = familyAchievements.filter((item) => item.memberId === member.id).slice(0, 5);
   const calendar = useMemo(() => buildCalendar(todayKey, profile.calendarEvents.map((event) => event.date)), [profile.calendarEvents, todayKey]);
 
@@ -154,6 +159,7 @@ export function MemberProfilePage({
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadNote, setUploadNote] = useState("");
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [messageInput, setMessageInput] = useState("");
   const displayedWeather = profile.weatherLocation ? weather : null;
   const displayedWeatherError = profile.weatherLocation ? weatherError : null;
 
@@ -259,6 +265,16 @@ export function MemberProfilePage({
       sleepHours: Number(sleep) || 0,
       note: fitnessNote.trim(),
     });
+  }
+
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!messageInput.trim()) {
+      return;
+    }
+
+    onSendMessage(messageInput.trim());
+    setMessageInput("");
   }
 
   return (
@@ -434,6 +450,30 @@ export function MemberProfilePage({
         </div>
 
         <div className="space-y-5">
+          {canMessageMember ? (
+            <article className="family-panel rounded-[28px] p-6">
+              <p className="family-kicker family-eyebrow">Private chat</p>
+              <h2 className="mt-3 font-serif text-4xl leading-tight">Message {member.name}.</h2>
+              <div className="mt-5 space-y-3">
+                {directMessages.length > 0 ? (
+                  directMessages.map((message) => (
+                    <div key={message.id} className={`family-chat-bubble ${message.senderId === currentUserId ? "family-chat-user" : "family-chat-assistant"}`}>
+                      <p className="family-kicker opacity-70">{message.senderName}</p>
+                      <p className="mt-2 whitespace-pre-wrap">{message.content}</p>
+                      <p className="mt-3 text-xs opacity-70">{formatDateLabel(message.createdAt.slice(0, 10))}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Start the first message so this profile becomes a real one-on-one space.</div>
+                )}
+              </div>
+              <form className="mt-5 space-y-4" onSubmit={sendMessage}>
+                <textarea value={messageInput} onChange={(event) => setMessageInput(event.target.value)} rows={4} placeholder={`Send ${member.name} a quick note...`} className="family-textarea" />
+                <button type="submit" className="family-btn family-btn-primary">Send message</button>
+              </form>
+            </article>
+          ) : null}
+
           <article className="family-panel rounded-[28px] p-6">
             <p className="family-kicker family-eyebrow">Today&apos;s weather</p>
             <h2 className="mt-3 font-serif text-4xl leading-tight">{displayedWeather?.weather.summary ?? "Pick a weather spot"}</h2>

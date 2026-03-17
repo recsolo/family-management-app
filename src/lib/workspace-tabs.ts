@@ -4,6 +4,7 @@ export const WORKSPACE_TAB_ROUTES = {
   meals: "/meal-planner",
   budget: "/budget-lab",
   family: "/family-room",
+  partner: "/partner-space",
   ai: "/ai-studio",
 } as const;
 
@@ -28,6 +29,8 @@ export function getActiveTabFromSegment(segment: string | null | undefined): Act
       return "budget";
     case "family-room":
       return "family";
+    case "partner-space":
+      return "partner";
     case "ai-studio":
       return "ai";
     default:

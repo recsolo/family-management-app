@@ -35,6 +35,20 @@ export type ChatMessage = {
   content: string;
 };
 
+export type DirectMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  createdAt: string;
+};
+
+export type DirectThread = {
+  id: string;
+  participantIds: string[];
+  messages: DirectMessage[];
+};
+
 export type MealPlan = {
   headline: string;
   summary: string;
@@ -131,6 +145,44 @@ export type FamilyAchievement = {
   kind: "goal" | "reward" | "fitness" | "shoutout";
 };
 
+export type PartnerReward = {
+  id: string;
+  title: string;
+  detail: string;
+  cost: number;
+  createdByMemberId: string;
+  createdByName: string;
+  redemptions: number;
+  lastRedeemedAt: string | null;
+};
+
+export type DateNightPlan = {
+  id: string;
+  title: string;
+  when: string;
+  location: string;
+  detail: string;
+  budget: string;
+  status: "idea" | "planned" | "booked";
+};
+
+export type ConnectionNote = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  createdAt: string;
+};
+
+export type PartnerSpace = {
+  memberIds: string[];
+  messages: DirectMessage[];
+  privateRewards: PartnerReward[];
+  datePlans: DateNightPlan[];
+  connectionNotes: ConnectionNote[];
+};
+
 export type AppState = {
   pantry: string[];
   budget: {
@@ -147,6 +199,8 @@ export type AppState = {
   latestBudgetCoach: BudgetCoach | null;
   memberProfiles: MemberProfile[];
   familyAchievements: FamilyAchievement[];
+  directThreads: DirectThread[];
+  partnerSpace: PartnerSpace | null;
 };
 
 type MemberSeed = {
@@ -265,6 +319,8 @@ export const DEFAULT_STATE: AppState = {
   latestBudgetCoach: null,
   memberProfiles: [],
   familyAchievements: [],
+  directThreads: [],
+  partnerSpace: null,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -475,6 +531,128 @@ function sanitizeAchievement(value: unknown): FamilyAchievement | null {
   };
 }
 
+function sanitizeDirectMessage(value: unknown): DirectMessage | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const senderId = toTrimmedString(value.senderId);
+  const content = toTrimmedString(value.content);
+  if (!senderId || !content) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("message")),
+    senderId,
+    senderName: toTrimmedString(value.senderName, "Family member"),
+    content,
+    createdAt: toTrimmedString(value.createdAt, new Date().toISOString()),
+  };
+}
+
+function sanitizeDirectThread(value: unknown): DirectThread | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const participantIds = Array.from(new Set(toStringArray(value.participantIds))).slice(0, 2);
+  if (participantIds.length !== 2) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("thread")),
+    participantIds,
+    messages: Array.isArray(value.messages) ? value.messages.map(sanitizeDirectMessage).filter(isDefined).slice(-120) : [],
+  };
+}
+
+function sanitizePartnerReward(value: unknown): PartnerReward | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  const createdByMemberId = toTrimmedString(value.createdByMemberId);
+  if (!title || !createdByMemberId) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("partner-reward")),
+    title,
+    detail: toTrimmedString(value.detail),
+    cost: clampNumber(value.cost, 40, 1, 5000),
+    createdByMemberId,
+    createdByName: toTrimmedString(value.createdByName, "Partner"),
+    redemptions: clampNumber(value.redemptions, 0, 0, 5000),
+    lastRedeemedAt: typeof value.lastRedeemedAt === "string" && value.lastRedeemedAt ? value.lastRedeemedAt : null,
+  };
+}
+
+function sanitizeDateNightPlan(value: unknown): DateNightPlan | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  if (!title) {
+    return null;
+  }
+
+  const status = value.status === "planned" || value.status === "booked" ? value.status : "idea";
+  return {
+    id: toTrimmedString(value.id, createId("date-night")),
+    title,
+    when: toTrimmedString(value.when),
+    location: toTrimmedString(value.location),
+    detail: toTrimmedString(value.detail),
+    budget: toTrimmedString(value.budget),
+    status,
+  };
+}
+
+function sanitizeConnectionNote(value: unknown): ConnectionNote | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const authorId = toTrimmedString(value.authorId);
+  const content = toTrimmedString(value.content);
+  if (!authorId || !content) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("note")),
+    authorId,
+    authorName: toTrimmedString(value.authorName, "Partner"),
+    title: toTrimmedString(value.title, "Little win"),
+    content,
+    createdAt: toTrimmedString(value.createdAt, new Date().toISOString()),
+  };
+}
+
+function sanitizePartnerSpace(value: unknown): PartnerSpace | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const memberIds = Array.from(new Set(toStringArray(value.memberIds))).slice(0, 2);
+  if (memberIds.length !== 2) {
+    return null;
+  }
+
+  return {
+    memberIds,
+    messages: Array.isArray(value.messages) ? value.messages.map(sanitizeDirectMessage).filter(isDefined).slice(-160) : [],
+    privateRewards: Array.isArray(value.privateRewards) ? value.privateRewards.map(sanitizePartnerReward).filter(isDefined) : [],
+    datePlans: Array.isArray(value.datePlans) ? value.datePlans.map(sanitizeDateNightPlan).filter(isDefined) : [],
+    connectionNotes: Array.isArray(value.connectionNotes) ? value.connectionNotes.map(sanitizeConnectionNote).filter(isDefined).slice(-80) : [],
+  };
+}
+
 export function normalizeIngredient(value: string) {
   return value.trim().toLowerCase();
 }
@@ -526,10 +704,43 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
     }))
     .slice(0, 60);
 
+  const directThreads = sanitized.directThreads
+    .filter((thread) => thread.participantIds.length === 2 && thread.participantIds.every((participantId) => memberMap.has(participantId)))
+    .map((thread) => ({
+      ...thread,
+      participantIds: thread.participantIds.slice(0, 2),
+      messages: thread.messages.map((message) => ({
+        ...message,
+        senderName: memberMap.get(message.senderId)?.name ?? message.senderName,
+      })),
+    }));
+
+  const partnerSpace =
+    sanitized.partnerSpace && sanitized.partnerSpace.memberIds.every((memberId) => memberMap.has(memberId))
+      ? {
+          ...sanitized.partnerSpace,
+          memberIds: sanitized.partnerSpace.memberIds.slice(0, 2),
+          messages: sanitized.partnerSpace.messages.map((message) => ({
+            ...message,
+            senderName: memberMap.get(message.senderId)?.name ?? message.senderName,
+          })),
+          privateRewards: sanitized.partnerSpace.privateRewards.map((reward) => ({
+            ...reward,
+            createdByName: memberMap.get(reward.createdByMemberId)?.name ?? reward.createdByName,
+          })),
+          connectionNotes: sanitized.partnerSpace.connectionNotes.map((note) => ({
+            ...note,
+            authorName: memberMap.get(note.authorId)?.name ?? note.authorName,
+          })),
+        }
+      : null;
+
   return {
     ...sanitized,
     memberProfiles,
     familyAchievements,
+    directThreads,
+    partnerSpace,
   };
 }
 
@@ -586,6 +797,8 @@ export function sanitizeState(raw: unknown): AppState {
     latestBudgetCoach: parsed.latestBudgetCoach ?? defaults.latestBudgetCoach,
     memberProfiles: Array.isArray(parsed.memberProfiles) ? parsed.memberProfiles.map(sanitizeProfile).filter(isDefined) : defaults.memberProfiles,
     familyAchievements: Array.isArray(parsed.familyAchievements) ? parsed.familyAchievements.map(sanitizeAchievement).filter(isDefined) : defaults.familyAchievements,
+    directThreads: Array.isArray(parsed.directThreads) ? parsed.directThreads.map(sanitizeDirectThread).filter(isDefined) : defaults.directThreads,
+    partnerSpace: sanitizePartnerSpace(parsed.partnerSpace),
   };
 }
 

@@ -5,9 +5,11 @@ import {
   cloneDefaultState,
   type AppState,
   type BudgetCoach,
+  type DirectThread,
   type FamilyAchievement,
   type MealPlan,
   type MemberProfile,
+  type PartnerSpace,
   syncStateWithMembers,
 } from "@/lib/familyflow";
 import { db } from "@/lib/db";
@@ -47,6 +49,8 @@ type HouseholdRecord = {
   routinesJson: string;
   memberProfilesJson: string;
   familyAchievementsJson: string;
+  directThreadsJson: string;
+  partnerSpaceJson: string | null;
   assistantHistoryJson: string;
   latestMealPlanJson: string | null;
   latestBudgetCoachJson: string | null;
@@ -80,6 +84,8 @@ function householdStatePayload(baseState: AppState) {
     routinesJson: JSON.stringify(baseState.routines),
     memberProfilesJson: JSON.stringify(baseState.memberProfiles),
     familyAchievementsJson: JSON.stringify(baseState.familyAchievements),
+    directThreadsJson: JSON.stringify(baseState.directThreads),
+    partnerSpaceJson: baseState.partnerSpace ? JSON.stringify(baseState.partnerSpace) : null,
     assistantHistoryJson: JSON.stringify(baseState.assistantHistory),
     latestMealPlanJson: baseState.latestMealPlan ? JSON.stringify(baseState.latestMealPlan) : null,
     latestBudgetCoachJson: baseState.latestBudgetCoach ? JSON.stringify(baseState.latestBudgetCoach) : null,
@@ -102,6 +108,8 @@ export function householdToAppState(household: HouseholdRecord): AppState {
     routines: safeParse(household.routinesJson, defaults.routines),
     memberProfiles: safeParse<MemberProfile[]>(household.memberProfilesJson, defaults.memberProfiles),
     familyAchievements: safeParse<FamilyAchievement[]>(household.familyAchievementsJson, defaults.familyAchievements),
+    directThreads: safeParse<DirectThread[]>(household.directThreadsJson, defaults.directThreads),
+    partnerSpace: safeParse<PartnerSpace | null>(household.partnerSpaceJson, defaults.partnerSpace),
     assistantHistory: safeParse(household.assistantHistoryJson, defaults.assistantHistory),
     latestMealPlan: safeParse<MealPlan | null>(household.latestMealPlanJson, null),
     latestBudgetCoach: safeParse<BudgetCoach | null>(household.latestBudgetCoachJson, null),
@@ -194,6 +202,8 @@ export async function saveHouseholdState(householdId: string, state: AppState) {
       routinesJson: payload.routinesJson,
       memberProfilesJson: payload.memberProfilesJson,
       familyAchievementsJson: payload.familyAchievementsJson,
+      directThreadsJson: payload.directThreadsJson,
+      partnerSpaceJson: payload.partnerSpaceJson,
       assistantHistoryJson: payload.assistantHistoryJson,
       latestMealPlanJson: payload.latestMealPlanJson,
       latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -380,6 +390,8 @@ export async function attachUserToHousehold(input: AttachHouseholdInput) {
         routinesJson: payload.routinesJson,
         memberProfilesJson: payload.memberProfilesJson,
         familyAchievementsJson: payload.familyAchievementsJson,
+        directThreadsJson: payload.directThreadsJson,
+        partnerSpaceJson: payload.partnerSpaceJson,
         assistantHistoryJson: payload.assistantHistoryJson,
         latestMealPlanJson: payload.latestMealPlanJson,
         latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -452,6 +464,8 @@ export async function registerUser(input: RegisterInput) {
           routinesJson: payload.routinesJson,
           memberProfilesJson: payload.memberProfilesJson,
           familyAchievementsJson: payload.familyAchievementsJson,
+          directThreadsJson: payload.directThreadsJson,
+          partnerSpaceJson: payload.partnerSpaceJson,
           assistantHistoryJson: payload.assistantHistoryJson,
           latestMealPlanJson: payload.latestMealPlanJson,
           latestBudgetCoachJson: payload.latestBudgetCoachJson,

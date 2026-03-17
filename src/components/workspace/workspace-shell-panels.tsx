@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { ActiveTab } from "@/lib/workspace-tabs";
 
 import type {
@@ -11,6 +13,17 @@ import type {
 } from "@/components/workspace/workspace-shell-data";
 
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
+
+type TopBarProps = {
+  householdName: string;
+  userName: string;
+  activeTitle: string;
+  activeDetail: string;
+  navigation: WorkspaceNavigationItem[];
+  activeTab: ActiveTab;
+  onNavigate: (tab: ActiveTab) => void;
+  onSignOut: () => void;
+};
 
 type LeftRailProps = {
   roleLabel: string;
@@ -62,6 +75,109 @@ function getActionButtonClass(tone: WorkspaceActionTone) {
 
 function usesDarkCopy(className: string) {
   return className.includes("dark") || className.includes("accent");
+}
+
+export function WorkspaceTopBar({
+  householdName,
+  userName,
+  activeTitle,
+  activeDetail,
+  navigation,
+  activeTab,
+  onNavigate,
+  onSignOut,
+}: TopBarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <header className="family-topbar family-animate-rise">
+      <div className="family-topbar__brand">
+        <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
+        <h1 className="mt-2 font-serif text-3xl leading-tight">{activeTitle}</h1>
+        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{activeDetail}</p>
+      </div>
+
+      <div className="family-topbar__actions">
+        <div className="family-topbar__meta">
+          <span className="family-badge family-badge-warm">{householdName}</span>
+          <span className="text-sm text-[var(--muted)]">{userName}</span>
+        </div>
+        <button
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls="family-command-menu"
+          onClick={() => setMenuOpen((current) => !current)}
+          className="family-menu-button"
+        >
+          <span className="family-menu-button__label">Menu</span>
+          <span className="family-menu-button__icon" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </div>
+
+      {menuOpen ? (
+        <>
+          <button type="button" aria-label="Close navigation menu" className="family-command-backdrop" onClick={() => setMenuOpen(false)} />
+          <div id="family-command-menu" className="family-command-popout" role="dialog" aria-label="Page navigation">
+            <div className="family-command-popout__header">
+              <div>
+                <p className="family-kicker family-eyebrow">Command menu</p>
+                <h2 className="mt-2 font-serif text-3xl leading-tight">Jump to a page</h2>
+              </div>
+              <button type="button" onClick={() => setMenuOpen(false)} className="family-btn family-btn-secondary">
+                Close
+              </button>
+            </div>
+
+            <nav className="mt-5 grid gap-3" aria-label="Workspace pages">
+              {navigation.map((item) => {
+                const isActive = item.value === activeTab;
+
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onNavigate(item.value);
+                    }}
+                    className={`family-command-link ${isActive ? "family-command-link-active" : ""}`}
+                  >
+                    <span>
+                      <span className="family-kicker family-eyebrow">{item.detail}</span>
+                      <span className="mt-2 block font-serif text-2xl leading-tight">{item.label}</span>
+                    </span>
+                    <span className={`family-badge ${isActive ? "family-badge-accent" : "family-badge-warm"}`}>{isActive ? "Open" : "Go"}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
+              <div>
+                <p className="family-kicker family-eyebrow">Account</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Signed in as {userName}.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSignOut();
+                }}
+                className="family-btn family-btn-secondary"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </header>
+  );
 }
 
 export function WorkspaceLeftRail({

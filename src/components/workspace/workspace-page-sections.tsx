@@ -3,7 +3,7 @@
 import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
-import type { AppState, BudgetGoal, BudgetStyle, Recipe } from "@/lib/familyflow";
+import { getTodayKey, type AppState, type BudgetGoal, type BudgetStyle, type Recipe } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
@@ -157,26 +157,34 @@ export function WorkspacePageSections(props: WorkspacePageSectionsProps) {
 function DashboardPage({
   state,
   bestRecipe,
-  savingsAmount,
-  savingsPercent,
   memberList,
   completedChores,
   openChores,
   goToTab,
   toggleChore,
 }: PageProps) {
+  const todayKey = getTodayKey();
   const firstReminder = state.reminders[0];
   const firstRoutine = state.routines[0];
+  const dinnerLead = state.latestMealPlan?.meals[0];
+  const todaysEvents = state.memberProfiles.flatMap((profile) =>
+    profile.calendarEvents
+      .filter((event) => event.date === todayKey)
+      .map((event) => ({
+        ...event,
+        memberName: memberList.find((member) => member.id === profile.memberId)?.name ?? "Family member",
+      })),
+  );
   const dashboardMetrics: RouteMetric[] = [
     {
-      label: "Dinner path",
-      value: bestRecipe ? bestRecipe.name : "Needs pantry data",
-      note: bestRecipe ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients already align.` : "Add staples to unlock smarter dinner guidance.",
+      label: "Dinner tonight",
+      value: dinnerLead?.recipe ?? bestRecipe?.name ?? "Still deciding",
+      note: dinnerLead ? dinnerLead.whyItFits : bestRecipe ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients already line up.` : "Add pantry staples to unlock smarter dinner guidance.",
     },
     {
-      label: "Budget reserve",
-      value: `${savingsPercent}%`,
-      note: `$${savingsAmount.toLocaleString()} currently protected for savings.`,
+      label: "Today's events",
+      value: `${todaysEvents.length}`,
+      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "Member appointments show up here on the day they happen.",
     },
     {
       label: "Household load",
@@ -193,42 +201,34 @@ function DashboardPage({
             <p className="family-kicker family-eyebrow">Today&apos;s family check</p>
             <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">See what&apos;s next today.</h3>
           </div>
-          <div className="family-route-chip">Dashboard</div>
+          <div className="family-route-chip">Today</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Check meals, money, chores, and reminders here before you open a more detailed page.
+          Keep this page focused on today: dinner, chores, reminders, and appointments that need attention right now.
         </p>
-        <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="mt-6">
           <RouteMetricStrip items={dashboardMetrics} />
-          <div className="family-route-notice family-route-notice--dark">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Quick switchboard</p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button type="button" onClick={() => goToTab("meals")} className="family-btn family-btn-primary">
-                Open meal planner
-              </button>
-              <button type="button" onClick={() => goToTab("budget")} className="family-btn family-btn-secondary">
-                Open Budget Lab
-              </button>
-              <button type="button" onClick={() => goToTab("ai")} className="family-btn family-btn-ghost">
-                Ask assistant
-              </button>
-            </div>
-          </div>
         </div>
       </article>
 
       <div className="grid gap-5 2xl:grid-cols-[1.04fr_0.96fr]">
         <InsightCard
           kicker="Tonight's dinner signal"
-          title={bestRecipe ? bestRecipe.name : "Set the pantry stage"}
+          title={dinnerLead?.recipe ?? bestRecipe?.name ?? "Set the pantry stage"}
           body={
-            bestRecipe
-              ? `${bestRecipe.name} is the strongest current match based on what is already in the house. This makes dinner planning feel like a decision desk instead of a guess.`
-              : "Add pantry items so the meal planner can stop guessing and start suggesting dinner from what the family actually has."
+            dinnerLead
+              ? `${dinnerLead.day} is already mapped with a dinner choice, so you can move straight into prep instead of debating what to cook.`
+              : bestRecipe
+                ? `${bestRecipe.name} is the strongest current match based on what is already in the house. This makes dinner planning feel like a decision desk instead of a guess.`
+                : "Add pantry items so the meal planner can stop guessing and start suggesting dinner from what the family actually has."
           }
           className="family-card family-card-dark family-grid-lines"
         >
-          {bestRecipe ? (
+          {dinnerLead ? (
+            <div className="mt-5 rounded-[22px] border border-white/10 bg-white/10 p-4 text-sm leading-7 text-stone-100">
+              {dinnerLead.whyItFits}
+            </div>
+          ) : bestRecipe ? (
             <div className="mt-5 flex flex-wrap gap-2">
               {bestRecipe.ingredients.map((ingredient) => (
                 <span key={ingredient} className="family-badge bg-white/10 text-stone-100">
@@ -239,33 +239,31 @@ function DashboardPage({
           ) : null}
         </InsightCard>
 
-        <div className="grid gap-5">
-          <InsightCard
-            kicker="Budget pulse"
-            title="Reserve is holding steady."
-            body={`${savingsPercent}% of income, or about $${savingsAmount.toLocaleString()} monthly, is currently being reserved.`}
-            className="family-card family-card-gold"
-          >
-            <button type="button" onClick={() => goToTab("budget")} className="family-btn family-btn-secondary mt-5">
-              Open Budget Lab
-            </button>
-          </InsightCard>
-
-          <InsightCard
-            kicker="Member snapshot"
-            title={`${memberList.length} people are in the loop.`}
-            body="Roles decide who can manage invites, settings, and access while everyone else stays focused on the family work."
-            className="family-panel"
-          >
-            <div className="mt-5 flex flex-wrap gap-2">
-              {memberList.slice(0, 4).map((member) => (
-                <span key={member.id} className="family-badge family-badge-accent">
-                  {member.name}
-                </span>
-              ))}
-            </div>
-          </InsightCard>
-        </div>
+        <article className="family-panel rounded-[28px] p-6 md:p-7">
+          <p className="family-kicker family-eyebrow">Appointments for today</p>
+          <h3 className="mt-4 font-serif text-4xl leading-tight">Know who needs to be where.</h3>
+          <div className="mt-5 space-y-3">
+            {todaysEvents.length > 0 ? (
+              todaysEvents.slice(0, 4).map((event) => (
+                <div key={`${event.memberName}-${event.id}`} className="family-list-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="font-serif text-2xl">{event.title}</h4>
+                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                        {event.memberName}
+                        {event.time ? ` / ${event.time}` : ""}
+                      </p>
+                    </div>
+                    <span className="family-badge family-badge-accent">Today</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{event.detail || "Open the member profile for more details."}</p>
+                </div>
+              ))
+            ) : (
+              <EmptyState>No appointments are on the calendar for today yet.</EmptyState>
+            )}
+          </div>
+        </article>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
@@ -281,7 +279,7 @@ function DashboardPage({
           </div>
           <div className="mt-5 space-y-3">
             {state.chores.length > 0 ? (
-              state.chores.slice(0, 3).map((chore) => (
+              state.chores.slice(0, 4).map((chore) => (
                 <button
                   key={chore.id}
                   type="button"
@@ -318,17 +316,39 @@ function DashboardPage({
             }
             className="family-panel family-surface-warm"
           />
+
           <InsightCard
-            kicker="Latest routine"
+            kicker="Today's rhythm"
             title={firstRoutine ? firstRoutine.name : "No shared routine yet"}
             body={
               firstRoutine
                 ? `${firstRoutine.timeWindow}. ${firstRoutine.items.join(", ")}.`
-                : "Add a repeatable routine so the household has a steady rhythm for resets and prep."
+                : "Add a repeatable routine so the household has a steady rhythm for mornings, after-school, or evenings."
             }
             className="family-card family-card-soft"
-          />
+          >
+            <button type="button" onClick={() => goToTab("meals")} className="family-btn family-btn-secondary mt-5">
+              Open Meal Planner
+            </button>
+          </InsightCard>
         </div>
+      </div>
+
+      <div className="grid gap-5">
+        <InsightCard
+          kicker="Family in the loop"
+          title={`${memberList.length} people are connected.`}
+          body="Profiles, private chats, and the family room all work better when everyone has their own place in the app."
+          className="family-panel"
+        >
+          <div className="mt-5 flex flex-wrap gap-2">
+            {memberList.slice(0, 6).map((member) => (
+              <span key={member.id} className="family-badge family-badge-accent">
+                {member.name}
+              </span>
+            ))}
+          </div>
+        </InsightCard>
       </div>
     </div>
   );
@@ -889,6 +909,7 @@ function FamilyPage({
   addRoutine,
   ownerCount,
   adminCount,
+  goToTab,
   openMemberProfile,
 }: PageProps) {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -1031,6 +1052,11 @@ function FamilyPage({
                     <button type="button" onClick={() => openMemberProfile(member.id)} className="family-btn family-btn-primary">
                       Open profile
                     </button>
+                    {!isCurrentUser ? (
+                      <button type="button" onClick={() => openMemberProfile(member.id)} className="family-btn family-btn-soft">
+                        Open chat
+                      </button>
+                    ) : null}
                   </div>
                   {(canChangeRole || canRemoveMember) ? (
                     <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -1128,6 +1154,21 @@ function FamilyPage({
             }
             className="family-panel"
           />
+
+          <InsightCard
+            kicker="Partner page"
+            title={state.partnerSpace?.memberIds.length === 2 ? "Private page is ready." : "Set up the grown-up page."}
+            body={
+              state.partnerSpace?.memberIds.length === 2
+                ? "Open Partner Space from the menu for private messages, date-night planning, and rewards."
+                : "Once two partners are chosen, they get a private page for messages, date ideas, and rewards."
+            }
+            className="family-card family-card-dark"
+          >
+            <button type="button" onClick={() => goToTab("partner")} className="family-btn family-btn-primary mt-5">
+              Open Partner Space
+            </button>
+          </InsightCard>
         </div>
       </div>
 

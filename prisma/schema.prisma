@@ -32,6 +32,8 @@ model Household {
   routinesJson          String       @default("[]") @map("routines_json")
   memberProfilesJson    String       @default("[]") @map("member_profiles_json")
   familyAchievementsJson String      @default("[]") @map("family_achievements_json")
+  directThreadsJson     String       @default("[]") @map("direct_threads_json")
+  partnerSpaceJson      String?      @map("partner_space_json")
   assistantHistoryJson  String       @default("[]") @map("assistant_history_json")
   latestMealPlanJson    String?      @map("latest_meal_plan_json")
   latestBudgetCoachJson String?      @map("latest_budget_coach_json")

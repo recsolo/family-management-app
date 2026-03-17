@@ -1391,3 +1391,208 @@ textarea:focus-visible {
     opacity: 1;
   }
 }
+
+.family-topbar {
+  position: sticky;
+  top: 1rem;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
+  border-radius: 30px;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--shadow-panel);
+}
+
+.family-topbar__brand {
+  max-width: 46rem;
+}
+
+.family-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-left: auto;
+}
+
+.family-topbar__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.family-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(16, 16, 16, 0.12);
+  background: #111111;
+  color: white;
+  border-radius: 999px;
+  padding: 0.85rem 1rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  box-shadow: 0 14px 28px rgba(15, 15, 15, 0.18);
+}
+
+.family-menu-button:hover {
+  transform: translateY(-1px);
+  background: #1a1a1a;
+}
+
+.family-menu-button__label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.family-menu-button__icon {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.24rem;
+}
+
+.family-menu-button__icon span {
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.family-command-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: 0;
+  background: rgba(15, 15, 15, 0.28);
+}
+
+.family-command-popout {
+  position: fixed;
+  top: 5.7rem;
+  right: max(1rem, calc((100vw - 1280px) / 2 + 1rem));
+  z-index: 40;
+  width: min(24rem, calc(100vw - 2rem));
+  border: 1px solid rgba(18, 18, 18, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 28px;
+  padding: 1rem;
+  box-shadow: 0 24px 70px rgba(15, 15, 15, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.family-command-popout__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.family-command-link {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  padding: 1rem;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.family-command-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(204, 164, 64, 0.45);
+  box-shadow: 0 14px 30px rgba(18, 18, 18, 0.08);
+}
+
+.family-command-link-active {
+  border-color: rgba(204, 164, 64, 0.55);
+  background: rgba(251, 246, 227, 0.92);
+}
+
+.family-partner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.family-partner-tab {
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.family-partner-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(16, 16, 16, 0.07);
+}
+
+.family-partner-tab-active {
+  background: #111111;
+  color: white;
+  border-color: #111111;
+}
+
+.family-surface-ink {
+  background:
+    linear-gradient(145deg, rgba(20, 20, 20, 0.98), rgba(43, 43, 43, 0.94)),
+    radial-gradient(circle at top right, rgba(222, 187, 99, 0.18), transparent 40%);
+}
+
+@media (max-width: 960px) {
+  .family-topbar {
+    top: 0.75rem;
+  }
+
+  .family-topbar__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .family-command-popout {
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    bottom: 1rem;
+    width: auto;
+    max-height: min(82vh, 42rem);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .family-topbar {
+    padding: 0.95rem;
+    border-radius: 24px;
+  }
+
+  .family-topbar__meta {
+    display: none;
+  }
+
+  .family-menu-button__label {
+    display: none;
+  }
+
+  .family-menu-button {
+    padding: 0.9rem;
+  }
+}

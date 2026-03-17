@@ -32,6 +32,14 @@ async function readPantryCount(page) {
   return getCountFromText(await pantryBadge.innerText());
 }
 
+async function navigateWithMenu(page, label, path) {
+  await page.getByRole("button", { name: /Menu/i }).click();
+  const menu = page.getByRole("dialog", { name: "Page navigation" });
+  await menu.waitFor({ state: "visible", timeout: 15000 });
+  await menu.getByRole("button", { name: new RegExp(label, "i") }).first().click();
+  await page.waitForURL(`${baseUrl}${path}`, { timeout: 15000 });
+}
+
 async function main() {
   const browser = await chromium.launch({
     channel: browserChannel,
@@ -62,8 +70,7 @@ async function main() {
     }
     results.push({ step: "weather-route", ok: true });
 
-    await page.getByRole("button", { name: /Family Ops/i }).first().click();
-    await page.waitForURL(`${baseUrl}/family-ops`, { timeout: 15000 });
+    await navigateWithMenu(page, "Family Ops", "/family-ops");
 
     await page.getByLabel("New chore").fill(choreTitle);
     await page.getByRole("button", { name: "Add to board" }).click();
@@ -83,8 +90,7 @@ async function main() {
     await page.getByText(reminderTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "add-reminder", ok: true });
 
-    await page.getByRole("button", { name: /Meal Planner/i }).first().click();
-    await page.waitForURL(`${baseUrl}/meal-planner`, { timeout: 15000 });
+    await navigateWithMenu(page, "Meal Planner", "/meal-planner");
     const pantryCountBefore = await readPantryCount(page);
     await page.getByLabel("Add ingredients").fill(pantryIngredients.join(", "));
     await page.getByRole("button", { name: "Add pantry items" }).click();
@@ -101,8 +107,7 @@ async function main() {
     );
     results.push({ step: "add-pantry-items", ok: true, before: pantryCountBefore });
 
-    await page.getByRole("button", { name: /Budget Lab/i }).first().click();
-    await page.waitForURL(`${baseUrl}/budget-lab`, { timeout: 15000 });
+    await navigateWithMenu(page, "Budget Lab", "/budget-lab");
     await page.getByLabel("Monthly take-home income").fill("6800");
     await page.getByLabel("Family size").fill("4");
     const incomeValue = await page.getByLabel("Monthly take-home income").inputValue();
@@ -112,8 +117,7 @@ async function main() {
     }
     results.push({ step: "edit-budget-inputs", ok: true });
 
-    await page.getByRole("button", { name: /Family Room/i }).first().click();
-    await page.waitForURL(`${baseUrl}/family-room`, { timeout: 15000 });
+    await navigateWithMenu(page, "Family Room", "/family-room");
     await page.getByRole("button", { name: "Open profile" }).first().click();
     await page.waitForURL(/\/members\//, { timeout: 15000 });
     await page.getByPlaceholder("New goal").fill(profileGoalTitle);
@@ -147,8 +151,7 @@ async function main() {
     await page.getByText(profileKeepsakeTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "profile-upload", ok: true });
 
-    await page.getByRole("button", { name: /AI Studio/i }).first().click();
-    await page.waitForURL(`${baseUrl}/ai-studio`, { timeout: 15000 });
+    await navigateWithMenu(page, "AI Studio", "/ai-studio");
     await page.getByText("Talk to FamilyFlow.", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
     await page.getByRole("button", { name: /Plan a calm weeknight for our family/i }).first().waitFor({
       state: "visible",

@@ -8,9 +8,9 @@ const password = "FamilyFlowTest123!";
 
 const routeChecks = [
   {
-    label: "Dashboard",
+    label: "Today",
     path: "/dashboard",
-    expectedText: "Tonight's dinner signal",
+    expectedText: "Appointments for today",
     unexpectedText: "Add a chore",
   },
   {
@@ -38,12 +38,26 @@ const routeChecks = [
     unexpectedText: "Talk to FamilyFlow.",
   },
   {
+    label: "Partner Space",
+    path: "/partner-space",
+    expectedText: "Choose the pair",
+    unexpectedText: "What is in the kitchen?",
+  },
+  {
     label: "AI Studio",
     path: "/ai-studio",
     expectedText: "Talk to FamilyFlow.",
-    unexpectedText: "Tonight's dinner signal",
+    unexpectedText: "Appointments for today",
   },
 ];
+
+async function navigateWithMenu(page, label, path) {
+  await page.getByRole("button", { name: /Menu/i }).click();
+  const menu = page.getByRole("dialog", { name: "Page navigation" });
+  await menu.waitFor({ state: "visible", timeout: 15000 });
+  await menu.getByRole("button", { name: new RegExp(label, "i") }).first().click();
+  await page.waitForURL(`${baseUrl}${path}`, { timeout: 15000 });
+}
 
 async function main() {
   const browser = await chromium.launch({
@@ -68,14 +82,13 @@ async function main() {
     await page.getByRole("button", { name: "Create family space" }).click();
 
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 30000 });
-    await page.getByText("Tonight's dinner signal", { exact: true }).first().waitFor({
+    await page.getByText("Appointments for today", { exact: true }).first().waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     for (const check of routeChecks) {
-      await page.getByRole("button", { name: new RegExp(check.label, "i") }).first().click();
-      await page.waitForURL(`${baseUrl}${check.path}`, { timeout: 15000 });
+      await navigateWithMenu(page, check.label, check.path);
       await page.getByText(check.expectedText, { exact: true }).first().waitFor({
         state: "visible",
         timeout: 15000,
