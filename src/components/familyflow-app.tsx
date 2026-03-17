@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
+import { MemberProfilePage } from "@/components/workspace/member-profile-page";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";
 import {
@@ -15,14 +16,18 @@ import {
 import {
   createId,
   getBudgetPlan,
+  getTodayKey,
   normalizeIngredient,
   RECIPES,
   type AppState,
   type BudgetCoach,
   type ChatMessage,
+  type FitnessLog,
   type MealPlan,
+  type ProfileUpload,
+  syncStateWithMembers,
 } from "@/lib/familyflow";
-import { getWorkspacePath, WORKSPACE_AI_CHAT_PATH, type ActiveTab } from "@/lib/workspace-tabs";
+import { getMemberProfilePath, getWorkspacePath, WORKSPACE_AI_CHAT_PATH, type ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
@@ -36,7 +41,8 @@ type Props = {
   role: HouseholdRole;
   userName: string;
   members: HouseholdMember[];
-  view?: "default" | "focus-chat";
+  view?: "default" | "focus-chat" | "member-profile";
+  memberProfileId?: string;
 };
 
 export function FamilyFlowApp({
@@ -49,10 +55,12 @@ export function FamilyFlowApp({
   userName,
   members,
   view = "default",
+  memberProfileId,
 }: Props) {
   const router = useRouter();
   const initialMemberNames = Array.from(new Set(members.map((member) => member.name.trim()).filter(Boolean)));
-  const [state, setState] = useState<AppState>(initialState);
+  const [state, setState] = useState<AppState>(syncStateWithMembers(initialState, members));
+  const stateRef = useRef(state);
   const [householdName, setHouseholdName] = useState(initialHouseholdName);
   const [householdNameInput, setHouseholdNameInput] = useState(initialHouseholdName);
   const [inviteCode, setInviteCode] = useState(initialInviteCode);
@@ -115,7 +123,16 @@ export function FamilyFlowApp({
     }
   }, [memberNames, reminderAudience]);
 
+  useEffect(() => {
+    setLocalState((current) => syncStateWithMembers(current, memberList));
+  }, [memberList]);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   async function persistState(nextState: AppState) {
+    stateRef.current = nextState;
     setState(nextState);
     setSaving(true);
     setSaveError(null);
@@ -134,8 +151,16 @@ export function FamilyFlowApp({
   }
 
   async function updateState(updater: (current: AppState) => AppState) {
-    const nextState = updater(state);
+    const nextState = updater(stateRef.current);
     await persistState(nextState);
+  }
+
+  function setLocalState(updater: (current: AppState) => AppState) {
+    setState((current) => {
+      const nextState = updater(current);
+      stateRef.current = nextState;
+      return nextState;
+    });
   }
 
   function goToTab(tab: ActiveTab) {
@@ -144,6 +169,44 @@ export function FamilyFlowApp({
 
   function openAiChatFocus() {
     router.push(WORKSPACE_AI_CHAT_PATH);
+  }
+
+  function openMemberProfile(memberId: string) {
+    router.push(getMemberProfilePath(memberId));
+  }
+
+  async function updateMemberProfile(memberId: string, updater: (profile: AppState["memberProfiles"][number]) => AppState["memberProfiles"][number]) {
+    await updateState((current) => {
+      const baseProfiles = syncStateWithMembers(current, memberList).memberProfiles;
+      return {
+        ...current,
+        memberProfiles: baseProfiles.map((profile) => (profile.memberId === memberId ? updater(profile) : profile)),
+      };
+    });
+  }
+
+  async function addFamilyAchievement(memberId: string, title: string, detail: string, points: number, kind: AppState["familyAchievements"][number]["kind"]) {
+    const member = memberList.find((entry) => entry.id === memberId);
+    if (!member) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      familyAchievements: [
+        {
+          id: createId("achievement"),
+          memberId,
+          memberName: member.name,
+          title,
+          detail,
+          points,
+          kind,
+          createdAt: new Date().toISOString(),
+        },
+        ...current.familyAchievements,
+      ].slice(0, 60),
+    }));
   }
 
   async function callAi<T>(payload: { kind: "assistant" | "meal-plan" | "budget-coach"; prompt?: string; history?: ChatMessage[] }) {
@@ -171,7 +234,7 @@ export function FamilyFlowApp({
     setAiTask("assistant");
     setAiError(null);
     setChatInput("");
-    setState((current) => ({ ...current, assistantHistory: nextHistory }));
+    setLocalState((current) => ({ ...current, assistantHistory: nextHistory }));
 
     try {
       const data = await callAi<{ reply: string; suggestions: string[] }>({
@@ -179,7 +242,7 @@ export function FamilyFlowApp({
         prompt: prompt.trim(),
         history: nextHistory,
       });
-      setState((current) => ({
+      setLocalState((current) => ({
         ...current,
         assistantHistory: [...nextHistory, { role: "assistant", content: data.reply }],
       }));
@@ -196,7 +259,7 @@ export function FamilyFlowApp({
     setAiError(null);
     try {
       const data = await callAi<MealPlan>({ kind: "meal-plan" });
-      setState((current) => ({ ...current, latestMealPlan: data }));
+      setLocalState((current) => ({ ...current, latestMealPlan: data }));
       goToTab("meals");
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "The meal planner could not generate a plan.");
@@ -210,7 +273,7 @@ export function FamilyFlowApp({
     setAiError(null);
     try {
       const data = await callAi<BudgetCoach>({ kind: "budget-coach" });
-      setState((current) => ({ ...current, latestBudgetCoach: data }));
+      setLocalState((current) => ({ ...current, latestBudgetCoach: data }));
       goToTab("budget");
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "The budget coach could not respond.");
@@ -277,7 +340,9 @@ export function FamilyFlowApp({
       return;
     }
 
-    setMemberList(body.members);
+    const nextMembers = body.members;
+    setMemberList(nextMembers);
+    setLocalState((current) => syncStateWithMembers(current, nextMembers));
   }
 
   async function removeMember(memberId: string) {
@@ -297,7 +362,9 @@ export function FamilyFlowApp({
       return;
     }
 
-    setMemberList(body.members);
+    const nextMembers = body.members;
+    setMemberList(nextMembers);
+    await persistState(syncStateWithMembers(stateRef.current, nextMembers));
   }
 
   async function addPantryItems(event: React.FormEvent<HTMLFormElement>) {
@@ -407,6 +474,205 @@ export function FamilyFlowApp({
     setRoutineItems("");
   }
 
+  async function saveProfileBasics(memberId: string, headline: string, about: string) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      headline,
+      about,
+    }));
+  }
+
+  async function saveProfileWeatherLocation(memberId: string, weatherLocation: string) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      weatherLocation,
+    }));
+  }
+
+  async function saveProfileFitness(memberId: string, entry: FitnessLog) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      fitnessLogs: [entry, ...profile.fitnessLogs.filter((fitness) => fitness.date !== entry.date)].slice(0, 30),
+    }));
+  }
+
+  async function shareProfileFitness(memberId: string) {
+    const member = memberList.find((entry) => entry.id === memberId);
+    const profile = state.memberProfiles.find((entry) => entry.memberId === memberId);
+    const todayEntry = profile?.fitnessLogs.find((entry) => entry.date === getTodayKey());
+
+    if (!member || !todayEntry) {
+      return;
+    }
+
+    await addFamilyAchievement(
+      memberId,
+      `${member.name} shared a fitness win`,
+      `${todayEntry.steps} steps, ${todayEntry.movementMinutes} active minutes, and ${todayEntry.waterCups} cups of water.`,
+      0,
+      "fitness",
+    );
+  }
+
+  async function addProfileGoal(
+    memberId: string,
+    goal: {
+      title: string;
+      detail: string;
+      category: string;
+      targetDate: string;
+      points: number;
+    },
+  ) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      goals: [
+        {
+          id: createId("goal"),
+          title: goal.title,
+          detail: goal.detail,
+          category: goal.category || "Goal",
+          targetDate: goal.targetDate,
+          points: goal.points,
+          status: "active",
+          completedAt: null,
+          sharedAt: null,
+        },
+        ...profile.goals,
+      ],
+    }));
+  }
+
+  async function completeProfileGoal(memberId: string, goalId: string) {
+    await updateMemberProfile(memberId, (profile) => {
+      const goal = profile.goals.find((entry) => entry.id === goalId);
+      if (!goal || goal.status === "done") {
+        return profile;
+      }
+
+      return {
+        ...profile,
+        pointsBalance: profile.pointsBalance + goal.points,
+        lifetimePoints: profile.lifetimePoints + goal.points,
+        goals: profile.goals.map((entry) =>
+          entry.id === goalId ? { ...entry, status: "done", completedAt: new Date().toISOString() } : entry,
+        ),
+      };
+    });
+  }
+
+  async function shareProfileGoal(memberId: string, goalId: string) {
+    const member = memberList.find((entry) => entry.id === memberId);
+    const goal = state.memberProfiles.find((entry) => entry.memberId === memberId)?.goals.find((entry) => entry.id === goalId);
+
+    if (!member || !goal || goal.sharedAt) {
+      return;
+    }
+
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      goals: profile.goals.map((entry) => (entry.id === goalId ? { ...entry, sharedAt: new Date().toISOString() } : entry)),
+    }));
+    await addFamilyAchievement(memberId, `${member.name} finished ${goal.title}`, goal.detail || "A new goal was completed.", goal.points, "goal");
+  }
+
+  async function addProfileReward(
+    memberId: string,
+    reward: {
+      title: string;
+      detail: string;
+      cost: number;
+    },
+  ) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      rewards: [
+        {
+          id: createId("reward"),
+          title: reward.title,
+          detail: reward.detail,
+          cost: reward.cost,
+          redemptions: 0,
+          lastRedeemedAt: null,
+        },
+        ...profile.rewards,
+      ],
+    }));
+  }
+
+  async function redeemProfileReward(memberId: string, rewardId: string) {
+    const member = memberList.find((entry) => entry.id === memberId);
+    const reward = state.memberProfiles.find((entry) => entry.memberId === memberId)?.rewards.find((entry) => entry.id === rewardId);
+
+    if (!member || !reward) {
+      return;
+    }
+
+    await updateMemberProfile(memberId, (profile) => {
+      if (profile.pointsBalance < reward.cost) {
+        return profile;
+      }
+
+      return {
+        ...profile,
+        pointsBalance: profile.pointsBalance - reward.cost,
+        rewards: profile.rewards.map((entry) =>
+          entry.id === rewardId
+            ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: new Date().toISOString() }
+            : entry,
+        ),
+      };
+    });
+    await addFamilyAchievement(memberId, `${member.name} unlocked ${reward.title}`, reward.detail || "A reward was redeemed.", 0, "reward");
+  }
+
+  async function addProfileCalendarEvent(
+    memberId: string,
+    event: {
+      title: string;
+      date: string;
+      time: string;
+      detail: string;
+    },
+  ) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      calendarEvents: [
+        {
+          id: createId("calendar"),
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          detail: event.detail,
+        },
+        ...profile.calendarEvents,
+      ].sort((left, right) => `${left.date}${left.time}`.localeCompare(`${right.date}${right.time}`)),
+    }));
+  }
+
+  async function saveProfileAvatarUpload(memberId: string, upload: ProfileUpload) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      avatarUploadId: upload.id,
+      uploads: [upload, ...profile.uploads.filter((entry) => entry.id !== upload.id && entry.kind !== "avatar")],
+    }));
+  }
+
+  async function addProfileMemoryUpload(memberId: string, upload: ProfileUpload) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      uploads: [upload, ...profile.uploads.filter((entry) => entry.id !== upload.id)].slice(0, 18),
+    }));
+  }
+
+  async function removeProfileUpload(memberId: string, uploadId: string) {
+    await updateMemberProfile(memberId, (profile) => ({
+      ...profile,
+      avatarUploadId: profile.avatarUploadId === uploadId ? null : profile.avatarUploadId,
+      uploads: profile.uploads.filter((entry) => entry.id !== uploadId),
+    }));
+  }
+
   const openChores = state.chores.length - completedChores;
   const savingsPercent = savingsRow?.percent ?? 0;
   const savingsAmount = savingsRow?.amount ?? 0;
@@ -414,6 +680,8 @@ export function FamilyFlowApp({
   const primarySuggestion = assistantSuggestions[0] ?? "Ask the assistant for a weekly family planning reset.";
   const ownerCount = memberList.filter((member) => member.role === "owner").length;
   const adminCount = memberList.filter((member) => member.role === "admin").length;
+  const activeMember = memberProfileId ? memberList.find((member) => member.id === memberProfileId) : null;
+  const activeProfile = memberProfileId ? state.memberProfiles.find((profile) => profile.memberId === memberProfileId) : null;
   const { navigation, activeMeta, activeNav, activeHeroStats, pageProfile } = buildWorkspaceShellData({
     activeTab,
     state,
@@ -448,6 +716,28 @@ export function FamilyFlowApp({
       },
     },
   });
+
+  if (view === "member-profile" && (!activeMember || !activeProfile)) {
+    return (
+      <main className="family-stage overflow-hidden text-[var(--foreground)]">
+        <div className="family-stage__glow family-stage__glow--one" />
+        <div className="family-stage__glow family-stage__glow--two" />
+        <div className="family-stage__glow family-stage__glow--three" />
+        <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="family-panel rounded-[32px] p-8 md:p-10">
+            <p className="family-kicker family-eyebrow">Member profile</p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">We could not find that family member.</h1>
+            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
+              The profile may have been removed, or the member is not part of this household anymore.
+            </p>
+            <button type="button" onClick={() => goToTab("family")} className="family-btn family-btn-primary mt-6">
+              Back to Family Room
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (view === "focus-chat") {
     return (
@@ -514,107 +804,161 @@ export function FamilyFlowApp({
           />
 
           <div className="space-y-5">
-            <WorkspaceHeroPanel
-              activeTab={activeTab}
-              aiTask={aiTask}
-              activeMeta={activeMeta}
-              activeNav={activeNav}
-              activeHeroStats={activeHeroStats}
-              pageProfile={pageProfile}
-            />
-
-            <section className="space-y-5">
-              <WorkspacePageSections
-                activeTab={activeTab}
-                currentUserId={currentUserId}
-                state={state}
-                memberList={memberList}
-                memberNames={memberNames}
+            {view === "member-profile" && activeMember && activeProfile ? (
+              <MemberProfilePage
+                key={activeMember.id}
+                member={activeMember}
+                profile={activeProfile}
                 role={role}
-                householdNameInput={householdNameInput}
-                setHouseholdNameInput={setHouseholdNameInput}
-                inviteCode={inviteCode}
-                canManageHousehold={canManageHousehold}
-                canManageRoles={canManageRoles}
-                canRemoveMembers={canRemoveMembers}
-                ingredientInput={ingredientInput}
-                setIngredientInput={setIngredientInput}
-                choreTitle={choreTitle}
-                setChoreTitle={setChoreTitle}
-                choreAssignee={choreAssignee}
-                setChoreAssignee={setChoreAssignee}
-                reminderTitle={reminderTitle}
-                setReminderTitle={setReminderTitle}
-                reminderWhen={reminderWhen}
-                setReminderWhen={setReminderWhen}
-                reminderAudience={reminderAudience}
-                setReminderAudience={setReminderAudience}
-                routineName={routineName}
-                setRoutineName={setRoutineName}
-                routineTimeWindow={routineTimeWindow}
-                setRoutineTimeWindow={setRoutineTimeWindow}
-                routineItems={routineItems}
-                setRoutineItems={setRoutineItems}
-                chatInput={chatInput}
-                setChatInput={setChatInput}
-                aiTask={aiTask}
-                rotatingInvite={rotatingInvite}
-                savingHouseholdName={savingHouseholdName}
-                memberActionId={memberActionId}
-                assistantSuggestions={assistantSuggestions}
-                recipeMatches={recipeMatches}
-                bestRecipe={bestRecipe}
-                budgetPlan={budgetPlan}
-                savingsPercent={savingsPercent}
-                savingsAmount={savingsAmount}
-                completedChores={completedChores}
-                openChores={openChores}
-                ownerCount={ownerCount}
-                adminCount={adminCount}
-                goToTab={goToTab}
-                openAiChatFocus={openAiChatFocus}
-                handleAssistantPrompt={handleAssistantPrompt}
-                generateMealPlan={() => {
-                  void generateMealPlan();
+                currentUserId={currentUserId}
+                familyAchievements={state.familyAchievements}
+                onBackToFamilyRoom={() => goToTab("family")}
+                onSaveBasics={(headline, about) => {
+                  void saveProfileBasics(activeMember.id, headline, about);
                 }}
-                generateBudgetCoach={() => {
-                  void generateBudgetCoach();
+                onSaveWeatherLocation={(location) => {
+                  void saveProfileWeatherLocation(activeMember.id, location);
                 }}
-                rotateInviteCode={() => {
-                  void rotateInviteCode();
+                onSaveFitness={(entry) => {
+                  void saveProfileFitness(activeMember.id, entry);
                 }}
-                saveHouseholdDetails={(event) => {
-                  void saveHouseholdDetails(event);
+                onShareFitness={() => {
+                  void shareProfileFitness(activeMember.id);
                 }}
-                updateMember={(memberId, nextRole) => {
-                  void updateMember(memberId, nextRole);
+                onAddGoal={(goal) => {
+                  void addProfileGoal(activeMember.id, goal);
                 }}
-                removeMember={(memberId) => {
-                  void removeMember(memberId);
+                onCompleteGoal={(goalId) => {
+                  void completeProfileGoal(activeMember.id, goalId);
                 }}
-                addPantryItems={(event) => {
-                  void addPantryItems(event);
+                onShareGoal={(goalId) => {
+                  void shareProfileGoal(activeMember.id, goalId);
                 }}
-                updateBudget={(key, value) => {
-                  void updateBudget(key, value);
+                onAddReward={(reward) => {
+                  void addProfileReward(activeMember.id, reward);
                 }}
-                addChore={(event) => {
-                  void addChore(event);
+                onRedeemReward={(rewardId) => {
+                  void redeemProfileReward(activeMember.id, rewardId);
                 }}
-                toggleChore={(id) => {
-                  void toggleChore(id);
+                onAddCalendarEvent={(event) => {
+                  void addProfileCalendarEvent(activeMember.id, event);
                 }}
-                addReminder={(event) => {
-                  void addReminder(event);
+                onSaveAvatarUpload={(upload) => {
+                  void saveProfileAvatarUpload(activeMember.id, upload);
                 }}
-                removeReminder={(id) => {
-                  void removeReminder(id);
+                onAddMemoryUpload={(upload) => {
+                  void addProfileMemoryUpload(activeMember.id, upload);
                 }}
-                addRoutine={(event) => {
-                  void addRoutine(event);
+                onRemoveUpload={(uploadId) => {
+                  void removeProfileUpload(activeMember.id, uploadId);
                 }}
               />
-            </section>
+            ) : (
+              <>
+                <WorkspaceHeroPanel
+                  activeTab={activeTab}
+                  aiTask={aiTask}
+                  activeMeta={activeMeta}
+                  activeNav={activeNav}
+                  activeHeroStats={activeHeroStats}
+                  pageProfile={pageProfile}
+                />
+
+                <section className="space-y-5">
+                  <WorkspacePageSections
+                    activeTab={activeTab}
+                    currentUserId={currentUserId}
+                    state={state}
+                    memberList={memberList}
+                    memberNames={memberNames}
+                    role={role}
+                    householdNameInput={householdNameInput}
+                    setHouseholdNameInput={setHouseholdNameInput}
+                    inviteCode={inviteCode}
+                    canManageHousehold={canManageHousehold}
+                    canManageRoles={canManageRoles}
+                    canRemoveMembers={canRemoveMembers}
+                    ingredientInput={ingredientInput}
+                    setIngredientInput={setIngredientInput}
+                    choreTitle={choreTitle}
+                    setChoreTitle={setChoreTitle}
+                    choreAssignee={choreAssignee}
+                    setChoreAssignee={setChoreAssignee}
+                    reminderTitle={reminderTitle}
+                    setReminderTitle={setReminderTitle}
+                    reminderWhen={reminderWhen}
+                    setReminderWhen={setReminderWhen}
+                    reminderAudience={reminderAudience}
+                    setReminderAudience={setReminderAudience}
+                    routineName={routineName}
+                    setRoutineName={setRoutineName}
+                    routineTimeWindow={routineTimeWindow}
+                    setRoutineTimeWindow={setRoutineTimeWindow}
+                    routineItems={routineItems}
+                    setRoutineItems={setRoutineItems}
+                    chatInput={chatInput}
+                    setChatInput={setChatInput}
+                    aiTask={aiTask}
+                    rotatingInvite={rotatingInvite}
+                    savingHouseholdName={savingHouseholdName}
+                    memberActionId={memberActionId}
+                    assistantSuggestions={assistantSuggestions}
+                    recipeMatches={recipeMatches}
+                    bestRecipe={bestRecipe}
+                    budgetPlan={budgetPlan}
+                    savingsPercent={savingsPercent}
+                    savingsAmount={savingsAmount}
+                    completedChores={completedChores}
+                    openChores={openChores}
+                    ownerCount={ownerCount}
+                    adminCount={adminCount}
+                    goToTab={goToTab}
+                    openAiChatFocus={openAiChatFocus}
+                    openMemberProfile={openMemberProfile}
+                    handleAssistantPrompt={handleAssistantPrompt}
+                    generateMealPlan={() => {
+                      void generateMealPlan();
+                    }}
+                    generateBudgetCoach={() => {
+                      void generateBudgetCoach();
+                    }}
+                    rotateInviteCode={() => {
+                      void rotateInviteCode();
+                    }}
+                    saveHouseholdDetails={(event) => {
+                      void saveHouseholdDetails(event);
+                    }}
+                    updateMember={(memberId, nextRole) => {
+                      void updateMember(memberId, nextRole);
+                    }}
+                    removeMember={(memberId) => {
+                      void removeMember(memberId);
+                    }}
+                    addPantryItems={(event) => {
+                      void addPantryItems(event);
+                    }}
+                    updateBudget={(key, value) => {
+                      void updateBudget(key, value);
+                    }}
+                    addChore={(event) => {
+                      void addChore(event);
+                    }}
+                    toggleChore={(id) => {
+                      void toggleChore(id);
+                    }}
+                    addReminder={(event) => {
+                      void addReminder(event);
+                    }}
+                    removeReminder={(id) => {
+                      void removeReminder(id);
+                    }}
+                    addRoutine={(event) => {
+                      void addRoutine(event);
+                    }}
+                  />
+                </section>
+              </>
+            )}
           </div>
 
           <WorkspaceRightRail

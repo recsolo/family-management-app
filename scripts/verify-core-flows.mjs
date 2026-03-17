@@ -9,6 +9,9 @@ const choreTitle = `Smoke chore ${timestamp}`;
 const reminderTitle = `Smoke reminder ${timestamp}`;
 const householdName = `Smoke Home ${timestamp}`;
 const pantryIngredients = [`smoke-rice-${timestamp}`, `smoke-beans-${timestamp}`];
+const profileGoalTitle = `Profile goal ${timestamp}`;
+const profileEventTitle = `Profile event ${timestamp}`;
+const profileKeepsakeTitle = `Keepsake ${timestamp}`;
 
 function getCountFromText(text) {
   const match = text.match(/(\d+)/);
@@ -52,6 +55,12 @@ async function main() {
 
     await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 30000 });
     results.push({ step: "create-household", ok: true, url: page.url() });
+
+    const weatherResponse = await page.request.get(`${baseUrl}/api/weather?location=Indianapolis,%20IN`);
+    if (!weatherResponse.ok()) {
+      throw new Error(`Weather route returned ${weatherResponse.status()}.`);
+    }
+    results.push({ step: "weather-route", ok: true });
 
     await page.getByRole("button", { name: /Family Ops/i }).first().click();
     await page.waitForURL(`${baseUrl}/family-ops`, { timeout: 15000 });
@@ -102,6 +111,41 @@ async function main() {
       throw new Error("Budget inputs did not persist after editing.");
     }
     results.push({ step: "edit-budget-inputs", ok: true });
+
+    await page.getByRole("button", { name: /Family Room/i }).first().click();
+    await page.waitForURL(`${baseUrl}/family-room`, { timeout: 15000 });
+    await page.getByRole("button", { name: "Open profile" }).first().click();
+    await page.waitForURL(/\/members\//, { timeout: 15000 });
+    await page.getByPlaceholder("New goal").fill(profileGoalTitle);
+    await page.getByPlaceholder("Why this goal matters").fill("A quick profile goal to verify points and sharing.");
+    await page.getByRole("button", { name: "Add goal" }).click();
+    await page.getByText(profileGoalTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    await page.getByRole("button", { name: "Mark finished" }).first().click();
+    await page.getByRole("button", { name: "Share with family" }).first().click();
+    await page.getByText("Shared", { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    results.push({ step: "profile-goal-flow", ok: true });
+
+    await page.getByPlaceholder("Steps").fill("4200");
+    await page.getByPlaceholder("Active minutes").fill("35");
+    await page.getByPlaceholder("Water cups").fill("6");
+    await page.getByPlaceholder("Sleep hours").fill("8");
+    await page.getByRole("button", { name: /Save today's tracker/i }).click();
+    results.push({ step: "profile-fitness-save", ok: true });
+
+    await page.getByPlaceholder("New event").fill(profileEventTitle);
+    await page.getByRole("button", { name: "Add event" }).click();
+    await page.getByText(profileEventTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    results.push({ step: "profile-calendar-event", ok: true });
+
+    await page.getByPlaceholder("Keepsake title").fill(profileKeepsakeTitle);
+    await page.getByPlaceholder("Keepsake note").fill("Smoke test keepsake upload");
+    await page.locator('input[type="file"]').nth(1).setInputFiles({
+      name: `keepsake-${timestamp}.txt`,
+      mimeType: "text/plain",
+      buffer: Buffer.from("FamilyFlow keepsake upload smoke test"),
+    });
+    await page.getByText(profileKeepsakeTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    results.push({ step: "profile-upload", ok: true });
 
     await page.getByRole("button", { name: /AI Studio/i }).first().click();
     await page.waitForURL(`${baseUrl}/ai-studio`, { timeout: 15000 });

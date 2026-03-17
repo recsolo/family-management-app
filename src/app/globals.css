@@ -1138,6 +1138,121 @@ a {
   flex-direction: column;
 }
 
+.family-profile-hero {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.22), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 239, 221, 0.95));
+  box-shadow: var(--shadow-panel);
+}
+
+.family-profile-hero__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.family-profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 8.75rem;
+  height: 8.75rem;
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgba(228, 192, 92, 0.24);
+  background: linear-gradient(135deg, #111111 0%, #262626 100%);
+  color: white;
+  font-family: var(--font-serif), serif;
+  font-size: 2.4rem;
+  box-shadow: var(--shadow-dark);
+}
+
+.family-profile-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.family-profile-stat-grid,
+.family-profile-form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.family-profile-goal-card,
+.family-profile-reward-card,
+.family-profile-upload-card,
+.family-profile-feed-card,
+.family-profile-event-card {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.6rem;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.family-profile-goal-card-done {
+  background: linear-gradient(180deg, rgba(250, 241, 210, 0.94), rgba(255, 255, 255, 0.92));
+  border-color: rgba(228, 192, 92, 0.26);
+}
+
+.family-profile-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.family-profile-calendar-cell {
+  display: grid;
+  place-items: center;
+  min-height: 4.6rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  font-weight: 700;
+  color: var(--foreground);
+  position: relative;
+}
+
+.family-profile-calendar-cell-muted {
+  color: rgba(16, 16, 16, 0.35);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.family-profile-calendar-cell-today {
+  border-color: rgba(228, 192, 92, 0.34);
+  background: linear-gradient(180deg, rgba(250, 241, 210, 0.98), rgba(255, 255, 255, 0.92));
+  box-shadow: var(--shadow-soft);
+}
+
+.family-profile-calendar-dot {
+  position: absolute;
+  bottom: 0.65rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f3da8f 0%, #d2a53b 100%);
+}
+
+.family-profile-upload-card__image {
+  width: 100%;
+  height: 11rem;
+  object-fit: cover;
+  border-radius: 1.2rem;
+}
+
+.family-profile-upload-card__file {
+  display: grid;
+  place-items: center;
+  min-height: 11rem;
+  border-radius: 1.2rem;
+  background: linear-gradient(160deg, rgba(11, 11, 11, 0.98), rgba(29, 29, 29, 0.98));
+  color: white;
+  text-align: center;
+  padding: 1rem;
+}
+
 @media (min-width: 900px) {
   .family-route-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1145,6 +1260,18 @@ a {
 
   .family-meal-day__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .family-profile-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .family-profile-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .family-profile-form-grid__wide {
+    grid-column: 1 / -1;
   }
 }
 

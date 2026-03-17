@@ -75,6 +75,7 @@ type WorkspacePageSectionsProps = {
   adminCount: number;
   goToTab: (tab: ActiveTab) => void;
   openAiChatFocus: () => void;
+  openMemberProfile: (memberId: string) => void;
   handleAssistantPrompt: (prompt: string) => void;
   generateMealPlan: () => void;
   generateBudgetCoach: () => void;
@@ -888,6 +889,7 @@ function FamilyPage({
   addRoutine,
   ownerCount,
   adminCount,
+  openMemberProfile,
 }: PageProps) {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
 
@@ -1004,6 +1006,8 @@ function FamilyPage({
               const canChangeRole = canManageRoles && !isCurrentUser && member.role !== "owner";
               const canRemoveMember = canRemoveMembers && !isCurrentUser && (role === "owner" ? member.role !== "owner" : member.role === "member");
               const memberBusy = memberActionId === member.id;
+              const profile = state.memberProfiles.find((entry) => entry.memberId === member.id);
+              const points = profile?.pointsBalance ?? 0;
 
               return (
                 <div key={member.id} className="rounded-[22px] border border-[var(--line-soft)] bg-white/74 p-4">
@@ -1018,6 +1022,15 @@ function FamilyPage({
                     <span className={`family-badge ${member.role === "owner" ? "family-badge-warm" : member.role === "admin" ? "family-badge-accent" : "family-badge-gold"}`}>
                       {member.role}
                     </span>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
+                    <span className="family-badge family-badge-warm">{points} pts</span>
+                    <span>{profile?.goals.filter((goal) => goal.status === "done").length ?? 0} goals done</span>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button type="button" onClick={() => openMemberProfile(member.id)} className="family-btn family-btn-primary">
+                      Open profile
+                    </button>
                   </div>
                   {(canChangeRole || canRemoveMember) ? (
                     <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -1103,6 +1116,17 @@ function FamilyPage({
                 : "Add the first routine here so the family has one repeatable flow it can keep returning to."
             }
             className="family-card family-card-gold"
+          />
+
+          <InsightCard
+            kicker="Family wins"
+            title={state.familyAchievements[0]?.title ?? "No shared wins yet"}
+            body={
+              state.familyAchievements[0]
+                ? `${state.familyAchievements[0].memberName} shared: ${state.familyAchievements[0].detail || "A new family accomplishment just landed."}`
+                : "Profile pages can now send completed goals and fitness wins here for the whole family to celebrate."
+            }
+            className="family-panel"
           />
         </div>
       </div>

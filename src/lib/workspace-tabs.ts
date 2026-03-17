@@ -8,6 +8,7 @@ export const WORKSPACE_TAB_ROUTES = {
 } as const;
 
 export const WORKSPACE_AI_CHAT_PATH = "/ai-chat";
+export const WORKSPACE_MEMBER_PROFILE_PREFIX = "/members";
 
 export type ActiveTab = keyof typeof WORKSPACE_TAB_ROUTES;
 
@@ -32,4 +33,8 @@ export function getActiveTabFromSegment(segment: string | null | undefined): Act
     default:
       return "dashboard";
   }
+}
+
+export function getMemberProfilePath(memberId: string) {
+  return `${WORKSPACE_MEMBER_PROFILE_PREFIX}/${memberId}`;
 }

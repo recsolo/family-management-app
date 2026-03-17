@@ -5,7 +5,10 @@ import {
   cloneDefaultState,
   type AppState,
   type BudgetCoach,
+  type FamilyAchievement,
   type MealPlan,
+  type MemberProfile,
+  syncStateWithMembers,
 } from "@/lib/familyflow";
 import { db } from "@/lib/db";
 
@@ -42,6 +45,8 @@ type HouseholdRecord = {
   choresJson: string;
   remindersJson: string;
   routinesJson: string;
+  memberProfilesJson: string;
+  familyAchievementsJson: string;
   assistantHistoryJson: string;
   latestMealPlanJson: string | null;
   latestBudgetCoachJson: string | null;
@@ -73,6 +78,8 @@ function householdStatePayload(baseState: AppState) {
     choresJson: JSON.stringify(baseState.chores),
     remindersJson: JSON.stringify(baseState.reminders),
     routinesJson: JSON.stringify(baseState.routines),
+    memberProfilesJson: JSON.stringify(baseState.memberProfiles),
+    familyAchievementsJson: JSON.stringify(baseState.familyAchievements),
     assistantHistoryJson: JSON.stringify(baseState.assistantHistory),
     latestMealPlanJson: baseState.latestMealPlan ? JSON.stringify(baseState.latestMealPlan) : null,
     latestBudgetCoachJson: baseState.latestBudgetCoach ? JSON.stringify(baseState.latestBudgetCoach) : null,
@@ -93,6 +100,8 @@ export function householdToAppState(household: HouseholdRecord): AppState {
     chores: safeParse(household.choresJson, defaults.chores),
     reminders: safeParse(household.remindersJson, defaults.reminders),
     routines: safeParse(household.routinesJson, defaults.routines),
+    memberProfiles: safeParse<MemberProfile[]>(household.memberProfilesJson, defaults.memberProfiles),
+    familyAchievements: safeParse<FamilyAchievement[]>(household.familyAchievementsJson, defaults.familyAchievements),
     assistantHistory: safeParse(household.assistantHistoryJson, defaults.assistantHistory),
     latestMealPlan: safeParse<MealPlan | null>(household.latestMealPlanJson, null),
     latestBudgetCoach: safeParse<BudgetCoach | null>(household.latestBudgetCoachJson, null),
@@ -183,6 +192,8 @@ export async function saveHouseholdState(householdId: string, state: AppState) {
       choresJson: payload.choresJson,
       remindersJson: payload.remindersJson,
       routinesJson: payload.routinesJson,
+      memberProfilesJson: payload.memberProfilesJson,
+      familyAchievementsJson: payload.familyAchievementsJson,
       assistantHistoryJson: payload.assistantHistoryJson,
       latestMealPlanJson: payload.latestMealPlanJson,
       latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -306,14 +317,17 @@ export async function getWorkspaceForUser(userId: string) {
     return null;
   }
 
+  const members = await listHouseholdMembers(membership.household.id);
+  const state = syncStateWithMembers(householdToAppState(membership.household), members);
+
   return {
     currentUserId: userId,
     householdId: membership.household.id,
     householdName: membership.household.name,
     inviteCode: membership.household.inviteCode,
     role: membership.role as HouseholdRole,
-    members: await listHouseholdMembers(membership.household.id),
-    state: householdToAppState(membership.household),
+    members,
+    state,
   };
 }
 
@@ -364,6 +378,8 @@ export async function attachUserToHousehold(input: AttachHouseholdInput) {
         choresJson: payload.choresJson,
         remindersJson: payload.remindersJson,
         routinesJson: payload.routinesJson,
+        memberProfilesJson: payload.memberProfilesJson,
+        familyAchievementsJson: payload.familyAchievementsJson,
         assistantHistoryJson: payload.assistantHistoryJson,
         latestMealPlanJson: payload.latestMealPlanJson,
         latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -434,6 +450,8 @@ export async function registerUser(input: RegisterInput) {
           choresJson: payload.choresJson,
           remindersJson: payload.remindersJson,
           routinesJson: payload.routinesJson,
+          memberProfilesJson: payload.memberProfilesJson,
+          familyAchievementsJson: payload.familyAchievementsJson,
           assistantHistoryJson: payload.assistantHistoryJson,
           latestMealPlanJson: payload.latestMealPlanJson,
           latestBudgetCoachJson: payload.latestBudgetCoachJson,

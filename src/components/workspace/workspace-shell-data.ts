@@ -214,7 +214,7 @@ export function buildWorkspaceShellData({
           { label: "Members", value: memberList.length },
           { label: "Owners", value: ownerCount },
           { label: "Admins", value: adminCount },
-          { label: "Routines", value: state.routines.length },
+          { label: "Shared wins", value: state.familyAchievements.length },
         ];
       case "ai":
         return [
@@ -411,9 +411,9 @@ export function buildWorkspaceShellData({
           heroTone: "light",
           heroClass: "family-panel family-surface-gold",
           focusKicker: "Access and identity",
-          focusTitle: "Make the shared workspace feel organized behind the scenes too.",
-          focusBody: `${memberList.length} connected member${memberList.length === 1 ? "" : "s"}, ${state.routines.length} routine${state.routines.length === 1 ? "" : "s"}, and one invite path keep this household workspace structured.`,
-          focusNote: "This route is about ownership, access, and repeatable family systems rather than day-to-day execution.",
+          focusTitle: "Open profiles, share wins, and keep the household organized.",
+          focusBody: `${memberList.length} connected member${memberList.length === 1 ? "" : "s"}, ${state.familyAchievements.length} shared win${state.familyAchievements.length === 1 ? "" : "s"}, and one invite path keep this family space connected.`,
+          focusNote: "This route is about profiles, access, invites, and family celebration moments.",
           featureClass: "family-card family-card-dark",
           featureKicker: "Access posture",
           featureTitle: `${memberList.length} people are connected.`,
@@ -427,11 +427,11 @@ export function buildWorkspaceShellData({
               }
             : undefined,
           signalClass: "family-panel",
-          signalKicker: "Routine rhythm",
-          signalTitle: firstRoutine ? firstRoutine.name : "No routine built yet",
-          signalBody: firstRoutine
-            ? `${firstRoutine.timeWindow}. ${firstRoutine.items.join(", ")}.`
-            : "Add the first routine here so the family has one repeatable flow it can keep returning to.",
+          signalKicker: "Shared spotlight",
+          signalTitle: state.familyAchievements[0]?.title ?? "No shared win yet",
+          signalBody: state.familyAchievements[0]
+            ? `${state.familyAchievements[0].memberName}: ${state.familyAchievements[0].detail}`
+            : "Open a member profile and share a finished goal or fitness win so the whole family can see it here.",
           signalTags: memberList.slice(0, 4).map((member) => member.name),
           railLabel: "Family structure",
           railDescription: "This route is the home for members, roles, invites, and routine-building.",
@@ -454,6 +454,14 @@ export function buildWorkspaceShellData({
               body: firstRoutine ? `Latest: ${firstRoutine.name}.` : "No routines have been built yet.",
               className: "family-panel",
             },
+            {
+              kicker: "Shared wins",
+              title: `${state.familyAchievements.length} celebration${state.familyAchievements.length === 1 ? "" : "s"}`,
+              body: state.familyAchievements[0]
+                ? `Latest: ${state.familyAchievements[0].title}`
+                : "Profiles can now send family accomplishments here.",
+              className: "family-card family-card-dark",
+            },
           ],
           contextTitle: "What is shaping family access right now.",
           contextItems: [
@@ -461,6 +469,7 @@ export function buildWorkspaceShellData({
             `Owners: ${ownerCount}, admins: ${adminCount}`,
             `Invite code currently active: ${inviteCode}`,
             `Routine count: ${state.routines.length}`,
+            `Shared wins: ${state.familyAchievements.length}`,
           ],
         };
       case "ai":

@@ -23,11 +23,12 @@ type WorkspaceResponse = {
 
 type Props = {
   activeTab: ActiveTab;
-  view?: "default" | "focus-chat";
+  view?: "default" | "focus-chat" | "member-profile";
+  memberProfileId?: string;
   redirectPath?: string;
 };
 
-export function WorkspaceShell({ activeTab, view = "default", redirectPath }: Props) {
+export function WorkspaceShell({ activeTab, view = "default", memberProfileId, redirectPath }: Props) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
@@ -135,6 +136,7 @@ export function WorkspaceShell({ activeTab, view = "default", redirectPath }: Pr
       role={workspace.role}
       userName={session.user?.name ?? "Family member"}
       view={view}
+      memberProfileId={memberProfileId}
     />
   );
 }
