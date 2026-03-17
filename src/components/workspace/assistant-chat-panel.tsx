@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import type { ChatMessage } from "@/lib/familyflow";
 
 type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
@@ -28,6 +30,11 @@ export function AssistantChatPanel({
   onBackToStudio,
 }: AssistantChatPanelProps) {
   const isFocus = mode === "focus";
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [history.length, aiTask]);
 
   return (
     <article className={`family-chat-shell family-animate-rise rounded-[30px] ${isFocus ? "family-chat-shell-focus" : "family-panel p-6 md:p-7"}`}>
@@ -56,26 +63,34 @@ export function AssistantChatPanel({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-3">
-        {assistantSuggestions.slice(0, isFocus ? 5 : 3).map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => onSubmitPrompt(suggestion)}
-            disabled={aiTask !== null}
-            className="family-chat-seed"
-          >
-            {suggestion}
-          </button>
-        ))}
+      <div className="family-chat-topband">
+        <div className="family-chat-state">
+          <span className={`family-chat-state-dot ${aiTask === "assistant" ? "family-chat-state-dot-live" : ""}`} aria-hidden="true" />
+          <span>{aiTask === "assistant" ? "FamilyFlow is writing back..." : "Ready to help right now"}</span>
+        </div>
+        <div className="family-chat-seeds">
+          {assistantSuggestions.slice(0, isFocus ? 5 : 3).map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => onSubmitPrompt(suggestion)}
+              disabled={aiTask !== null}
+              className="family-chat-seed"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className={`family-scroll family-chat-stream ${isFocus ? "family-chat-stream-focus" : ""}`}>
+      <div className={`family-scroll family-chat-stream ${isFocus ? "family-chat-stream-focus" : ""}`} aria-live="polite">
         {history.length > 0 ? (
           history.map((message, index) => (
-            <div key={`${message.role}-${index}`} className={`rounded-[20px] px-4 py-3 text-sm leading-7 ${message.role === "assistant" ? "family-chat-assistant" : "family-chat-user"}`}>
-              <p className="family-kicker opacity-70">{message.role === "assistant" ? "FamilyFlow AI" : "You"}</p>
-              <p className="mt-2">{message.content}</p>
+            <div key={`${message.role}-${index}`} className={`family-chat-row ${message.role === "assistant" ? "family-chat-row-assistant" : "family-chat-row-user"}`}>
+              <div className={`family-chat-bubble ${message.role === "assistant" ? "family-chat-assistant" : "family-chat-user"}`}>
+                <p className="family-kicker opacity-70">{message.role === "assistant" ? "FamilyFlow AI" : "You"}</p>
+                <p className="mt-2 whitespace-pre-wrap">{message.content}</p>
+              </div>
             </div>
           ))
         ) : (
@@ -83,10 +98,25 @@ export function AssistantChatPanel({
             Start with a weekly plan, a dinner question, or a school-night reset.
           </div>
         )}
+
+        {aiTask === "assistant" ? (
+          <div className="family-chat-row family-chat-row-assistant">
+            <div className="family-chat-bubble family-chat-assistant family-chat-bubble-thinking">
+              <p className="family-kicker opacity-70">FamilyFlow AI</p>
+              <div className="family-chat-thinking" aria-label="Assistant is thinking">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div ref={bottomRef} />
       </div>
 
       <form
-        className="mt-5 space-y-4"
+        className="family-chat-compose-shell mt-5 space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           onSubmitPrompt(chatInput);
