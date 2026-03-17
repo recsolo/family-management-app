@@ -125,14 +125,14 @@ export function WorkspaceTopBar({
             <div className="family-command-popout__header">
               <div>
                 <p className="family-kicker family-eyebrow">Command menu</p>
-                <h2 className="mt-2 font-serif text-3xl leading-tight">Jump to a page</h2>
+                <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Jump to a page</h2>
               </div>
               <button type="button" onClick={() => setMenuOpen(false)} className="family-btn family-btn-secondary">
                 Close
               </button>
             </div>
 
-            <nav className="mt-5 grid gap-3" aria-label="Workspace pages">
+            <nav className="family-command-popout__nav mt-4 grid" aria-label="Workspace pages">
               {navigation.map((item) => {
                 const isActive = item.value === activeTab;
 
@@ -149,7 +149,7 @@ export function WorkspaceTopBar({
                   >
                     <span>
                       <span className="family-kicker family-eyebrow">{item.detail}</span>
-                      <span className="mt-2 block font-serif text-2xl leading-tight">{item.label}</span>
+                      <span className="family-command-link__title mt-2 block font-serif leading-tight">{item.label}</span>
                     </span>
                     <span className={`family-badge ${isActive ? "family-badge-accent" : "family-badge-warm"}`}>{isActive ? "Open" : "Go"}</span>
                   </button>
@@ -157,7 +157,7 @@ export function WorkspaceTopBar({
               })}
             </nav>
 
-            <div className="mt-5 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
+            <div className="family-command-popout__footer mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
               <div>
                 <p className="family-kicker family-eyebrow">Account</p>
                 <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Signed in as {userName}.</p>
