@@ -151,6 +151,10 @@ async function main() {
     await page.getByText(profileKeepsakeTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "profile-upload", ok: true });
 
+    await navigateWithMenu(page, "Family Inbox", "/family-inbox");
+    await page.getByText("You earned 15 points", { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    results.push({ step: "open-family-inbox", ok: true });
+
     await navigateWithMenu(page, "AI Studio", "/ai-studio");
     await page.getByText("Talk to FamilyFlow.", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
     await page.getByRole("button", { name: /Plan a calm weeknight for our family/i }).first().waitFor({

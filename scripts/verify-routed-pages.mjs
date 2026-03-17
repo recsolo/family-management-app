@@ -14,6 +14,12 @@ const routeChecks = [
     unexpectedText: "Add a chore",
   },
   {
+    label: "Family Inbox",
+    path: "/family-inbox",
+    expectedText: "Needs your eye",
+    unexpectedText: "What is in the kitchen?",
+  },
+  {
     label: "Family Ops",
     path: "/family-ops",
     expectedText: "Add a chore",

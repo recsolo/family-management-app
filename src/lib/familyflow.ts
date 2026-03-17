@@ -49,6 +49,21 @@ export type DirectThread = {
   messages: DirectMessage[];
 };
 
+export type AppNotificationKind = "message" | "partner" | "reminder" | "goal" | "reward" | "calendar" | "achievement" | "system";
+
+export type AppNotification = {
+  id: string;
+  recipientUserId: string;
+  actorId: string | null;
+  actorName: string;
+  kind: AppNotificationKind;
+  title: string;
+  detail: string;
+  link: string;
+  createdAt: string;
+  readAt: string | null;
+};
+
 export type MealPlan = {
   headline: string;
   summary: string;
@@ -201,6 +216,7 @@ export type AppState = {
   familyAchievements: FamilyAchievement[];
   directThreads: DirectThread[];
   partnerSpace: PartnerSpace | null;
+  notifications: AppNotification[];
 };
 
 type MemberSeed = {
@@ -321,6 +337,7 @@ export const DEFAULT_STATE: AppState = {
   familyAchievements: [],
   directThreads: [],
   partnerSpace: null,
+  notifications: [],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -568,6 +585,43 @@ function sanitizeDirectThread(value: unknown): DirectThread | null {
   };
 }
 
+function sanitizeNotification(value: unknown): AppNotification | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const recipientUserId = toTrimmedString(value.recipientUserId);
+  const title = toTrimmedString(value.title);
+  if (!recipientUserId || !title) {
+    return null;
+  }
+
+  const kind =
+    value.kind === "message" ||
+    value.kind === "partner" ||
+    value.kind === "reminder" ||
+    value.kind === "goal" ||
+    value.kind === "reward" ||
+    value.kind === "calendar" ||
+    value.kind === "achievement" ||
+    value.kind === "system"
+      ? value.kind
+      : "system";
+
+  return {
+    id: toTrimmedString(value.id, createId("notification")),
+    recipientUserId,
+    actorId: typeof value.actorId === "string" && value.actorId ? value.actorId : null,
+    actorName: toTrimmedString(value.actorName, "FamilyFlow"),
+    kind,
+    title,
+    detail: toTrimmedString(value.detail),
+    link: toTrimmedString(value.link, "/dashboard"),
+    createdAt: toTrimmedString(value.createdAt, new Date().toISOString()),
+    readAt: typeof value.readAt === "string" && value.readAt ? value.readAt : null,
+  };
+}
+
 function sanitizePartnerReward(value: unknown): PartnerReward | null {
   if (!isRecord(value)) {
     return null;
@@ -715,6 +769,14 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
       })),
     }));
 
+  const notifications = sanitized.notifications
+    .filter((notification) => memberMap.has(notification.recipientUserId))
+    .map((notification) => ({
+      ...notification,
+      actorName: notification.actorId ? memberMap.get(notification.actorId)?.name ?? notification.actorName : notification.actorName,
+    }))
+    .slice(0, 200);
+
   const partnerSpace =
     sanitized.partnerSpace && sanitized.partnerSpace.memberIds.every((memberId) => memberMap.has(memberId))
       ? {
@@ -741,6 +803,7 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
     familyAchievements,
     directThreads,
     partnerSpace,
+    notifications,
   };
 }
 
@@ -799,6 +862,7 @@ export function sanitizeState(raw: unknown): AppState {
     familyAchievements: Array.isArray(parsed.familyAchievements) ? parsed.familyAchievements.map(sanitizeAchievement).filter(isDefined) : defaults.familyAchievements,
     directThreads: Array.isArray(parsed.directThreads) ? parsed.directThreads.map(sanitizeDirectThread).filter(isDefined) : defaults.directThreads,
     partnerSpace: sanitizePartnerSpace(parsed.partnerSpace),
+    notifications: Array.isArray(parsed.notifications) ? parsed.notifications.map(sanitizeNotification).filter(isDefined).slice(0, 200) : defaults.notifications,
   };
 }
 

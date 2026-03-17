@@ -10,6 +10,7 @@ export type WorkspaceNavigationItem = {
   value: ActiveTab;
   label: string;
   detail: string;
+  badge?: string | null;
 };
 
 export type WorkspaceTabMeta = {
@@ -76,6 +77,8 @@ type BuildWorkspaceShellDataArgs = {
   budgetPlanCount: number;
   savingsPercent: number;
   savingsAmount: number;
+  personalNotificationCount: number;
+  unreadNotificationCount: number;
   primarySuggestion: string;
   saving: boolean;
   assistantSuggestions: string[];
@@ -96,6 +99,7 @@ type BuildWorkspaceShellDataArgs = {
 
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
   { value: "dashboard", label: "Today", detail: "Today at a glance" },
+  { value: "inbox", label: "Family Inbox", detail: "Alerts and updates" },
   { value: "ops", label: "Family Ops", detail: "Chores and reminders" },
   { value: "meals", label: "Meal Planner", detail: "Pantry and recipes" },
   { value: "budget", label: "Budget Lab", detail: "Money plan" },
@@ -111,6 +115,13 @@ export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
     description:
       "Meals, money, reminders, and progress all show up in one easy spot.",
     spotlight: "Start here when you want a quick check.",
+  },
+  inbox: {
+    eyebrow: "Stay in the loop",
+    headline: "See new alerts, messages, and shared wins.",
+    description:
+      "Family Inbox keeps recent household updates in one clear feed so no one misses the important stuff.",
+    spotlight: "Open this page when you want the latest updates fast.",
   },
   ops: {
     eyebrow: "Let's get things done",
@@ -165,6 +176,8 @@ export function buildWorkspaceShellData({
   budgetPlanCount,
   savingsPercent,
   savingsAmount,
+  personalNotificationCount,
+  unreadNotificationCount,
   primarySuggestion,
   assistantSuggestions,
   aiTask,
@@ -210,6 +223,13 @@ export function buildWorkspaceShellData({
           { label: "Done today", value: completedChores },
           { label: "Reminders", value: state.reminders.length },
           { label: "Members", value: memberList.length },
+        ];
+      case "inbox":
+        return [
+          { label: "Unread", value: unreadNotificationCount },
+          { label: "Recent alerts", value: personalNotificationCount },
+          { label: "Messages", value: state.notifications.filter((notification) => notification.kind === "message" || notification.kind === "partner").length },
+          { label: "Achievements", value: state.notifications.filter((notification) => notification.kind === "goal" || notification.kind === "achievement" || notification.kind === "reward").length },
         ];
       case "meals":
         return [
@@ -315,6 +335,61 @@ export function buildWorkspaceShellData({
             `Reminder count in view: ${state.reminders.length}`,
             `Members available to assign: ${memberList.length}`,
             firstRoutine ? `Current routine anchor: ${firstRoutine.name}` : "No routine anchor has been created yet.",
+          ],
+        };
+      case "inbox":
+        return {
+          heroTone: "light",
+          heroClass: "family-panel family-surface-accent",
+          focusKicker: "Fresh updates",
+          focusTitle: "Keep alerts, messages, and wins in one easy feed.",
+          focusBody:
+            unreadNotificationCount > 0
+              ? `${unreadNotificationCount} unread alert${unreadNotificationCount === 1 ? "" : "s"} are waiting right now.`
+              : "Everything is caught up right now, and new family updates will land here first.",
+          focusNote: "This route should feel like the family's calm notification desk, not a noisy feed.",
+          featureClass: "family-card family-card-dark",
+          featureKicker: "Unread right now",
+          featureTitle: unreadNotificationCount > 0 ? `${unreadNotificationCount} alert${unreadNotificationCount === 1 ? "" : "s"} to check` : "All caught up",
+          featureBody:
+            unreadNotificationCount > 0
+              ? "Use this page to open the newest updates and clear unread items without digging through the app."
+              : "When new reminders, chats, or shared wins appear, they will show up here first.",
+          featureMeta: `${personalNotificationCount} total inbox item${personalNotificationCount === 1 ? "" : "s"} are saved for this member.`,
+          signalClass: "family-card family-card-gold",
+          signalKicker: "What lands here",
+          signalTitle: "Messages, reminders, and family wins.",
+          signalBody:
+            "Direct chats, partner nudges, reminder alerts, and shared accomplishments all collect here so the next action is easier to spot.",
+          signalTags: ["Messages", "Reminders", "Goals"],
+          railLabel: "Inbox context",
+          railDescription: "This route is all about recent household updates and what still needs your attention.",
+          railCards: [
+            {
+              kicker: "Unread",
+              title: unreadNotificationCount > 0 ? `${unreadNotificationCount} still open` : "Zero unread",
+              body: unreadNotificationCount > 0 ? "Open the newest items first so the feed stays calm." : "You are fully caught up right now.",
+              className: "family-card family-card-dark",
+            },
+            {
+              kicker: "Recent alerts",
+              title: `${personalNotificationCount} saved`,
+              body: "Recent household events stay here until you clear or read them.",
+              className: "family-card family-card-gold",
+            },
+            {
+              kicker: "Latest priority",
+              title: unreadNotificationCount > 0 ? "Start with unread" : "Nothing urgent",
+              body: unreadNotificationCount > 0 ? "Unread items should always stand out from the rest of the feed." : "The inbox can now act as a history view instead of an alert queue.",
+              className: "family-panel",
+            },
+          ],
+          contextTitle: "What is shaping the inbox right now.",
+          contextItems: [
+            `Unread alerts waiting: ${unreadNotificationCount}`,
+            `Total alerts saved: ${personalNotificationCount}`,
+            `Message alerts in state: ${state.notifications.filter((notification) => notification.kind === "message" || notification.kind === "partner").length}`,
+            `Shared family win alerts in state: ${state.notifications.filter((notification) => notification.kind === "goal" || notification.kind === "achievement" || notification.kind === "reward").length}`,
           ],
         };
       case "meals":
@@ -666,7 +741,14 @@ export function buildWorkspaceShellData({
   })();
 
   return {
-    navigation: WORKSPACE_NAVIGATION,
+    navigation: WORKSPACE_NAVIGATION.map((item) =>
+      item.value === "inbox"
+        ? {
+            ...item,
+            badge: unreadNotificationCount > 0 ? `${Math.min(unreadNotificationCount, 99)}${unreadNotificationCount > 99 ? "+" : ""}` : null,
+          }
+        : item,
+    ),
     activeMeta,
     activeNav,
     activeHeroStats,

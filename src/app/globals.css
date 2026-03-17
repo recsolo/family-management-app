@@ -1442,6 +1442,50 @@ textarea:focus-visible {
   box-shadow: 0 14px 28px rgba(15, 15, 15, 0.18);
 }
 
+.family-notification-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(16, 16, 16, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.78rem 0.92rem;
+  box-shadow: var(--shadow-soft);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.family-notification-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(228, 192, 92, 0.28);
+}
+
+.family-notification-button-active {
+  border-color: rgba(228, 192, 92, 0.34);
+  background: rgba(251, 246, 227, 0.98);
+}
+
+.family-notification-button__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.family-notification-button__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  background: #111111;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 0.42rem;
+}
+
 .family-menu-button:hover {
   transform: translateY(-1px);
   background: #1a1a1a;
@@ -1553,6 +1597,70 @@ textarea:focus-visible {
   padding: 0.85rem 0.95rem;
 }
 
+.family-notification-popout {
+  position: fixed;
+  top: 5.7rem;
+  right: max(23rem, calc((100vw - 1280px) / 2 + 8rem));
+  z-index: 40;
+  width: min(25rem, calc(100vw - 2rem));
+  border: 1px solid rgba(18, 18, 18, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 0.95rem;
+  box-shadow: 0 24px 70px rgba(15, 15, 15, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.family-notification-popout__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.family-notification-popout__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.family-notification-item,
+.family-inbox-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 1rem;
+  box-shadow: var(--shadow-soft);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.family-notification-item {
+  width: 100%;
+  text-align: left;
+}
+
+.family-notification-item:hover,
+.family-inbox-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(228, 192, 92, 0.28);
+  box-shadow: 0 16px 30px rgba(16, 16, 16, 0.08);
+}
+
+.family-notification-item-unread,
+.family-inbox-card-unread {
+  border-color: rgba(228, 192, 92, 0.3);
+  background: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(247, 239, 221, 0.92));
+}
+
+.family-notification-empty {
+  border: 1px dashed rgba(228, 192, 92, 0.34);
+  border-radius: 20px;
+  background: rgba(255, 252, 244, 0.86);
+  padding: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
 .family-partner-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1608,6 +1716,16 @@ textarea:focus-visible {
     max-height: min(78vh, 34rem);
     overflow: auto;
   }
+
+  .family-notification-popout {
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    bottom: 1rem;
+    width: auto;
+    max-height: min(78vh, 34rem);
+    overflow: auto;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1620,10 +1738,12 @@ textarea:focus-visible {
     display: none;
   }
 
+  .family-notification-button__label,
   .family-menu-button__label {
     display: none;
   }
 
+  .family-notification-button,
   .family-menu-button {
     padding: 0.9rem;
   }
@@ -1652,5 +1772,14 @@ textarea:focus-visible {
 
   .family-command-popout__footer {
     padding: 0.78rem 0.82rem;
+  }
+
+  .family-notification-popout {
+    padding: 0.8rem;
+    border-radius: 22px;
+  }
+
+  .family-notification-popout__header {
+    flex-direction: column;
   }
 }

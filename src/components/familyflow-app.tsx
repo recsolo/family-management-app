@@ -11,6 +11,7 @@ import { WorkspacePageSections } from "@/components/workspace/workspace-page-sec
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";
 import { WorkspaceHeroPanel, WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
 import {
+  type AppNotification,
   createId,
   type DirectMessage,
   getBudgetPlan,
@@ -187,6 +188,91 @@ export function FamilyFlowApp({
     );
   }
 
+  function createNotifications(
+    recipientUserIds: string[],
+    config: {
+      kind: AppNotification["kind"];
+      title: string;
+      detail: string;
+      link: string;
+      actorId?: string | null;
+      actorName?: string;
+      createdAt?: string;
+    },
+  ) {
+    const createdAt = config.createdAt ?? new Date().toISOString();
+
+    return Array.from(new Set(recipientUserIds))
+      .filter(Boolean)
+      .map((recipientUserId) => ({
+        id: createId("notification"),
+        recipientUserId,
+        actorId: config.actorId ?? currentUserId,
+        actorName: config.actorName ?? userName,
+        kind: config.kind,
+        title: config.title,
+        detail: config.detail,
+        link: config.link,
+        createdAt,
+        readAt: null,
+      })) satisfies AppNotification[];
+  }
+
+  function appendNotifications(current: AppState, notifications: AppNotification[]) {
+    if (notifications.length === 0) {
+      return current;
+    }
+
+    return {
+      ...current,
+      notifications: [...notifications, ...current.notifications]
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .slice(0, 200),
+    };
+  }
+
+  function getNotificationRecipientsForAudience(audience: string) {
+    if (audience === "Family") {
+      return memberList.filter((member) => member.id !== currentUserId).map((member) => member.id);
+    }
+
+    return memberList
+      .filter((member) => member.name.trim().toLowerCase() === audience.trim().toLowerCase() && member.id !== currentUserId)
+      .map((member) => member.id);
+  }
+
+  function getPartnerRecipientIds(memberIds: string[]) {
+    return memberIds.filter((memberId) => memberId !== currentUserId);
+  }
+
+  async function markNotificationRead(notificationId: string) {
+    await updateState((current) => ({
+      ...current,
+      notifications: current.notifications.map((notification) =>
+        notification.id === notificationId && !notification.readAt ? { ...notification, readAt: new Date().toISOString() } : notification,
+      ),
+    }));
+  }
+
+  async function markAllNotificationsRead() {
+    await updateState((current) => ({
+      ...current,
+      notifications: current.notifications.map((notification) =>
+        notification.recipientUserId === currentUserId && !notification.readAt
+          ? { ...notification, readAt: new Date().toISOString() }
+          : notification,
+      ),
+    }));
+  }
+
+  async function openNotification(notification: AppNotification) {
+    if (!notification.readAt) {
+      await markNotificationRead(notification.id);
+    }
+
+    router.push(notification.link);
+  }
+
   async function sendDirectMessage(memberId: string, content: string) {
     const trimmed = content.trim();
     if (!trimmed) {
@@ -201,6 +287,17 @@ export function FamilyFlowApp({
       createdAt: new Date().toISOString(),
     };
     const participantIds = getSortedParticipantIds(currentUserId, memberId);
+    const targetMember = memberList.find((member) => member.id === memberId);
+    const notifications = createNotifications(
+      targetMember ? [targetMember.id] : [],
+      {
+        kind: "message",
+        title: `${userName} sent you a message`,
+        detail: trimmed,
+        link: getMemberProfilePath(currentUserId),
+        createdAt: message.createdAt,
+      },
+    );
 
     await updateState((current) => {
       const existingThread = current.directThreads.find(
@@ -226,6 +323,7 @@ export function FamilyFlowApp({
         directThreads: existingThread
           ? current.directThreads.map((thread) => (thread.id === existingThread.id ? nextThread : thread))
           : [nextThread, ...current.directThreads],
+        notifications: [...notifications, ...current.notifications].sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 200),
       };
     });
   }
@@ -266,16 +364,27 @@ export function FamilyFlowApp({
       content: trimmed,
       createdAt: new Date().toISOString(),
     };
+    const notifications = createNotifications(getPartnerRecipientIds(state.partnerSpace.memberIds), {
+      kind: "partner",
+      title: `${userName} sent a private note`,
+      detail: trimmed,
+      link: getWorkspacePath("partner"),
+      createdAt: message.createdAt,
+    });
 
-    await updateState((current) => ({
-      ...current,
-      partnerSpace: current.partnerSpace
-        ? {
-            ...current.partnerSpace,
-            messages: [...current.partnerSpace.messages, message].slice(-160),
-          }
-        : current.partnerSpace,
-    }));
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        partnerSpace: current.partnerSpace
+          ? {
+              ...current.partnerSpace,
+              messages: [...current.partnerSpace.messages, message].slice(-160),
+            }
+          : current.partnerSpace,
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function addPartnerReward(reward: { title: string; detail: string; cost: number }) {
@@ -353,26 +462,39 @@ export function FamilyFlowApp({
       return;
     }
 
-    await updateState((current) => ({
-      ...current,
-      partnerSpace: current.partnerSpace
-        ? {
-            ...current.partnerSpace,
-            datePlans: [
-              {
-                id: createId("date-night"),
-                title: plan.title,
-                when: plan.when,
-                location: plan.location,
-                detail: plan.detail,
-                budget: plan.budget,
-                status: plan.status,
-              },
-              ...current.partnerSpace.datePlans,
-            ],
-          }
-        : current.partnerSpace,
-    }));
+    const createdAt = new Date().toISOString();
+    const notifications = createNotifications(getPartnerRecipientIds(state.partnerSpace.memberIds), {
+      kind: "partner",
+      title: `${userName} added a date-night plan`,
+      detail: `${plan.title}${plan.when ? ` for ${plan.when}` : ""}`,
+      link: getWorkspacePath("partner"),
+      createdAt,
+    });
+
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        partnerSpace: current.partnerSpace
+          ? {
+              ...current.partnerSpace,
+              datePlans: [
+                {
+                  id: createId("date-night"),
+                  title: plan.title,
+                  when: plan.when,
+                  location: plan.location,
+                  detail: plan.detail,
+                  budget: plan.budget,
+                  status: plan.status,
+                },
+                ...current.partnerSpace.datePlans,
+              ],
+            }
+          : current.partnerSpace,
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function addPartnerConnectionNote(note: { title: string; content: string }) {
@@ -380,25 +502,38 @@ export function FamilyFlowApp({
       return;
     }
 
-    await updateState((current) => ({
-      ...current,
-      partnerSpace: current.partnerSpace
-        ? {
-            ...current.partnerSpace,
-            connectionNotes: [
-              {
-                id: createId("partner-note"),
-                authorId: currentUserId,
-                authorName: userName,
-                title: note.title,
-                content: note.content,
-                createdAt: new Date().toISOString(),
-              },
-              ...current.partnerSpace.connectionNotes,
-            ].slice(0, 80),
-          }
-        : current.partnerSpace,
-    }));
+    const createdAt = new Date().toISOString();
+    const notifications = createNotifications(getPartnerRecipientIds(state.partnerSpace.memberIds), {
+      kind: "partner",
+      title: `${userName} left a closer note`,
+      detail: note.title || "A little love note",
+      link: getWorkspacePath("partner"),
+      createdAt,
+    });
+
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        partnerSpace: current.partnerSpace
+          ? {
+              ...current.partnerSpace,
+              connectionNotes: [
+                {
+                  id: createId("partner-note"),
+                  authorId: currentUserId,
+                  authorName: userName,
+                  title: note.title,
+                  content: note.content,
+                  createdAt,
+                },
+                ...current.partnerSpace.connectionNotes,
+              ].slice(0, 80),
+            }
+          : current.partnerSpace,
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function updateMemberProfile(memberId: string, updater: (profile: AppState["memberProfiles"][number]) => AppState["memberProfiles"][number]) {
@@ -411,28 +546,39 @@ export function FamilyFlowApp({
     });
   }
 
-  async function addFamilyAchievement(memberId: string, title: string, detail: string, points: number, kind: AppState["familyAchievements"][number]["kind"]) {
+  async function addFamilyAchievement(
+    memberId: string,
+    title: string,
+    detail: string,
+    points: number,
+    kind: AppState["familyAchievements"][number]["kind"],
+    notifications: AppNotification[] = [],
+  ) {
     const member = memberList.find((entry) => entry.id === memberId);
     if (!member) {
       return;
     }
 
-    await updateState((current) => ({
-      ...current,
-      familyAchievements: [
-        {
-          id: createId("achievement"),
-          memberId,
-          memberName: member.name,
-          title,
-          detail,
-          points,
-          kind,
-          createdAt: new Date().toISOString(),
-        },
-        ...current.familyAchievements,
-      ].slice(0, 60),
-    }));
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        familyAchievements: [
+          {
+            id: createId("achievement"),
+            memberId,
+            memberName: member.name,
+            title,
+            detail,
+            points,
+            kind,
+            createdAt: new Date().toISOString(),
+          },
+          ...current.familyAchievements,
+        ].slice(0, 60),
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function callAi<T>(payload: { kind: "assistant" | "meal-plan" | "budget-coach"; prompt?: string; history?: ChatMessage[] }) {
@@ -620,19 +766,35 @@ export function FamilyFlowApp({
       return;
     }
 
-    await updateState((current) => ({
-      ...current,
-      chores: [
-        ...current.chores,
-        {
-          id: createId("chore"),
-          title: choreTitle.trim(),
-          assignee: choreAssignee,
-          frequency: "Custom",
-          done: false,
-        },
-      ],
-    }));
+    const trimmedTitle = choreTitle.trim();
+    const assigneeMember = memberList.find((member) => member.name.trim().toLowerCase() === choreAssignee.trim().toLowerCase());
+    const notifications = createNotifications(
+      assigneeMember && assigneeMember.id !== currentUserId ? [assigneeMember.id] : [],
+      {
+        kind: "system",
+        title: `${userName} assigned you a chore`,
+        detail: trimmedTitle,
+        link: getWorkspacePath("ops"),
+      },
+    );
+
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        chores: [
+          ...current.chores,
+          {
+            id: createId("chore"),
+            title: trimmedTitle,
+            assignee: choreAssignee,
+            frequency: "Custom",
+            done: false,
+          },
+        ],
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
     setChoreTitle("");
   }
 
@@ -649,18 +811,31 @@ export function FamilyFlowApp({
       return;
     }
 
-    await updateState((current) => ({
-      ...current,
-      reminders: [
-        {
-          id: createId("reminder"),
-          title: reminderTitle.trim(),
-          when: reminderWhen.trim(),
-          audience: reminderAudience,
-        },
-        ...current.reminders,
-      ],
-    }));
+    const trimmedTitle = reminderTitle.trim();
+    const trimmedWhen = reminderWhen.trim();
+    const notifications = createNotifications(getNotificationRecipientsForAudience(reminderAudience), {
+      kind: "reminder",
+      title: `${userName} added a reminder`,
+      detail: `${trimmedTitle} / ${trimmedWhen}`,
+      link: getWorkspacePath("ops"),
+    });
+
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        reminders: [
+          {
+            id: createId("reminder"),
+            title: trimmedTitle,
+            when: trimmedWhen,
+            audience: reminderAudience,
+          },
+          ...current.reminders,
+        ],
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
     setReminderTitle("");
     setReminderWhen("");
     setReminderAudience("Family");
@@ -731,12 +906,25 @@ export function FamilyFlowApp({
       return;
     }
 
+    const notifications = createNotifications(
+      memberList.filter((entry) => entry.id !== memberId).map((entry) => entry.id),
+      {
+        kind: "achievement",
+        title: `${member.name} shared a fitness win`,
+        detail: `${todayEntry.steps} steps and ${todayEntry.movementMinutes} active minutes.`,
+        link: getMemberProfilePath(memberId),
+        actorId: memberId,
+        actorName: member.name,
+      },
+    );
+
     await addFamilyAchievement(
       memberId,
       `${member.name} shared a fitness win`,
       `${todayEntry.steps} steps, ${todayEntry.movementMinutes} active minutes, and ${todayEntry.waterCups} cups of water.`,
       0,
       "fitness",
+      notifications,
     );
   }
 
@@ -770,20 +958,43 @@ export function FamilyFlowApp({
   }
 
   async function completeProfileGoal(memberId: string, goalId: string) {
-    await updateMemberProfile(memberId, (profile) => {
-      const goal = profile.goals.find((entry) => entry.id === goalId);
-      if (!goal || goal.status === "done") {
-        return profile;
-      }
+    const member = memberList.find((entry) => entry.id === memberId);
+    const goal = state.memberProfiles.find((entry) => entry.memberId === memberId)?.goals.find((entry) => entry.id === goalId);
+    if (!member || !goal || goal.status === "done") {
+      return;
+    }
 
-      return {
-        ...profile,
-        pointsBalance: profile.pointsBalance + goal.points,
-        lifetimePoints: profile.lifetimePoints + goal.points,
-        goals: profile.goals.map((entry) =>
-          entry.id === goalId ? { ...entry, status: "done", completedAt: new Date().toISOString() } : entry,
-        ),
+    const completedAt = new Date().toISOString();
+    const notifications = createNotifications([memberId], {
+      kind: "goal",
+      title: `You earned ${goal.points} points`,
+      detail: `${goal.title} was marked finished.`,
+      link: getMemberProfilePath(memberId),
+      actorId: memberId,
+      actorName: member.name,
+      createdAt: completedAt,
+    });
+
+    await updateState((current) => {
+      const nextState: AppState = {
+        ...current,
+        memberProfiles: current.memberProfiles.map((profile) => {
+          if (profile.memberId !== memberId) {
+            return profile;
+          }
+
+          return {
+            ...profile,
+            pointsBalance: profile.pointsBalance + goal.points,
+            lifetimePoints: profile.lifetimePoints + goal.points,
+            goals: profile.goals.map((entry) =>
+              entry.id === goalId ? { ...entry, status: "done", completedAt } : entry,
+            ),
+          };
+        }),
       };
+
+      return appendNotifications(nextState, notifications);
     });
   }
 
@@ -799,7 +1010,18 @@ export function FamilyFlowApp({
       ...profile,
       goals: profile.goals.map((entry) => (entry.id === goalId ? { ...entry, sharedAt: new Date().toISOString() } : entry)),
     }));
-    await addFamilyAchievement(memberId, `${member.name} finished ${goal.title}`, goal.detail || "A new goal was completed.", goal.points, "goal");
+    const notifications = createNotifications(
+      memberList.filter((entry) => entry.id !== memberId).map((entry) => entry.id),
+      {
+        kind: "achievement",
+        title: `${member.name} finished ${goal.title}`,
+        detail: goal.detail || "A new goal was completed.",
+        link: getMemberProfilePath(memberId),
+        actorId: memberId,
+        actorName: member.name,
+      },
+    );
+    await addFamilyAchievement(memberId, `${member.name} finished ${goal.title}`, goal.detail || "A new goal was completed.", goal.points, "goal", notifications);
   }
 
   async function addProfileReward(
@@ -834,22 +1056,58 @@ export function FamilyFlowApp({
       return;
     }
 
-    await updateMemberProfile(memberId, (profile) => {
-      if (profile.pointsBalance < reward.cost) {
-        return profile;
+    const redeemedAt = new Date().toISOString();
+    const selfNotifications = createNotifications([memberId], {
+      kind: "reward",
+      title: `You used points for ${reward.title}`,
+      detail: `${reward.cost} points were spent on this reward.`,
+      link: getMemberProfilePath(memberId),
+      actorId: memberId,
+      actorName: member.name,
+      createdAt: redeemedAt,
+    });
+
+    await updateState((current) => {
+      const targetProfile = current.memberProfiles.find((profile) => profile.memberId === memberId);
+      if (!targetProfile || targetProfile.pointsBalance < reward.cost) {
+        return current;
       }
 
-      return {
-        ...profile,
-        pointsBalance: profile.pointsBalance - reward.cost,
-        rewards: profile.rewards.map((entry) =>
-          entry.id === rewardId
-            ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: new Date().toISOString() }
-            : entry,
-        ),
+      const nextState: AppState = {
+        ...current,
+        memberProfiles: current.memberProfiles.map((profile) => {
+          if (profile.memberId !== memberId) {
+            return profile;
+          }
+
+          return {
+            ...profile,
+            pointsBalance: profile.pointsBalance - reward.cost,
+            rewards: profile.rewards.map((entry) =>
+              entry.id === rewardId
+                ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: redeemedAt }
+                : entry,
+            ),
+          };
+        }),
       };
+
+      return appendNotifications(nextState, selfNotifications);
     });
-    await addFamilyAchievement(memberId, `${member.name} unlocked ${reward.title}`, reward.detail || "A reward was redeemed.", 0, "reward");
+
+    const familyNotifications = createNotifications(
+      memberList.filter((entry) => entry.id !== memberId).map((entry) => entry.id),
+      {
+        kind: "reward",
+        title: `${member.name} unlocked ${reward.title}`,
+        detail: reward.detail || "A reward was redeemed.",
+        link: getMemberProfilePath(memberId),
+        actorId: memberId,
+        actorName: member.name,
+        createdAt: redeemedAt,
+      },
+    );
+    await addFamilyAchievement(memberId, `${member.name} unlocked ${reward.title}`, reward.detail || "A reward was redeemed.", 0, "reward", familyNotifications);
   }
 
   async function addProfileCalendarEvent(
@@ -905,6 +1163,10 @@ export function FamilyFlowApp({
   const primarySuggestion = assistantSuggestions[0] ?? "Ask the assistant for a weekly family planning reset.";
   const ownerCount = memberList.filter((member) => member.role === "owner").length;
   const adminCount = memberList.filter((member) => member.role === "admin").length;
+  const currentUserNotifications = state.notifications
+    .filter((notification) => notification.recipientUserId === currentUserId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const unreadNotificationCount = currentUserNotifications.filter((notification) => !notification.readAt).length;
   const activeMember = memberProfileId ? memberList.find((member) => member.id === memberProfileId) : null;
   const activeProfile = memberProfileId ? state.memberProfiles.find((profile) => profile.memberId === memberProfileId) : null;
   const activeDirectThread = activeMember ? findDirectThread(activeMember.id) : null;
@@ -922,6 +1184,8 @@ export function FamilyFlowApp({
     budgetPlanCount: budgetPlan.length,
     savingsPercent,
     savingsAmount,
+    personalNotificationCount: currentUserNotifications.length,
+    unreadNotificationCount,
     primarySuggestion,
     saving,
     assistantSuggestions,
@@ -991,7 +1255,15 @@ export function FamilyFlowApp({
             activeDetail="A clean chat room with the menu tucked into the top right."
             navigation={navigation}
             activeTab={activeTab}
+            notifications={currentUserNotifications}
+            unreadNotificationCount={unreadNotificationCount}
             onNavigate={goToTab}
+            onOpenNotification={(notification) => {
+              void openNotification(notification);
+            }}
+            onMarkAllNotificationsRead={() => {
+              void markAllNotificationsRead();
+            }}
             onSignOut={() => {
               void signOut({ callbackUrl: "/" });
             }}
@@ -1032,7 +1304,15 @@ export function FamilyFlowApp({
           activeDetail={topBarDetail}
           navigation={navigation}
           activeTab={activeTab}
+          notifications={currentUserNotifications}
+          unreadNotificationCount={unreadNotificationCount}
           onNavigate={goToTab}
+          onOpenNotification={(notification) => {
+            void openNotification(notification);
+          }}
+          onMarkAllNotificationsRead={() => {
+            void markAllNotificationsRead();
+          }}
           onSignOut={() => {
             void signOut({ callbackUrl: "/" });
           }}
@@ -1149,6 +1429,8 @@ export function FamilyFlowApp({
                     savingHouseholdName={savingHouseholdName}
                     memberActionId={memberActionId}
                     assistantSuggestions={assistantSuggestions}
+                    currentUserNotifications={currentUserNotifications}
+                    unreadNotificationCount={unreadNotificationCount}
                     recipeMatches={recipeMatches}
                     bestRecipe={bestRecipe}
                     budgetPlan={budgetPlan}
@@ -1161,6 +1443,15 @@ export function FamilyFlowApp({
                     goToTab={goToTab}
                     openAiChatFocus={openAiChatFocus}
                     openMemberProfile={openMemberProfile}
+                    openNotification={(notification) => {
+                      void openNotification(notification);
+                    }}
+                    markNotificationRead={(notificationId) => {
+                      void markNotificationRead(notificationId);
+                    }}
+                    markAllNotificationsRead={() => {
+                      void markAllNotificationsRead();
+                    }}
                     handleAssistantPrompt={handleAssistantPrompt}
                     generateMealPlan={() => {
                       void generateMealPlan();
