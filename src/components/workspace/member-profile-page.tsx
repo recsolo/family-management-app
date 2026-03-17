@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 
 import { createId, getTodayKey, type DirectMessage, type FamilyAchievement, type FitnessLog, type MemberProfile, type ProfileUpload } from "@/lib/familyflow";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
+import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
 type WeatherSnapshot = {
   location: { label: string };
@@ -26,6 +27,8 @@ type Props = {
   directMessages: DirectMessage[];
   onBackToFamilyRoom: () => void;
   onSendMessage: (content: string) => void;
+  onEditMessage: (messageId: string, content: string) => void;
+  onDeleteMessage: (messageId: string) => void;
   onSaveBasics: (headline: string, about: string) => void;
   onSaveWeatherLocation: (location: string) => void;
   onSaveFitness: (entry: FitnessLog) => void;
@@ -111,6 +114,8 @@ export function MemberProfilePage({
   directMessages,
   onBackToFamilyRoom,
   onSendMessage,
+  onEditMessage,
+  onDeleteMessage,
   onSaveBasics,
   onSaveWeatherLocation,
   onSaveFitness,
@@ -159,7 +164,6 @@ export function MemberProfilePage({
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadNote, setUploadNote] = useState("");
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [messageInput, setMessageInput] = useState("");
   const displayedWeather = profile.weatherLocation ? weather : null;
   const displayedWeatherError = profile.weatherLocation ? weatherError : null;
 
@@ -265,16 +269,6 @@ export function MemberProfilePage({
       sleepHours: Number(sleep) || 0,
       note: fitnessNote.trim(),
     });
-  }
-
-  function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!messageInput.trim()) {
-      return;
-    }
-
-    onSendMessage(messageInput.trim());
-    setMessageInput("");
   }
 
   return (
@@ -453,24 +447,20 @@ export function MemberProfilePage({
           {canMessageMember ? (
             <article className="family-panel rounded-[28px] p-6">
               <p className="family-kicker family-eyebrow">Private chat</p>
-              <h2 className="mt-3 font-serif text-4xl leading-tight">Message {member.name}.</h2>
-              <div className="mt-5 space-y-3">
-                {directMessages.length > 0 ? (
-                  directMessages.map((message) => (
-                    <div key={message.id} className={`family-chat-bubble ${message.senderId === currentUserId ? "family-chat-user" : "family-chat-assistant"}`}>
-                      <p className="family-kicker opacity-70">{message.senderName}</p>
-                      <p className="mt-2 whitespace-pre-wrap">{message.content}</p>
-                      <p className="mt-3 text-xs opacity-70">{formatDateLabel(message.createdAt.slice(0, 10))}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Start the first message so this profile becomes a real one-on-one space.</div>
-                )}
+              <h2 className="mt-3 font-serif text-4xl leading-tight">Message {member.name} without the clutter.</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Your own messages can be edited or deleted after you send them.</p>
+              <div className="mt-5">
+                <EditableMessageThread
+                  messages={directMessages}
+                  currentUserId={currentUserId}
+                  emptyMessage="Start the first message so this profile becomes a real one-on-one space."
+                  composePlaceholder={`Send ${member.name} a quick note...`}
+                  sendLabel="Send message"
+                  onSendMessage={onSendMessage}
+                  onEditMessage={onEditMessage}
+                  onDeleteMessage={onDeleteMessage}
+                />
               </div>
-              <form className="mt-5 space-y-4" onSubmit={sendMessage}>
-                <textarea value={messageInput} onChange={(event) => setMessageInput(event.target.value)} rows={4} placeholder={`Send ${member.name} a quick note...`} className="family-textarea" />
-                <button type="submit" className="family-btn family-btn-primary">Send message</button>
-              </form>
             </article>
           ) : null}
 

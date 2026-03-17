@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 
 import type { AppState } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
+import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
 type PartnerTab = "chat" | "date-night" | "private-rewards" | "closer";
 
@@ -17,6 +18,8 @@ type Props = {
   partnerSpace: AppState["partnerSpace"];
   onConfigurePartnerSpace: (memberIds: string[]) => void;
   onSendMessage: (content: string) => void;
+  onEditMessage: (messageId: string, content: string) => void;
+  onDeleteMessage: (messageId: string) => void;
   onAddPrivateReward: (reward: { title: string; detail: string; cost: number }) => void;
   onRedeemPrivateReward: (rewardId: string) => void;
   onAddDatePlan: (plan: {
@@ -62,6 +65,8 @@ export function PartnerSpacePage({
   partnerSpace,
   onConfigurePartnerSpace,
   onSendMessage,
+  onEditMessage,
+  onDeleteMessage,
   onAddPrivateReward,
   onRedeemPrivateReward,
   onAddDatePlan,
@@ -70,7 +75,6 @@ export function PartnerSpacePage({
   const [activeTab, setActiveTab] = useState<PartnerTab>("chat");
   const [pairA, setPairA] = useState(partnerSpace?.memberIds[0] ?? members[0]?.id ?? "");
   const [pairB, setPairB] = useState(partnerSpace?.memberIds[1] ?? members[1]?.id ?? "");
-  const [chatInput, setChatInput] = useState("");
   const [rewardTitle, setRewardTitle] = useState("");
   const [rewardDetail, setRewardDetail] = useState("");
   const [rewardCost, setRewardCost] = useState("50");
@@ -102,16 +106,6 @@ export function PartnerSpacePage({
     }
 
     onConfigurePartnerSpace([pairA, pairB]);
-  }
-
-  function submitChat(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!chatInput.trim()) {
-      return;
-    }
-
-    onSendMessage(chatInput.trim());
-    setChatInput("");
   }
 
   function submitReward(event: FormEvent<HTMLFormElement>) {
@@ -245,45 +239,42 @@ export function PartnerSpacePage({
           </div>
 
           {activeTab === "chat" ? (
-            <div className="grid gap-5 xl:grid-cols-[1.02fr_0.98fr]">
+            <div className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Private chat</p>
                 <h3 className="mt-3 font-serif text-4xl leading-tight">Talk without losing the thread.</h3>
-                <div className="mt-5 space-y-3">
-                  {partnerSpace.messages.length > 0 ? (
-                    partnerSpace.messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`family-chat-bubble ${message.senderId === currentUserId ? "family-chat-user" : "family-chat-assistant"}`}
-                      >
-                        <p className="family-kicker opacity-70">{message.senderName}</p>
-                        <p className="mt-2 whitespace-pre-wrap">{message.content}</p>
-                        <p className="mt-3 text-xs opacity-70">{formatTimestamp(message.createdAt)}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
-                      Start the first private message so this page feels like your shared corner of the app.
-                    </div>
-                  )}
+                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Your own private notes can be edited or deleted after sending.</p>
+                <div className="mt-5">
+                  <EditableMessageThread
+                    messages={partnerSpace.messages}
+                    currentUserId={currentUserId}
+                    emptyMessage="Start the first private message so this page feels like your shared corner of the app."
+                    composePlaceholder="Write a sweet note, a quick check-in, or tonight's plan..."
+                    sendLabel="Send private message"
+                    onSendMessage={onSendMessage}
+                    onEditMessage={onEditMessage}
+                    onDeleteMessage={onDeleteMessage}
+                  />
                 </div>
               </article>
 
-              <article className="family-panel rounded-[28px] p-6">
-                <p className="family-kicker family-eyebrow">Send a note</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Keep the conversation warm.</h3>
-                <form className="mt-5 space-y-4" onSubmit={submitChat}>
-                  <textarea
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    rows={6}
-                    placeholder="Write a sweet note, a quick check-in, or tonight's plan..."
-                    className="family-textarea"
-                  />
-                  <button type="submit" className="family-btn family-btn-primary">
-                    Send private message
-                  </button>
-                </form>
+              <article className="family-panel family-surface-warm rounded-[28px] p-6">
+                <p className="family-kicker family-eyebrow">Chat focus</p>
+                <h3 className="mt-3 font-serif text-4xl leading-tight">Keep it warm and simple.</h3>
+                <div className="mt-5 space-y-3">
+                  <div className="family-sidebar-note">
+                    <p className="family-kicker family-eyebrow">Good use</p>
+                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Quick check-ins, little plans, and kind notes are easier to keep up with when the page is not crowded.</p>
+                  </div>
+                  <div className="family-sidebar-note">
+                    <p className="family-kicker family-eyebrow">New option</p>
+                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">If you send the wrong text, just edit it. If it no longer belongs there, delete it.</p>
+                  </div>
+                  <div className="family-sidebar-note">
+                    <p className="family-kicker family-eyebrow">Private space</p>
+                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Only the chosen pair can open and use this conversation area.</p>
+                  </div>
+                </div>
               </article>
             </div>
           ) : null}

@@ -285,6 +285,7 @@ export function FamilyFlowApp({
       senderName: userName,
       content: trimmed,
       createdAt: new Date().toISOString(),
+      editedAt: null,
     };
     const participantIds = getSortedParticipantIds(currentUserId, memberId);
     const targetMember = memberList.find((member) => member.id === memberId);
@@ -328,6 +329,58 @@ export function FamilyFlowApp({
     });
   }
 
+  async function editDirectMessage(memberId: string, messageId: string, content: string) {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const participantIds = getSortedParticipantIds(currentUserId, memberId);
+    const editedAt = new Date().toISOString();
+
+    await updateState((current) => ({
+      ...current,
+      directThreads: current.directThreads.map((thread) =>
+        thread.participantIds.length === 2 &&
+        thread.participantIds[0] === participantIds[0] &&
+        thread.participantIds[1] === participantIds[1]
+          ? {
+              ...thread,
+              messages: thread.messages.map((message) =>
+                message.id === messageId && message.senderId === currentUserId
+                  ? { ...message, content: trimmed, editedAt }
+                  : message,
+              ),
+            }
+          : thread,
+      ),
+    }));
+  }
+
+  async function deleteDirectMessage(memberId: string, messageId: string) {
+    const participantIds = getSortedParticipantIds(currentUserId, memberId);
+
+    await updateState((current) => ({
+      ...current,
+      directThreads: current.directThreads.flatMap((thread) => {
+        const isTargetThread =
+          thread.participantIds.length === 2 &&
+          thread.participantIds[0] === participantIds[0] &&
+          thread.participantIds[1] === participantIds[1];
+
+        if (!isTargetThread) {
+          return [thread];
+        }
+
+        const nextMessages = thread.messages.filter(
+          (message) => !(message.id === messageId && message.senderId === currentUserId),
+        );
+
+        return nextMessages.length > 0 ? [{ ...thread, messages: nextMessages }] : [];
+      }),
+    }));
+  }
+
   async function configurePartnerSpace(memberIds: string[]) {
     const nextMemberIds = Array.from(new Set(memberIds.filter(Boolean))).slice(0, 2);
     if (nextMemberIds.length !== 2) {
@@ -363,6 +416,7 @@ export function FamilyFlowApp({
       senderName: userName,
       content: trimmed,
       createdAt: new Date().toISOString(),
+      editedAt: null,
     };
     const notifications = createNotifications(getPartnerRecipientIds(state.partnerSpace.memberIds), {
       kind: "partner",
@@ -385,6 +439,47 @@ export function FamilyFlowApp({
 
       return appendNotifications(nextState, notifications);
     });
+  }
+
+  async function editPartnerMessage(messageId: string, content: string) {
+    const trimmed = content.trim();
+    if (!trimmed || !state.partnerSpace) {
+      return;
+    }
+
+    const editedAt = new Date().toISOString();
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            messages: current.partnerSpace.messages.map((message) =>
+              message.id === messageId && message.senderId === currentUserId
+                ? { ...message, content: trimmed, editedAt }
+                : message,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerMessage(messageId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            messages: current.partnerSpace.messages.filter(
+              (message) => !(message.id === messageId && message.senderId === currentUserId),
+            ),
+          }
+        : current.partnerSpace,
+    }));
   }
 
   async function addPartnerReward(reward: { title: string; detail: string; cost: number }) {
@@ -1338,6 +1433,12 @@ export function FamilyFlowApp({
               onSendMessage={(content) => {
                 void sendDirectMessage(activeMember.id, content);
               }}
+              onEditMessage={(messageId, content) => {
+                void editDirectMessage(activeMember.id, messageId, content);
+              }}
+              onDeleteMessage={(messageId) => {
+                void deleteDirectMessage(activeMember.id, messageId);
+              }}
               onSaveBasics={(headline, about) => {
                 void saveProfileBasics(activeMember.id, headline, about);
               }}
@@ -1510,6 +1611,12 @@ export function FamilyFlowApp({
                   }}
                   onSendMessage={(content) => {
                     void sendPartnerMessage(content);
+                  }}
+                  onEditMessage={(messageId, content) => {
+                    void editPartnerMessage(messageId, content);
+                  }}
+                  onDeleteMessage={(messageId) => {
+                    void deletePartnerMessage(messageId);
                   }}
                   onAddPrivateReward={(reward) => {
                     void addPartnerReward(reward);

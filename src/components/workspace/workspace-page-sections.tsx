@@ -3,6 +3,7 @@
 import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
+import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
 import { getTodayKey, type AppNotification, type AppState, type BudgetGoal, type BudgetStyle, type Recipe } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
@@ -262,10 +263,14 @@ function DashboardPage({
           ) : null}
         </InsightCard>
 
-        <article className="family-panel rounded-[28px] p-6 md:p-7">
-          <p className="family-kicker family-eyebrow">Appointments for today</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Know who needs to be where.</h3>
-          <div className="mt-5 space-y-3">
+        <DisclosurePanel
+          kicker="Appointments for today"
+          title="Know who needs to be where."
+          summary="Tap to open the day schedule without keeping it on screen all the time."
+          badge={`${todaysEvents.length} today`}
+          className="family-panel rounded-[28px] p-5 md:p-6"
+        >
+          <div className="space-y-3">
             {todaysEvents.length > 0 ? (
               todaysEvents.slice(0, 4).map((event) => (
                 <div key={`${event.memberName}-${event.id}`} className="family-list-card">
@@ -286,21 +291,19 @@ function DashboardPage({
               <EmptyState>No appointments are on the calendar for today yet.</EmptyState>
             )}
           </div>
-        </article>
+        </DisclosurePanel>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
-        <article className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="family-kicker family-eyebrow">Chore board</p>
-              <h3 className="mt-3 font-serif text-4xl leading-tight">
-                {completedChores}/{state.chores.length} complete
-              </h3>
-            </div>
-            <span className="family-badge family-badge-gold">{openChores} open</span>
-          </div>
-          <div className="mt-5 space-y-3">
+        <DisclosurePanel
+          kicker="Chore board"
+          title={`${completedChores}/${state.chores.length} complete`}
+          summary="Open the chore list when you want to clear jobs, then tuck it away again."
+          badge={`${openChores} open`}
+          defaultOpen
+          className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
+        >
+          <div className="space-y-3">
             {state.chores.length > 0 ? (
               state.chores.slice(0, 4).map((chore) => (
                 <button
@@ -326,7 +329,7 @@ function DashboardPage({
               <EmptyState>Add the first chore to start building a visible shared completion board.</EmptyState>
             )}
           </div>
-        </article>
+        </DisclosurePanel>
 
         <div className="grid gap-5">
           <InsightCard
@@ -559,13 +562,14 @@ function OperationsPage({
       </article>
 
       <div className="grid gap-5 xl:grid-cols-[0.94fr_1.06fr]">
-        <InsightCard
+        <DisclosurePanel
           kicker="Add a chore"
           title="Pick the next job."
-          body="Add a job, choose who does it, and keep the board moving."
-          className="family-panel family-surface-accent family-ops-form-card"
+          summary="Keep the form tucked away until you need to add something new."
+          badge="Open form"
+          className="family-panel family-surface-accent family-ops-form-card rounded-[28px] p-5 md:p-6"
         >
-          <form className="mt-6 space-y-4" onSubmit={addChore}>
+          <form className="space-y-4" onSubmit={addChore}>
             <label className="block text-sm font-medium text-stone-700">
               New chore
               <input value={choreTitle} onChange={(event) => setChoreTitle(event.target.value)} placeholder="Take out recycling" className="family-input mt-2" />
@@ -590,7 +594,7 @@ function OperationsPage({
               Keep chores short and easy to understand so everyone knows what to do fast.
             </p>
           </div>
-        </InsightCard>
+        </DisclosurePanel>
 
         <article className="family-panel family-route-board family-route-board--ops family-animate-rise rounded-[28px] p-6 md:p-7 family-ops-board-shell">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -633,10 +637,14 @@ function OperationsPage({
 
       <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7 family-reminder-shell">
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-          <div className="family-reminder-form-card rounded-[28px] p-5 md:p-6">
-            <p className="family-kicker family-eyebrow">Add a reminder</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight">Save something important.</h3>
-            <form className="mt-6 space-y-4" onSubmit={addReminder}>
+          <DisclosurePanel
+            kicker="Add a reminder"
+            title="Save something important."
+            summary="Open the reminder form only when you need it."
+            badge="Open form"
+            className="family-reminder-form-card rounded-[28px] p-5 md:p-6"
+          >
+            <form className="space-y-4" onSubmit={addReminder}>
               <label className="block text-sm font-medium text-stone-700">
                 Reminder
                 <input value={reminderTitle} onChange={(event) => setReminderTitle(event.target.value)} placeholder="Dentist forms in backpack" className="family-input mt-2" />
@@ -660,7 +668,7 @@ function OperationsPage({
                 Save reminder
               </button>
             </form>
-          </div>
+          </DisclosurePanel>
 
           <div className="family-route-column">
             <div>
@@ -718,13 +726,15 @@ function MealsPage({
           Add pantry items, compare recipes, and build a meal plan from one page.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
-          <InsightCard
-            kicker="What is in the kitchen?"
+          <DisclosurePanel
+            kicker="Pantry tools"
             title="Add what you have."
-            body="Add ingredients once and use them for recipes and AI meal ideas."
-            className="family-panel family-surface-warm family-meals-form-card"
+            summary="Open this only when you want to update pantry items or check the shelf."
+            badge={`${state.pantry.length} items`}
+            defaultOpen
+            className="family-panel family-surface-warm family-meals-form-card rounded-[28px] p-5 md:p-6"
           >
-            <form className="mt-6 space-y-4" onSubmit={addPantryItems}>
+            <form className="space-y-4" onSubmit={addPantryItems}>
               <label className="block text-sm font-medium text-stone-700">
                 Add ingredients
                 <input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" />
@@ -753,7 +763,7 @@ function MealsPage({
                 <EmptyState className="mt-4">Add a few staples and this shelf will start filling in.</EmptyState>
               )}
             </div>
-          </InsightCard>
+          </DisclosurePanel>
 
           <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="family-route-notice family-route-notice--dark family-meals-match-card">
@@ -1240,13 +1250,15 @@ function FamilyPage({
         </article>
 
         <div className="grid gap-5">
-          <InsightCard
+          <DisclosurePanel
             kicker="Invite family"
             title="Share your family link."
-            body="Send the link or code so family members join this same space."
-            className="family-panel family-surface-warm"
+            summary="Keep the invite tools tucked away until you need to copy or send them."
+            badge="Invite tools"
+            defaultOpen
+            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
           >
-            <form className="mt-5 space-y-4" onSubmit={saveHouseholdDetails}>
+            <form className="space-y-4" onSubmit={saveHouseholdDetails}>
               <label className="block text-sm font-medium text-stone-700">
                 Family name
                 <input
@@ -1283,7 +1295,7 @@ function FamilyPage({
             <button type="button" onClick={rotateInviteCode} disabled={!canManageHousehold || rotatingInvite} className="family-btn family-btn-secondary mt-5">
               {rotatingInvite ? "Refreshing..." : "New invite code"}
             </button>
-          </InsightCard>
+          </DisclosurePanel>
 
           <InsightCard
             kicker="Family routine"
@@ -1324,12 +1336,16 @@ function FamilyPage({
         </div>
       </div>
 
-      <article className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-6 md:p-7">
+      <DisclosurePanel
+        kicker="Family routine"
+        title="Build a family routine."
+        summary="Open this section when you want to add or review routines instead of keeping the whole builder on screen."
+        badge={`${state.routines.length} saved`}
+        className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-5 md:p-6"
+      >
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <p className="family-kicker family-eyebrow">Add a routine</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight">Build a family routine.</h3>
-            <form className="mt-5 space-y-4" onSubmit={addRoutine}>
+            <form className="space-y-4" onSubmit={addRoutine}>
               <label className="block text-sm font-medium text-stone-700">
                 Routine name
                 <input value={routineName} onChange={(event) => setRoutineName(event.target.value)} placeholder="Saturday reset" className="family-input mt-2" />
@@ -1368,7 +1384,7 @@ function FamilyPage({
             </div>
           </div>
         </div>
-      </article>
+      </DisclosurePanel>
     </div>
   );
 }
@@ -1426,13 +1442,14 @@ function AiStudioPage({
         />
 
         <div className="space-y-5">
-          <InsightCard
+          <DisclosurePanel
             kicker="Quick ideas"
             title="Start with a helpful question."
-            body="These prompts give you an easy way to ask for help."
-            className="family-panel family-surface-warm"
+            summary="Prompt starters stay under one button so the page feels calmer."
+            badge={`${assistantSuggestions.length} prompts`}
+            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
           >
-            <div className="mt-5 grid gap-3">
+            <div className="grid gap-3">
               {assistantSuggestions.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -1445,7 +1462,7 @@ function AiStudioPage({
                 </button>
               ))}
             </div>
-          </InsightCard>
+          </DisclosurePanel>
 
           <InsightCard
             kicker="Shared context"

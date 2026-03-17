@@ -41,6 +41,7 @@ export type DirectMessage = {
   senderName: string;
   content: string;
   createdAt: string;
+  editedAt: string | null;
 };
 
 export type DirectThread = {
@@ -565,6 +566,7 @@ function sanitizeDirectMessage(value: unknown): DirectMessage | null {
     senderName: toTrimmedString(value.senderName, "Family member"),
     content,
     createdAt: toTrimmedString(value.createdAt, new Date().toISOString()),
+    editedAt: toTrimmedString(value.editedAt) || null,
   };
 }
 
