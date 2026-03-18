@@ -28,13 +28,13 @@ const routeChecks = [
   {
     label: "Family Ops",
     path: "/family-ops",
-    expectedText: "Add a chore",
+    expectedText: "Only what matters today.",
     unexpectedText: "What is in the kitchen?",
   },
   {
     label: "Meal Planner",
     path: "/meal-planner",
-    expectedText: "What is in the kitchen?",
+    expectedText: "Pick meals from what you already have.",
     unexpectedText: "Budget settings",
   },
   {
