@@ -18,6 +18,10 @@
   --shadow-panel: 0 28px 80px rgba(16, 16, 16, 0.1);
   --shadow-soft: 0 16px 38px rgba(16, 16, 16, 0.07);
   --shadow-dark: 0 34px 88px rgba(16, 16, 16, 0.22);
+  --shadow-float: 0 34px 72px rgba(16, 16, 16, 0.14), 0 10px 22px rgba(16, 16, 16, 0.08);
+  --shadow-plinth: 0 26px 40px rgba(16, 16, 16, 0.12), 0 46px 92px rgba(16, 16, 16, 0.12);
+  --shadow-plinth-dark: 0 28px 46px rgba(0, 0, 0, 0.24), 0 52px 104px rgba(0, 0, 0, 0.26);
+  --surface-highlight: rgba(255, 255, 255, 0.76);
 }
 
 @theme inline {
@@ -40,6 +44,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
+    radial-gradient(circle at 50% -8%, rgba(255, 255, 255, 0.92), transparent 28%),
     radial-gradient(circle at 12% 10%, rgba(241, 214, 136, 0.3), transparent 18%),
     radial-gradient(circle at 84% 14%, rgba(17, 17, 17, 0.06), transparent 20%),
     radial-gradient(circle at 68% 84%, rgba(228, 192, 92, 0.18), transparent 22%),
@@ -93,6 +98,8 @@ a {
   position: relative;
   min-height: 100vh;
   isolation: isolate;
+  perspective: 1600px;
+  transform-style: preserve-3d;
 }
 
 .family-stage__glow {
@@ -129,16 +136,19 @@ a {
 
 .family-panel,
 .family-card {
+  position: relative;
+  isolation: isolate;
   border: 1px solid var(--line-soft);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 246, 236, 0.94)),
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0));
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--shadow-float);
   backdrop-filter: blur(18px);
+  transform-style: preserve-3d;
   transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
 }
 
 .family-panel-soft,
@@ -173,6 +183,45 @@ a {
   background: linear-gradient(180deg, rgba(250, 241, 210, 0.98), rgba(255, 252, 244, 0.96));
 }
 
+.family-panel::before,
+.family-card::before,
+.family-panel-soft::before,
+.family-card-soft::before,
+.family-panel-dark::before,
+.family-card-dark::before,
+.family-card-accent::before,
+.family-card-gold::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--surface-highlight), rgba(255, 255, 255, 0));
+  opacity: 0.68;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.family-panel::after,
+.family-card::after,
+.family-panel-soft::after,
+.family-card-soft::after,
+.family-panel-dark::after,
+.family-card-dark::after,
+.family-card-accent::after,
+.family-card-gold::after {
+  content: "";
+  position: absolute;
+  inset: auto 6% -18px;
+  height: 34px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 17, 17, 0.18), transparent 72%);
+  filter: blur(14px);
+  opacity: 0.42;
+  pointer-events: none;
+  z-index: -2;
+}
+
 .family-command {
   border-color: rgba(228, 192, 92, 0.2);
   background:
@@ -180,13 +229,22 @@ a {
     linear-gradient(135deg, rgba(241, 214, 136, 0.16), rgba(255, 255, 255, 0));
 }
 
-.family-panel:hover,
-.family-panel-soft:hover,
-.family-panel-dark:hover,
-.family-card:hover,
-.family-card-soft:hover,
-.family-card-dark:hover {
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .family-panel:hover,
+  .family-panel-soft:hover,
+  .family-panel-dark:hover,
+  .family-card:hover,
+  .family-card-soft:hover,
+  .family-card-dark:hover {
+    transform: translateY(-6px) rotateX(1.1deg);
+    box-shadow: var(--shadow-plinth);
+  }
+
+  .family-panel-dark:hover,
+  .family-card-dark:hover,
+  .family-card-accent:hover {
+    box-shadow: var(--shadow-plinth-dark);
+  }
 }
 
 .family-grid-lines {
@@ -680,6 +738,8 @@ a {
 }
 
 .family-sidebar-note {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(16, 16, 16, 0.08);
   border-radius: 1.45rem;
   background: rgba(255, 255, 255, 0.84);
@@ -688,6 +748,8 @@ a {
 }
 
 .family-side-stat {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(241, 214, 136, 0.18);
   border-radius: 1.35rem;
   background: linear-gradient(160deg, #111111 0%, #212121 100%);
@@ -701,14 +763,18 @@ a {
 }
 
 .family-focus-card {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(228, 192, 92, 0.2);
   border-radius: 1.8rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(249, 244, 232, 0.96));
   padding: 1.35rem;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-float);
 }
 
 .family-dark-note {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(241, 214, 136, 0.16);
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.08);
@@ -992,7 +1058,8 @@ a {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(16, 16, 16, 0.08);
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--shadow-plinth);
+  transform-style: preserve-3d;
 }
 
 .family-route-shell::before {
@@ -1003,12 +1070,61 @@ a {
   background: linear-gradient(180deg, rgba(228, 192, 92, 0.98), rgba(184, 135, 31, 0.78));
 }
 
+.family-route-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto 8% -22px;
+  height: 44px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 17, 17, 0.18), transparent 72%);
+  filter: blur(16px);
+  pointer-events: none;
+  opacity: 0.48;
+}
+
 .family-route-shell__header {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.family-hero-card {
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-plinth-dark);
+  transform: translateZ(28px);
+}
+
+.family-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.22), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+}
+
+.family-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 10% -22px;
+  height: 38px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 17, 17, 0.26), transparent 72%);
+  filter: blur(14px);
+  pointer-events: none;
+  opacity: 0.54;
+}
+
+.family-hero-side {
+  transform-style: preserve-3d;
+}
+
+.family-hero-tile {
+  transform: translateZ(18px);
 }
 
 .family-route-shell--dashboard {
@@ -1096,6 +1212,8 @@ a {
 .family-route-board {
   position: relative;
   overflow: hidden;
+  transform-style: preserve-3d;
+  box-shadow: var(--shadow-float);
 }
 
 .family-route-board::after {
@@ -1104,6 +1222,39 @@ a {
   inset: auto 2rem 0 2rem;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(228, 192, 92, 0.3), transparent);
+}
+
+.family-route-board::before,
+.family-focus-card::before,
+.family-sidebar-note::before,
+.family-side-stat::before,
+.family-dark-note::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.74), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+  opacity: 0.72;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .family-hero-card:hover {
+    transform: translateY(-6px) rotateX(1deg) rotateY(-1deg) translateZ(32px);
+  }
+
+  .family-hero-tile:hover,
+  .family-route-board:hover,
+  .family-focus-card:hover,
+  .family-sidebar-note:hover,
+  .family-side-stat:hover {
+    transform: translateY(-5px) translateZ(18px);
+  }
+
+  .family-topbar:hover {
+    box-shadow: 0 32px 48px rgba(16, 16, 16, 0.13), 0 54px 110px rgba(16, 16, 16, 0.14);
+  }
 }
 
 .family-route-board--dashboard {
@@ -1592,15 +1743,45 @@ textarea:focus-visible {
   gap: 0.85rem;
   margin-bottom: 1rem;
   border: 1px solid var(--line-soft);
-  background: rgba(255, 255, 255, 0.86);
+  overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 241, 224, 0.84)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.14), rgba(255, 255, 255, 0));
   backdrop-filter: blur(18px);
   border-radius: 24px;
   padding: 0.82rem 0.9rem;
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--shadow-plinth);
+  transform-style: preserve-3d;
+}
+
+.family-topbar::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.2), transparent 30%);
+  pointer-events: none;
+}
+
+.family-topbar::after {
+  content: "";
+  position: absolute;
+  inset: auto 10% -20px;
+  height: 36px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 17, 17, 0.16), transparent 72%);
+  filter: blur(14px);
+  pointer-events: none;
+  opacity: 0.4;
 }
 
 .family-topbar__brand {
   max-width: 40rem;
+  position: relative;
+  z-index: 1;
+  transform: translateZ(26px);
 }
 
 .family-topbar__actions {
@@ -1610,6 +1791,8 @@ textarea:focus-visible {
   margin-left: auto;
   position: relative;
   overflow: visible;
+  z-index: 2;
+  transform: translateZ(38px);
 }
 
 .family-topbar__meta {
@@ -1620,17 +1803,33 @@ textarea:focus-visible {
   justify-content: flex-end;
 }
 
+.family-topbar__meta-surface {
+  padding: 0.46rem 0.52rem;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 239, 221, 0.78)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.14), rgba(255, 255, 255, 0));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.84),
+    0 14px 28px rgba(16, 16, 16, 0.08);
+}
+
 .family-menu-button {
   display: inline-flex;
   align-items: center;
   gap: 0.72rem;
   border: 1px solid rgba(16, 16, 16, 0.12);
-  background: #111111;
+  background:
+    linear-gradient(180deg, rgba(31, 31, 31, 0.98), rgba(12, 12, 12, 0.98)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
   color: white;
   border-radius: 999px;
   padding: 0.72rem 0.86rem;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
-  box-shadow: 0 14px 28px rgba(15, 15, 15, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 30px rgba(15, 15, 15, 0.18);
 }
 
 .family-notification-button {
@@ -1638,11 +1837,15 @@ textarea:focus-visible {
   align-items: center;
   gap: 0.55rem;
   border: 1px solid rgba(16, 16, 16, 0.1);
-  background: rgba(255, 255, 255, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 241, 224, 0.86)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.12), rgba(255, 255, 255, 0));
   color: var(--foreground);
   border-radius: 999px;
   padding: 0.78rem 0.92rem;
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 16px 28px rgba(15, 15, 15, 0.08);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
@@ -1678,8 +1881,10 @@ textarea:focus-visible {
 }
 
 .family-menu-button:hover {
-  transform: translateY(-1px);
-  background: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 22px 34px rgba(15, 15, 15, 0.22);
 }
 
 .family-menu-button__label {
@@ -1717,11 +1922,38 @@ textarea:focus-visible {
   z-index: 40;
   width: min(18.5rem, calc(100vw - 2rem));
   border: 1px solid rgba(18, 18, 18, 0.1);
-  background: rgba(255, 255, 255, 0.94);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 239, 221, 0.92)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.16), rgba(255, 255, 255, 0));
   border-radius: 22px;
   padding: 0.72rem;
-  box-shadow: 0 24px 70px rgba(15, 15, 15, 0.18);
+  box-shadow: var(--shadow-plinth);
   backdrop-filter: blur(18px);
+  transform-origin: top right;
+  transform-style: preserve-3d;
+}
+
+.family-command-popout::before,
+.family-notification-popout::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.family-command-popout::after,
+.family-notification-popout::after {
+  content: "";
+  position: absolute;
+  inset: auto 8% -18px;
+  height: 30px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 17, 17, 0.18), transparent 72%);
+  filter: blur(12px);
+  pointer-events: none;
+  opacity: 0.42;
 }
 
 .family-command-popout__header {
@@ -1747,16 +1979,23 @@ textarea:focus-visible {
   width: 100%;
   text-align: left;
   border: 1px solid var(--line-soft);
-  background: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(249, 244, 232, 0.76)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.08), rgba(255, 255, 255, 0));
   border-radius: 16px;
   padding: 0.66rem 0.72rem;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 10px 22px rgba(16, 16, 16, 0.06);
 }
 
 .family-command-link:hover {
-  transform: translateY(-1px);
+  transform: translateY(-3px) translateX(1px);
   border-color: rgba(204, 164, 64, 0.45);
-  box-shadow: 0 14px 30px rgba(18, 18, 18, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 18px 30px rgba(18, 18, 18, 0.1);
 }
 
 .family-command-link-active {
@@ -1795,10 +2034,12 @@ textarea:focus-visible {
   z-index: 40;
   width: min(25rem, calc(100vw - 2rem));
   border: 1px solid rgba(18, 18, 18, 0.1);
-  background: rgba(255, 255, 255, 0.95);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 241, 224, 0.92)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.14), rgba(255, 255, 255, 0));
   border-radius: 24px;
   padding: 0.95rem;
-  box-shadow: 0 24px 70px rgba(15, 15, 15, 0.18);
+  box-shadow: var(--shadow-plinth);
   backdrop-filter: blur(18px);
 }
 

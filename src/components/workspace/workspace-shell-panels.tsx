@@ -123,7 +123,7 @@ export function WorkspaceTopBar({
       </div>
 
       <div className="family-topbar__actions">
-        <div className="family-topbar__meta">
+        <div className="family-topbar__meta family-topbar__meta-surface">
           <span className="family-badge family-badge-warm">{householdName}</span>
           <span className="text-sm text-[var(--muted)]">{userName}</span>
         </div>
@@ -430,12 +430,12 @@ export function WorkspaceHeroPanel({
   pageProfile,
 }: HeroPanelProps) {
   return (
-    <section className="family-panel family-animate-rise rounded-[40px] p-4 md:p-5">
-      <div className="grid gap-5 2xl:grid-cols-[1.06fr_0.94fr]">
-        <article className={`${pageProfile.heroClass} rounded-[34px] p-7 md:p-8`}>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`family-badge ${pageProfile.heroTone === "dark" ? "family-badge-gold" : "family-badge-warm"}`}>{activeMeta.eyebrow}</span>
-            <span className={`family-badge ${pageProfile.heroTone === "dark" ? "family-badge-warm" : "family-badge-accent"}`}>{activeNav.label}</span>
+      <section className="family-panel family-animate-rise rounded-[40px] p-4 md:p-5">
+        <div className="grid gap-5 2xl:grid-cols-[1.06fr_0.94fr]">
+          <article className={`${pageProfile.heroClass} family-hero-card rounded-[34px] p-7 md:p-8`}>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`family-badge ${pageProfile.heroTone === "dark" ? "family-badge-gold" : "family-badge-warm"}`}>{activeMeta.eyebrow}</span>
+              <span className={`family-badge ${pageProfile.heroTone === "dark" ? "family-badge-warm" : "family-badge-accent"}`}>{activeNav.label}</span>
           </div>
           <h2 className={`mt-6 max-w-3xl font-serif text-5xl leading-[0.94] md:text-6xl ${pageProfile.heroTone === "dark" ? "text-white" : "text-[var(--foreground)]"}`}>
             {activeMeta.headline}
@@ -454,19 +454,19 @@ export function WorkspaceHeroPanel({
           </div>
         </article>
 
-        <div className="grid gap-5">
-          <article className="family-focus-card">
-            <p className="family-kicker family-eyebrow">{pageProfile.focusKicker}</p>
-            <h3 className="mt-3 font-serif text-4xl leading-tight">{pageProfile.focusTitle}</h3>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{pageProfile.focusBody}</p>
-            <p className="mt-5 text-sm font-semibold text-[var(--accent-strong)]">{pageProfile.focusNote}</p>
-          </article>
+          <div className="family-hero-side grid gap-5">
+            <article className="family-focus-card family-hero-tile">
+              <p className="family-kicker family-eyebrow">{pageProfile.focusKicker}</p>
+              <h3 className="mt-3 font-serif text-4xl leading-tight">{pageProfile.focusTitle}</h3>
+              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{pageProfile.focusBody}</p>
+              <p className="mt-5 text-sm font-semibold text-[var(--accent-strong)]">{pageProfile.focusNote}</p>
+            </article>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <article className={`${pageProfile.featureClass} rounded-[30px] p-5`}>
-              <p className={`family-kicker ${usesDarkCopy(pageProfile.featureClass) ? "text-[rgba(241,214,136,0.76)]" : "family-eyebrow"}`}>{pageProfile.featureKicker}</p>
-              <p className={`mt-3 font-serif text-4xl leading-tight ${usesDarkCopy(pageProfile.featureClass) ? "text-white" : "text-[var(--foreground)]"}`}>{pageProfile.featureTitle}</p>
-              <p className={`mt-3 text-sm leading-7 ${usesDarkCopy(pageProfile.featureClass) ? "text-white/82" : "text-[var(--muted)]"}`}>{pageProfile.featureBody}</p>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <article className={`${pageProfile.featureClass} family-hero-tile rounded-[30px] p-5`}>
+                <p className={`family-kicker ${usesDarkCopy(pageProfile.featureClass) ? "text-[rgba(241,214,136,0.76)]" : "family-eyebrow"}`}>{pageProfile.featureKicker}</p>
+                <p className={`mt-3 font-serif text-4xl leading-tight ${usesDarkCopy(pageProfile.featureClass) ? "text-white" : "text-[var(--foreground)]"}`}>{pageProfile.featureTitle}</p>
+                <p className={`mt-3 text-sm leading-7 ${usesDarkCopy(pageProfile.featureClass) ? "text-white/82" : "text-[var(--muted)]"}`}>{pageProfile.featureBody}</p>
               <p className={`mt-4 text-sm ${usesDarkCopy(pageProfile.featureClass) ? "text-white/70" : "text-[var(--accent-strong)]"}`}>{pageProfile.featureMeta}</p>
               {pageProfile.featureAction ? (
                 <button
@@ -477,13 +477,13 @@ export function WorkspaceHeroPanel({
                 >
                   {pageProfile.featureAction.label}
                 </button>
-              ) : null}
-            </article>
+                ) : null}
+              </article>
 
-            <article className={`${pageProfile.signalClass} rounded-[30px] p-5`}>
-              <p className="family-kicker family-eyebrow">{pageProfile.signalKicker}</p>
-              <h3 className="mt-3 font-serif text-3xl leading-tight">{pageProfile.signalTitle}</h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{pageProfile.signalBody}</p>
+              <article className={`${pageProfile.signalClass} family-hero-tile rounded-[30px] p-5`}>
+                <p className="family-kicker family-eyebrow">{pageProfile.signalKicker}</p>
+                <h3 className="mt-3 font-serif text-3xl leading-tight">{pageProfile.signalTitle}</h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{pageProfile.signalBody}</p>
               {pageProfile.signalTags.length > 0 ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {pageProfile.signalTags.map((tag) => (
