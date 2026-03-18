@@ -14,6 +14,7 @@ export type Chore = {
   assignee: string;
   frequency: string;
   done: boolean;
+  completedOn: string | null;
 };
 
 export type Reminder = {
@@ -297,9 +298,9 @@ export const DEFAULT_STATE: AppState = {
     style: "balanced",
   },
   chores: [
-    { id: "chore-1", title: "Empty dishwasher", assignee: "Jordan", frequency: "Daily", done: false },
-    { id: "chore-2", title: "Pack school lunches", assignee: "Avery", frequency: "Weekdays", done: true },
-    { id: "chore-3", title: "Feed the dog", assignee: "Mia", frequency: "Daily", done: false },
+    { id: "chore-1", title: "Empty dishwasher", assignee: "Jordan", frequency: "Daily", done: false, completedOn: null },
+    { id: "chore-2", title: "Pack school lunches", assignee: "Avery", frequency: "Weekdays", done: true, completedOn: getTodayKey() },
+    { id: "chore-3", title: "Feed the dog", assignee: "Mia", frequency: "Daily", done: false, completedOn: null },
   ],
   reminders: [
     { id: "reminder-1", title: "Soccer practice pickup", when: "Tue 5:15 PM", audience: "Jordan" },
@@ -815,6 +816,7 @@ export function cloneDefaultState() {
 
 export function sanitizeState(raw: unknown): AppState {
   const defaults = cloneDefaultState();
+  const todayKey = getTodayKey();
 
   if (!raw || typeof raw !== "object") {
     return defaults;
@@ -825,21 +827,32 @@ export function sanitizeState(raw: unknown): AppState {
 
   return {
     ...defaults,
-    ...parsed,
-    pantry: Array.isArray(parsed.pantry) ? parsed.pantry.filter((item): item is string => typeof item === "string") : defaults.pantry,
+      ...parsed,
+      pantry: Array.isArray(parsed.pantry) ? parsed.pantry.filter((item): item is string => typeof item === "string") : defaults.pantry,
     budget: {
       income: clampNumber(budget.income, defaults.budget.income, 0, 1_000_000),
       familySize: clampNumber(budget.familySize, defaults.budget.familySize, 1, 20),
       goal: budget.goal === "stability" || budget.goal === "debt" || budget.goal === "savings" ? budget.goal : defaults.budget.goal,
       style: budget.style === "lean" || budget.style === "comfort" || budget.style === "balanced" ? budget.style : defaults.budget.style,
     },
-    chores: Array.isArray(parsed.chores) ? parsed.chores.filter(isRecord).map((chore) => ({
-      id: toTrimmedString(chore.id, createId("chore")),
-      title: toTrimmedString(chore.title),
-      assignee: toTrimmedString(chore.assignee, "Family"),
-      frequency: toTrimmedString(chore.frequency, "Any time"),
-      done: Boolean(chore.done),
-    })).filter((chore) => chore.title) : defaults.chores,
+      chores: Array.isArray(parsed.chores)
+        ? parsed.chores
+            .filter(isRecord)
+            .map((chore) => {
+              const completedOn = typeof chore.completedOn === "string" && chore.completedOn ? chore.completedOn : null;
+              const doneToday = Boolean(chore.done) && completedOn === todayKey;
+
+              return {
+                id: toTrimmedString(chore.id, createId("chore")),
+                title: toTrimmedString(chore.title),
+                assignee: toTrimmedString(chore.assignee, "Family"),
+                frequency: toTrimmedString(chore.frequency, "Any time"),
+                done: doneToday,
+                completedOn: doneToday ? completedOn : null,
+              };
+            })
+            .filter((chore) => chore.title)
+        : defaults.chores,
     reminders: Array.isArray(parsed.reminders) ? parsed.reminders.filter(isRecord).map((reminder) => ({
       id: toTrimmedString(reminder.id, createId("reminder")),
       title: toTrimmedString(reminder.title),

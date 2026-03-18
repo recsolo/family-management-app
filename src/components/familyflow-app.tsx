@@ -884,6 +884,7 @@ export function FamilyFlowApp({
             assignee: choreAssignee,
             frequency: "Custom",
             done: false,
+            completedOn: null,
           },
         ],
       };
@@ -894,9 +895,18 @@ export function FamilyFlowApp({
   }
 
   async function toggleChore(id: string) {
+    const todayKey = getTodayKey();
     await updateState((current) => ({
       ...current,
-      chores: current.chores.map((chore) => (chore.id === id ? { ...chore, done: !chore.done } : chore)),
+      chores: current.chores.map((chore) =>
+        chore.id === id
+          ? {
+              ...chore,
+              done: !chore.done,
+              completedOn: !chore.done ? todayKey : null,
+            }
+          : chore,
+      ),
     }));
   }
 
