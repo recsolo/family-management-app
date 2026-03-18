@@ -227,6 +227,67 @@ export type PartnerSpace = {
   connectionNotes: ConnectionNote[];
 };
 
+export type ArcadeRun = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  score: number;
+  starsCaught: number;
+  cloudsDodged: number;
+  playedAt: string;
+};
+
+export type UnoCardColor = "red" | "blue" | "green" | "yellow" | "wild";
+export type UnoPlayableColor = Exclude<UnoCardColor, "wild">;
+export type UnoCardValue =
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "skip"
+  | "reverse"
+  | "+2"
+  | "wild"
+  | "+4";
+
+export type UnoCard = {
+  id: string;
+  color: UnoCardColor;
+  value: UnoCardValue;
+};
+
+export type UnoPlayerSeat = {
+  memberId: string;
+  name: string;
+  hand: UnoCard[];
+};
+
+export type UnoGame = {
+  status: "playing" | "finished";
+  players: UnoPlayerSeat[];
+  currentPlayerIndex: number;
+  direction: 1 | -1;
+  discardPile: UnoCard[];
+  drawPile: UnoCard[];
+  activeColor: UnoPlayableColor;
+  winnerId: string | null;
+  lastAction: string;
+  startedAt: string;
+  updatedAt: string;
+};
+
+export type GameRoomState = {
+  selectedArcadeMemberId: string | null;
+  arcadeRuns: ArcadeRun[];
+  uno: UnoGame | null;
+};
+
 export type AppState = {
   pantry: string[];
   budget: {
@@ -246,6 +307,7 @@ export type AppState = {
   directThreads: DirectThread[];
   partnerSpace: PartnerSpace | null;
   notifications: AppNotification[];
+  gameRoom: GameRoomState;
 };
 
 type MemberSeed = {
@@ -436,6 +498,11 @@ export const DEFAULT_STATE: AppState = {
   directThreads: [],
   partnerSpace: null,
   notifications: [],
+  gameRoom: {
+    selectedArcadeMemberId: null,
+    arcadeRuns: [],
+    uno: null,
+  },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -806,6 +873,129 @@ function sanitizePartnerSpace(value: unknown): PartnerSpace | null {
   };
 }
 
+function sanitizeArcadeRun(value: unknown): ArcadeRun | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const memberId = toTrimmedString(value.memberId);
+  if (!memberId) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("arcade-run")),
+    memberId,
+    memberName: toTrimmedString(value.memberName, "Family member"),
+    score: clampNumber(value.score, 0, 0, 99999),
+    starsCaught: clampNumber(value.starsCaught, 0, 0, 9999),
+    cloudsDodged: clampNumber(value.cloudsDodged, 0, 0, 9999),
+    playedAt: toTrimmedString(value.playedAt, new Date().toISOString()),
+  };
+}
+
+function isUnoColor(value: unknown): value is UnoCardColor {
+  return value === "red" || value === "blue" || value === "green" || value === "yellow" || value === "wild";
+}
+
+function isUnoPlayableColor(value: unknown): value is UnoPlayableColor {
+  return value === "red" || value === "blue" || value === "green" || value === "yellow";
+}
+
+function isUnoValue(value: unknown): value is UnoCardValue {
+  return (
+    value === "0" ||
+    value === "1" ||
+    value === "2" ||
+    value === "3" ||
+    value === "4" ||
+    value === "5" ||
+    value === "6" ||
+    value === "7" ||
+    value === "8" ||
+    value === "9" ||
+    value === "skip" ||
+    value === "reverse" ||
+    value === "+2" ||
+    value === "wild" ||
+    value === "+4"
+  );
+}
+
+function sanitizeUnoCard(value: unknown): UnoCard | null {
+  if (!isRecord(value) || !isUnoColor(value.color) || !isUnoValue(value.value)) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("uno-card")),
+    color: value.color,
+    value: value.value,
+  };
+}
+
+function sanitizeUnoPlayerSeat(value: unknown): UnoPlayerSeat | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const memberId = toTrimmedString(value.memberId);
+  const name = toTrimmedString(value.name);
+  if (!memberId || !name) {
+    return null;
+  }
+
+  return {
+    memberId,
+    name,
+    hand: Array.isArray(value.hand) ? value.hand.map(sanitizeUnoCard).filter(isDefined).slice(0, 108) : [],
+  };
+}
+
+function sanitizeUnoGame(value: unknown): UnoGame | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const players = Array.isArray(value.players) ? value.players.map(sanitizeUnoPlayerSeat).filter(isDefined).slice(0, 8) : [];
+  const discardPile = Array.isArray(value.discardPile) ? value.discardPile.map(sanitizeUnoCard).filter(isDefined).slice(-108) : [];
+  const drawPile = Array.isArray(value.drawPile) ? value.drawPile.map(sanitizeUnoCard).filter(isDefined).slice(-108) : [];
+
+  if (players.length < 2 || discardPile.length === 0 || drawPile.length === 0 || !isUnoPlayableColor(value.activeColor)) {
+    return null;
+  }
+
+  return {
+    status: value.status === "finished" ? "finished" : "playing",
+    players,
+    currentPlayerIndex: clampNumber(value.currentPlayerIndex, 0, 0, Math.max(players.length - 1, 0)),
+    direction: value.direction === -1 ? -1 : 1,
+    discardPile,
+    drawPile,
+    activeColor: value.activeColor,
+    winnerId: toTrimmedString(value.winnerId) || null,
+    lastAction: toTrimmedString(value.lastAction, "UNO round ready."),
+    startedAt: toTrimmedString(value.startedAt, new Date().toISOString()),
+    updatedAt: toTrimmedString(value.updatedAt, new Date().toISOString()),
+  };
+}
+
+function sanitizeGameRoomState(value: unknown): GameRoomState {
+  if (!isRecord(value)) {
+    return {
+      selectedArcadeMemberId: null,
+      arcadeRuns: [],
+      uno: null,
+    };
+  }
+
+  return {
+    selectedArcadeMemberId: toTrimmedString(value.selectedArcadeMemberId) || null,
+    arcadeRuns: Array.isArray(value.arcadeRuns) ? value.arcadeRuns.map(sanitizeArcadeRun).filter(isDefined).slice(0, 20) : [],
+    uno: sanitizeUnoGame(value.uno),
+  };
+}
+
 export function normalizeIngredient(value: string) {
   return value.trim().toLowerCase();
 }
@@ -919,7 +1109,7 @@ function buildDateTimeForDay(dayKey: string, timeValue: string) {
 }
 
 function findPreviousScheduledDayKey(chore: Chore, dayKey: string) {
-  let cursor = parseDayKey(dayKey);
+  const cursor = parseDayKey(dayKey);
 
   for (let index = 0; index < 14; index += 1) {
     cursor.setDate(cursor.getDate() - 1);
@@ -1071,6 +1261,36 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
         }
       : null;
 
+  const gameRoom = {
+    selectedArcadeMemberId:
+      sanitized.gameRoom.selectedArcadeMemberId && memberMap.has(sanitized.gameRoom.selectedArcadeMemberId)
+        ? sanitized.gameRoom.selectedArcadeMemberId
+        : members[0]?.id ?? null,
+    arcadeRuns: sanitized.gameRoom.arcadeRuns
+      .filter((run) => memberMap.has(run.memberId))
+      .map((run) => ({
+        ...run,
+        memberName: memberMap.get(run.memberId)?.name ?? run.memberName,
+      }))
+      .slice(0, 20),
+    uno:
+      sanitized.gameRoom.uno &&
+      sanitized.gameRoom.uno.players.length >= 2 &&
+      sanitized.gameRoom.uno.players.every((player) => memberMap.has(player.memberId))
+        ? {
+            ...sanitized.gameRoom.uno,
+            players: sanitized.gameRoom.uno.players.map((player) => ({
+              ...player,
+              name: memberMap.get(player.memberId)?.name ?? player.name,
+            })),
+            winnerId:
+              sanitized.gameRoom.uno.winnerId && memberMap.has(sanitized.gameRoom.uno.winnerId)
+                ? sanitized.gameRoom.uno.winnerId
+                : null,
+          }
+        : null,
+  };
+
   return {
     ...sanitized,
     memberProfiles,
@@ -1078,6 +1298,7 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
     directThreads,
     partnerSpace,
     notifications,
+    gameRoom,
   };
 }
 
@@ -1186,6 +1407,7 @@ export function sanitizeState(raw: unknown): AppState {
     directThreads: Array.isArray(parsed.directThreads) ? parsed.directThreads.map(sanitizeDirectThread).filter(isDefined) : defaults.directThreads,
     partnerSpace: sanitizePartnerSpace(parsed.partnerSpace),
     notifications: Array.isArray(parsed.notifications) ? parsed.notifications.map(sanitizeNotification).filter(isDefined).slice(0, 200) : defaults.notifications,
+    gameRoom: sanitizeGameRoomState(parsed.gameRoom),
   };
 }
 

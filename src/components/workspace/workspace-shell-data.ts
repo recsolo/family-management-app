@@ -99,6 +99,7 @@ type BuildWorkspaceShellDataArgs = {
 
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
   { value: "dashboard", label: "Today", detail: "Today at a glance" },
+  { value: "games", label: "Game Room", detail: "Play together" },
   { value: "inbox", label: "Family Inbox", detail: "Alerts and updates" },
   { value: "ops", label: "Family Ops", detail: "Chores and reminders" },
   { value: "meals", label: "Meal Planner", detail: "Pantry and recipes" },
@@ -115,6 +116,13 @@ export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
     description:
       "Meals, money, reminders, and progress all show up in one easy spot.",
     spotlight: "Start here when you want a quick check.",
+  },
+  games: {
+    eyebrow: "Family game night",
+    headline: "Play something fun together without leaving the app.",
+    description:
+      "Game Room mixes a quick all-ages arcade challenge with a pass-and-play UNO table for the whole family.",
+    spotlight: "Open this page when you want a break, a laugh, or a quick family challenge.",
   },
   inbox: {
     eyebrow: "Stay in the loop",
@@ -214,9 +222,18 @@ export function buildWorkspaceShellData({
   const adminCount = memberList.filter((member) => member.role === "admin").length;
   const plannedMealsCount = state.latestMealPlan?.meals.length ?? 0;
   const assistantHistoryCount = state.assistantHistory.length;
+  const topArcadeRun = [...state.gameRoom.arcadeRuns].sort((left, right) => right.score - left.score)[0];
+  const activeUnoPlayers = state.gameRoom.uno?.players.length ?? 0;
 
   const activeHeroStats: WorkspaceHeroStat[] = (() => {
     switch (activeTab) {
+      case "games":
+        return [
+          { label: "Arcade runs", value: state.gameRoom.arcadeRuns.length },
+          { label: "Top score", value: topArcadeRun ? topArcadeRun.score : "Ready" },
+          { label: "UNO seats", value: activeUnoPlayers },
+          { label: "Table state", value: state.gameRoom.uno ? state.gameRoom.uno.status : "Open" },
+        ];
       case "ops":
         return [
           { label: "Open chores", value: openChores },
@@ -279,6 +296,60 @@ export function buildWorkspaceShellData({
 
   const pageProfile: WorkspacePageProfile = (() => {
     switch (activeTab) {
+      case "games":
+        return {
+          heroTone: "dark",
+          heroClass: "family-card family-card-dark family-grid-lines",
+          focusKicker: "Family play mode",
+          focusTitle: "Switch from planning to play in one tap.",
+          focusBody: topArcadeRun
+            ? `${topArcadeRun.memberName} is leading the arcade board with ${topArcadeRun.score} points, and the UNO table is ${state.gameRoom.uno ? "already live" : "ready to start"}.`
+            : "Launch a quick arcade round for instant fun, or start a pass-and-play UNO game for the whole family.",
+          focusNote: "This page should feel playful and easy to start, not like another productivity screen.",
+          featureClass: "family-card family-card-gold",
+          featureKicker: "Arcade spotlight",
+          featureTitle: topArcadeRun ? `${topArcadeRun.memberName} · ${topArcadeRun.score}` : "Quick all-ages challenge",
+          featureBody: topArcadeRun
+            ? `${topArcadeRun.starsCaught} stars caught and ${topArcadeRun.cloudsDodged} storm clouds dodged in the current top run.`
+            : "The arcade game is built for quick turns, simple controls, and a score board everyone can chase.",
+          featureMeta: state.gameRoom.arcadeRuns.length > 0 ? `${state.gameRoom.arcadeRuns.length} saved run${state.gameRoom.arcadeRuns.length === 1 ? "" : "s"} in this household.` : "Great for kids, adults, and quick couch competitions.",
+          signalClass: "family-panel",
+          signalKicker: "UNO table",
+          signalTitle: state.gameRoom.uno ? `${activeUnoPlayers} seats at the table` : "No UNO round in progress",
+          signalBody: state.gameRoom.uno
+            ? `${state.gameRoom.uno.players[state.gameRoom.uno.currentPlayerIndex]?.name ?? "Someone"} is up next, and the table color is ${state.gameRoom.uno.activeColor}.`
+            : "Start a new UNO table and the whole family can pass the device around and play together.",
+          signalTags: state.gameRoom.uno?.players.map((player) => player.name).slice(0, 4) ?? [],
+          railLabel: "Game night",
+          railDescription: "Game Room is for breaks, laughs, and quick shared play without leaving the family app.",
+          railCards: [
+            {
+              kicker: "Arcade leader",
+              title: topArcadeRun ? `${topArcadeRun.memberName} · ${topArcadeRun.score}` : "No score yet",
+              body: topArcadeRun ? `${topArcadeRun.playedAt.slice(0, 10)} · ${topArcadeRun.starsCaught} stars` : "Run the arcade game to set the first family score.",
+              className: "family-card family-card-gold",
+            },
+            {
+              kicker: "UNO table",
+              title: state.gameRoom.uno ? `${activeUnoPlayers} players` : "Ready to deal",
+              body: state.gameRoom.uno ? state.gameRoom.uno.lastAction : "Start a pass-and-play round with family members from this household.",
+              className: "family-card family-card-dark",
+            },
+            {
+              kicker: "Family vibe",
+              title: "Built for kids and adults",
+              body: "One quick arcade challenge and one familiar card game make this page easy for everyone to enjoy.",
+              className: "family-panel",
+            },
+          ],
+          contextTitle: "What is shaping game night right now.",
+          contextItems: [
+            `Saved arcade runs: ${state.gameRoom.arcadeRuns.length}`,
+            topArcadeRun ? `Top arcade player: ${topArcadeRun.memberName}` : "No arcade leader yet.",
+            state.gameRoom.uno ? `UNO players seated: ${activeUnoPlayers}` : "No UNO table has started yet.",
+            state.gameRoom.uno ? `Current UNO color: ${state.gameRoom.uno.activeColor}` : "UNO is waiting for a fresh deal.",
+          ],
+        };
       case "ops":
         return {
           heroTone: "dark",

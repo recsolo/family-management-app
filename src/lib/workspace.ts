@@ -8,6 +8,7 @@ import {
   type BudgetCoach,
   type DirectThread,
   type FamilyAchievement,
+  type GameRoomState,
   type MealPlan,
   type MemberProfile,
   type PartnerSpace,
@@ -53,6 +54,7 @@ type HouseholdRecord = {
   directThreadsJson: string;
   partnerSpaceJson: string | null;
   notificationsJson: string;
+  gameRoomJson: string;
   assistantHistoryJson: string;
   latestMealPlanJson: string | null;
   latestBudgetCoachJson: string | null;
@@ -89,6 +91,7 @@ function householdStatePayload(baseState: AppState) {
     directThreadsJson: JSON.stringify(baseState.directThreads),
     partnerSpaceJson: baseState.partnerSpace ? JSON.stringify(baseState.partnerSpace) : null,
     notificationsJson: JSON.stringify(baseState.notifications),
+    gameRoomJson: JSON.stringify(baseState.gameRoom),
     assistantHistoryJson: JSON.stringify(baseState.assistantHistory),
     latestMealPlanJson: baseState.latestMealPlan ? JSON.stringify(baseState.latestMealPlan) : null,
     latestBudgetCoachJson: baseState.latestBudgetCoach ? JSON.stringify(baseState.latestBudgetCoach) : null,
@@ -114,6 +117,7 @@ export function householdToAppState(household: HouseholdRecord): AppState {
     directThreads: safeParse<DirectThread[]>(household.directThreadsJson, defaults.directThreads),
     partnerSpace: safeParse<PartnerSpace | null>(household.partnerSpaceJson, defaults.partnerSpace),
     notifications: safeParse<AppNotification[]>(household.notificationsJson, defaults.notifications),
+    gameRoom: safeParse<GameRoomState>(household.gameRoomJson, defaults.gameRoom),
     assistantHistory: safeParse(household.assistantHistoryJson, defaults.assistantHistory),
     latestMealPlan: safeParse<MealPlan | null>(household.latestMealPlanJson, null),
     latestBudgetCoach: safeParse<BudgetCoach | null>(household.latestBudgetCoachJson, null),
@@ -209,6 +213,7 @@ export async function saveHouseholdState(householdId: string, state: AppState) {
       directThreadsJson: payload.directThreadsJson,
       partnerSpaceJson: payload.partnerSpaceJson,
       notificationsJson: payload.notificationsJson,
+      gameRoomJson: payload.gameRoomJson,
       assistantHistoryJson: payload.assistantHistoryJson,
       latestMealPlanJson: payload.latestMealPlanJson,
       latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -398,6 +403,7 @@ export async function attachUserToHousehold(input: AttachHouseholdInput) {
         directThreadsJson: payload.directThreadsJson,
         partnerSpaceJson: payload.partnerSpaceJson,
         notificationsJson: payload.notificationsJson,
+        gameRoomJson: payload.gameRoomJson,
         assistantHistoryJson: payload.assistantHistoryJson,
         latestMealPlanJson: payload.latestMealPlanJson,
         latestBudgetCoachJson: payload.latestBudgetCoachJson,
@@ -473,6 +479,7 @@ export async function registerUser(input: RegisterInput) {
           directThreadsJson: payload.directThreadsJson,
           partnerSpaceJson: payload.partnerSpaceJson,
           notificationsJson: payload.notificationsJson,
+          gameRoomJson: payload.gameRoomJson,
           assistantHistoryJson: payload.assistantHistoryJson,
           latestMealPlanJson: payload.latestMealPlanJson,
           latestBudgetCoachJson: payload.latestBudgetCoachJson,

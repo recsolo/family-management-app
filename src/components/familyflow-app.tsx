@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
+import { GameRoomPage } from "@/components/workspace/game-room-page";
 import { MemberProfilePage } from "@/components/workspace/member-profile-page-compact";
 import { PartnerSpacePage } from "@/components/workspace/partner-space-page";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
@@ -12,6 +13,7 @@ import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-
 import { WorkspaceHeroPanel, WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
 import {
   type AppNotification,
+  type ArcadeRun,
   type ChoreCadence,
   createId,
   type DirectMessage,
@@ -32,6 +34,7 @@ import {
   type FitnessLog,
   type MealPlan,
   type ProfileUpload,
+  type UnoGame,
   syncStateWithMembers,
 } from "@/lib/familyflow";
 import { getMemberProfilePath, getWorkspacePath, WORKSPACE_AI_CHAT_PATH, type ActiveTab } from "@/lib/workspace-tabs";
@@ -355,6 +358,37 @@ export function FamilyFlowApp({
 
   function openMemberProfile(memberId: string) {
     router.push(getMemberProfilePath(memberId));
+  }
+
+  async function updateGameRoom(updater: (current: AppState["gameRoom"]) => AppState["gameRoom"]) {
+    await updateState((current) => ({
+      ...current,
+      gameRoom: updater(current.gameRoom),
+    }));
+  }
+
+  async function saveArcadeSelection(memberId: string) {
+    await updateGameRoom((current) => ({
+      ...current,
+      selectedArcadeMemberId: memberId,
+    }));
+  }
+
+  async function saveArcadeRun(run: ArcadeRun) {
+    await updateGameRoom((current) => ({
+      ...current,
+      selectedArcadeMemberId: run.memberId,
+      arcadeRuns: [...current.arcadeRuns, run]
+        .sort((left, right) => right.score - left.score || right.playedAt.localeCompare(left.playedAt))
+        .slice(0, 20),
+    }));
+  }
+
+  async function saveUnoGame(game: UnoGame | null) {
+    await updateGameRoom((current) => ({
+      ...current,
+      uno: game,
+    }));
   }
 
   function getSortedParticipantIds(leftId: string, rightId: string) {
@@ -1797,7 +1831,7 @@ export function FamilyFlowApp({
                 pageProfile={pageProfile}
               />
 
-              {activeTab !== "partner" ? (
+              {activeTab !== "partner" && activeTab !== "games" ? (
                 <section className="space-y-5">
                   <WorkspacePageSections
                     activeTab={activeTab}
@@ -1957,6 +1991,23 @@ export function FamilyFlowApp({
                   }}
                   onAddConnectionNote={(note) => {
                     void addPartnerConnectionNote(note);
+                  }}
+                />
+              ) : null}
+
+              {activeTab === "games" ? (
+                <GameRoomPage
+                  currentUserId={currentUserId}
+                  memberList={memberList}
+                  gameRoom={state.gameRoom}
+                  onSelectArcadeMember={(memberId) => {
+                    void saveArcadeSelection(memberId);
+                  }}
+                  onSaveArcadeRun={(run) => {
+                    void saveArcadeRun(run);
+                  }}
+                  onSaveUnoGame={(game) => {
+                    void saveUnoGame(game);
                   }}
                 />
               ) : null}

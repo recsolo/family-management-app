@@ -1473,6 +1473,116 @@ a {
   color: var(--foreground);
 }
 
+.family-route-shell--games {
+  background:
+    radial-gradient(circle at top right, rgba(17, 17, 17, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 239, 221, 0.94));
+}
+
+.family-route-board--games {
+  background:
+    radial-gradient(circle at top right, rgba(241, 214, 136, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 246, 236, 0.94));
+}
+
+.family-game-canvas-shell {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.8rem;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(20, 20, 20, 0.98), rgba(43, 43, 43, 0.94));
+  box-shadow: var(--shadow-dark);
+}
+
+.family-game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 920 / 420;
+}
+
+.family-game-leaderboard-row,
+.family-uno-seat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.95rem 1rem;
+}
+
+.family-uno-seat-active {
+  border-color: rgba(228, 192, 92, 0.3);
+  background: linear-gradient(180deg, rgba(250, 241, 210, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.family-uno-wild-picker {
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 1.4rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 1rem;
+}
+
+.family-uno-hand {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+
+.family-uno-card {
+  display: block;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+  padding: 1rem;
+  min-height: 8.8rem;
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+  opacity: 0.52;
+}
+
+.family-uno-card:disabled {
+  cursor: not-allowed;
+}
+
+.family-uno-card-playable {
+  opacity: 1;
+}
+
+.family-uno-card-playable:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-panel);
+}
+
+.family-uno-card--red,
+.family-uno-color-btn--red {
+  background: linear-gradient(145deg, #d85858 0%, #a12f2f 100%);
+}
+
+.family-uno-card--blue,
+.family-uno-color-btn--blue {
+  background: linear-gradient(145deg, #3c7be0 0%, #204b96 100%);
+}
+
+.family-uno-card--green,
+.family-uno-color-btn--green {
+  background: linear-gradient(145deg, #2e9c61 0%, #17623a 100%);
+}
+
+.family-uno-card--yellow,
+.family-uno-color-btn--yellow {
+  background: linear-gradient(145deg, #d7af34 0%, #a87a12 100%);
+}
+
+.family-uno-color-btn {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .family-route-column {
   display: flex;
   flex-direction: column;
