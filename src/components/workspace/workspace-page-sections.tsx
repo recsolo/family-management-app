@@ -4,7 +4,21 @@ import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateA
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
 import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
-import { getTodayKey, type AppNotification, type AppState, type BudgetGoal, type BudgetStyle, type Recipe } from "@/lib/familyflow";
+import {
+  formatReminderWhen,
+  getChoreCadenceLabel,
+  getChoreStatus,
+  getReminderStatus,
+  getTodayKey,
+  isChoreScheduledForDate,
+  WEEKDAY_OPTIONS,
+  type AppNotification,
+  type AppState,
+  type BudgetGoal,
+  type BudgetStyle,
+  type ChoreCadence,
+  type Recipe,
+} from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
@@ -46,12 +60,30 @@ type WorkspacePageSectionsProps = {
   setChoreTitle: Dispatch<SetStateAction<string>>;
   choreAssignee: string;
   setChoreAssignee: Dispatch<SetStateAction<string>>;
+  choreCadence: ChoreCadence;
+  setChoreCadence: Dispatch<SetStateAction<ChoreCadence>>;
+  choreDueTime: string;
+  setChoreDueTime: Dispatch<SetStateAction<string>>;
+  chorePoints: string;
+  setChorePoints: Dispatch<SetStateAction<string>>;
+  choreDays: number[];
+  toggleChoreDay: (day: number) => void;
   reminderTitle: string;
   setReminderTitle: Dispatch<SetStateAction<string>>;
   reminderWhen: string;
   setReminderWhen: Dispatch<SetStateAction<string>>;
+  reminderCadence: "once" | "daily" | "weekdays" | "weekly";
+  setReminderCadence: Dispatch<SetStateAction<"once" | "daily" | "weekdays" | "weekly">>;
+  reminderScheduledFor: string;
+  setReminderScheduledFor: Dispatch<SetStateAction<string>>;
   reminderAudience: string;
   setReminderAudience: Dispatch<SetStateAction<string>>;
+  reminderInApp: boolean;
+  setReminderInApp: Dispatch<SetStateAction<boolean>>;
+  reminderBrowser: boolean;
+  setReminderBrowser: Dispatch<SetStateAction<boolean>>;
+  reminderEmail: boolean;
+  setReminderEmail: Dispatch<SetStateAction<boolean>>;
   routineName: string;
   setRoutineName: Dispatch<SetStateAction<string>>;
   routineTimeWindow: string;
@@ -96,6 +128,7 @@ type WorkspacePageSectionsProps = {
   addReminder: (event: FormEvent<HTMLFormElement>) => void;
   removeReminder: (id: string) => void;
   addRoutine: (event: FormEvent<HTMLFormElement>) => void;
+  enableBrowserAlerts: () => void;
 };
 
 type PageProps = Omit<WorkspacePageSectionsProps, "activeTab">;
@@ -191,6 +224,10 @@ function DashboardPage({
   const firstReminder = state.reminders[0];
   const firstRoutine = state.routines[0];
   const dinnerLead = state.latestMealPlan?.meals[0];
+  const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
+  const focusReminders = state.reminders
+    .filter((reminder) => getReminderStatus(reminder, new Date()) === "due" || getReminderStatus(reminder, new Date()) === "scheduled")
+    .slice(0, 3);
   const todaysEvents = state.memberProfiles.flatMap((profile) =>
     profile.calendarEvents
       .filter((event) => event.date === todayKey)
@@ -212,8 +249,8 @@ function DashboardPage({
     },
     {
       label: "Household load",
-      value: `${openChores} open`,
-      note: `${state.reminders.length} reminders are shaping the family queue.`,
+      value: `${todayChores.filter((chore) => !chore.done).length} chores`,
+      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} are on deck.`,
     },
   ];
 
@@ -297,15 +334,15 @@ function DashboardPage({
       <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
         <DisclosurePanel
           kicker="Chore board"
-          title={`${completedChores}/${state.chores.length} complete`}
+          title={`${completedChores}/${todayChores.length} done today`}
           summary="Open the chore list when you want to clear jobs, then tuck it away again."
-          badge={`${openChores} open`}
+          badge={`${todayChores.filter((chore) => !chore.done).length} open`}
           defaultOpen
           className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
         >
           <div className="space-y-3">
-            {state.chores.length > 0 ? (
-              state.chores.slice(0, 4).map((chore) => (
+            {todayChores.length > 0 ? (
+              todayChores.slice(0, 4).map((chore) => (
                 <button
                   key={chore.id}
                   type="button"
@@ -316,7 +353,7 @@ function DashboardPage({
                     <div>
                       <h4 className="font-serif text-2xl">{chore.title}</h4>
                       <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                        {chore.assignee} / {chore.frequency}
+                        {chore.assignee} / {getChoreCadenceLabel(chore)}
                       </p>
                     </div>
                     <span className={`family-badge ${chore.done ? "family-badge-accent" : "family-badge-gold"}`}>
@@ -333,12 +370,14 @@ function DashboardPage({
 
         <div className="grid gap-5">
           <InsightCard
-            kicker="Upcoming reminder"
-            title={firstReminder ? firstReminder.title : "No reminder queued"}
+            kicker="Coming up"
+            title={focusReminders[0] ? focusReminders[0].title : firstReminder ? firstReminder.title : "No reminder queued"}
             body={
-              firstReminder
-                ? `${firstReminder.when} for ${firstReminder.audience}.`
-                : "Capture school items, pickup timing, or household resets so they do not disappear into memory."
+              focusReminders[0]
+                ? `${formatReminderWhen(focusReminders[0])} for ${focusReminders[0].audience}.`
+                : firstReminder
+                  ? `${formatReminderWhen(firstReminder)} for ${firstReminder.audience}.`
+                  : "Capture school items, pickup timing, or household resets so they do not disappear into memory."
             }
             className="family-panel family-surface-warm"
           />
@@ -520,6 +559,14 @@ function OperationsPage({
   setChoreTitle,
   choreAssignee,
   setChoreAssignee,
+  choreCadence,
+  setChoreCadence,
+  choreDueTime,
+  setChoreDueTime,
+  chorePoints,
+  setChorePoints,
+  choreDays,
+  toggleChoreDay,
   addChore,
   completedChores,
   toggleChore,
@@ -527,12 +574,32 @@ function OperationsPage({
   setReminderTitle,
   reminderWhen,
   setReminderWhen,
+  reminderCadence,
+  setReminderCadence,
+  reminderScheduledFor,
+  setReminderScheduledFor,
   reminderAudience,
   setReminderAudience,
+  reminderInApp,
+  setReminderInApp,
+  reminderBrowser,
+  setReminderBrowser,
+  reminderEmail,
+  setReminderEmail,
   addReminder,
   removeReminder,
+  enableBrowserAlerts,
 }: PageProps) {
-  const openChores = state.chores.length - completedChores;
+  const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
+  const dueChores = todayChores.filter((chore) => getChoreStatus(chore, new Date()) === "due");
+  const overdueChores = todayChores.filter((chore) => getChoreStatus(chore, new Date()) === "overdue");
+  const dueReminders = state.reminders.filter((reminder) => getReminderStatus(reminder, new Date()) === "due");
+  const upcomingReminders = state.reminders
+    .filter((reminder) => {
+      const status = getReminderStatus(reminder, new Date());
+      return status === "due" || status === "scheduled";
+    })
+    .slice(0, 6);
 
   return (
     <div className="space-y-5">
@@ -540,125 +607,180 @@ function OperationsPage({
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">Chores and reminders</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Finish chores and clear reminders.</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">See what is due today.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">Family Ops</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          Add work, clear it, and keep reminders easy to see without bouncing between screens.
+          This page now stays focused on today: what is due, what is late, and what needs to be added.
         </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <RouteMetricStrip
             tone="dark"
             items={[
-              { label: "Open chores", value: `${openChores}`, note: `${completedChores} already finished.` },
-              { label: "Reminder queue", value: `${state.reminders.length}`, note: "Shared family details stay visible here." },
-              { label: "Available assignees", value: `${memberNames.length}`, note: "Roles are ready to share the load." },
+              { label: "Due now", value: `${dueChores.length}`, note: `${completedChores} finished today.` },
+              { label: "Overdue", value: `${overdueChores.length}`, note: overdueChores.length > 0 ? "These should stand out first." : "Nothing late right now." },
+              { label: "Due reminders", value: `${dueReminders.length}`, note: `${memberNames.length} people can receive reminders.` },
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Tip</p>
+            <p className="family-kicker family-eyebrow">Simple flow</p>
             <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Use chores for jobs to do and reminders for things you do not want to forget.
+              Keep the forms tucked away, clear today&apos;s jobs first, and let alerts handle the rest.
             </p>
           </div>
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-[0.94fr_1.06fr]">
-        <DisclosurePanel
-          kicker="Add a chore"
-          title="Pick the next job."
-          summary="Keep the form tucked away until you need to add something new."
-          badge="Open form"
-          className="family-panel family-surface-accent family-ops-form-card rounded-[28px] p-5 md:p-6"
-        >
-          <form className="space-y-4" onSubmit={addChore}>
-            <label className="block text-sm font-medium text-stone-700">
-              New chore
-              <input value={choreTitle} onChange={(event) => setChoreTitle(event.target.value)} placeholder="Take out recycling" className="family-input mt-2" />
-            </label>
-            <label className="block text-sm font-medium text-stone-700">
-              Assign to
-              <select value={choreAssignee} onChange={(event) => setChoreAssignee(event.target.value)} className="family-select mt-2">
-                {memberNames.map((member) => (
-                  <option key={member} value={member}>
-                    {member}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="family-btn family-btn-primary">
-              Add to board
-            </button>
-          </form>
-          <div className="family-ops-hint mt-5">
-            <p className="family-kicker family-eyebrow">Quick rule</p>
-            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-              Keep chores short and easy to understand so everyone knows what to do fast.
-            </p>
-          </div>
-        </DisclosurePanel>
-
+      <div className="grid gap-5 xl:grid-cols-[1.06fr_0.94fr]">
         <article className="family-panel family-route-board family-route-board--ops family-animate-rise rounded-[28px] p-6 md:p-7 family-ops-board-shell">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="family-kicker family-eyebrow">Today&apos;s chores</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Shared completion board.</h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap any card to move it from open to done.</p>
+              <p className="family-kicker family-eyebrow">Today&apos;s chore board</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Only what matters today.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap a card to mark it done. Overdue chores stay at the top.</p>
             </div>
-            <span className="family-badge family-badge-gold">{openChores} open</span>
+            <span className="family-badge family-badge-gold">{todayChores.filter((chore) => !chore.done).length} open</span>
           </div>
           <div className="mt-6 space-y-4">
-            {state.chores.length > 0 ? (
-              state.chores.map((chore) => (
-                <button
-                  key={chore.id}
-                  type="button"
-                  onClick={() => toggleChore(chore.id)}
-                  className={`family-ops-chore-card ${chore.done ? "family-ops-chore-card-done" : ""}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-serif text-2xl">{chore.title}</h4>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                        {chore.assignee} / {chore.frequency}
+            {todayChores.length > 0 ? (
+              todayChores
+                .slice()
+                .sort((left, right) => {
+                  const order = { overdue: 0, due: 1, done: 2, upcoming: 3 } as const;
+                  return order[getChoreStatus(left, new Date())] - order[getChoreStatus(right, new Date())];
+                })
+                .map((chore) => {
+                  const status = getChoreStatus(chore, new Date());
+
+                  return (
+                    <button
+                      key={chore.id}
+                      type="button"
+                      onClick={() => toggleChore(chore.id)}
+                      className={`family-ops-chore-card ${chore.done ? "family-ops-chore-card-done" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-serif text-2xl">{chore.title}</h4>
+                          <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                            {chore.assignee} / {getChoreCadenceLabel(chore)} / by {chore.dueTime}
+                          </p>
+                        </div>
+                        <span className={`family-badge ${status === "done" ? "family-badge-accent" : status === "overdue" ? "family-badge-danger" : "family-badge-gold"}`}>
+                          {status === "done" ? "Done" : status === "overdue" ? "Late" : "Due"}
+                        </span>
+                      </div>
+                      <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                        {chore.points} pts · {chore.streakCount} day streak
                       </p>
-                    </div>
-                    <span className={`family-badge ${chore.done ? "family-badge-accent" : "family-badge-gold"}`}>{chore.done ? "Done" : "Open"}</span>
-                  </div>
-                  <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                    {chore.done ? "Nice work. This one is already cleared." : "Press this card when the job is finished."}
-                  </p>
-                </button>
-              ))
+                    </button>
+                  );
+                })
             ) : (
-              <EmptyState>Add the first chore to start building a shared completion board.</EmptyState>
+              <EmptyState>No chores are scheduled for today. Add one below if you want the board to fill in.</EmptyState>
             )}
           </div>
         </article>
-      </div>
 
-      <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7 family-reminder-shell">
-        <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-          <DisclosurePanel
-            kicker="Add a reminder"
-            title="Save something important."
-            summary="Open the reminder form only when you need it."
-            badge="Open form"
-            className="family-reminder-form-card rounded-[28px] p-5 md:p-6"
-          >
-            <form className="space-y-4" onSubmit={addReminder}>
+        <DisclosurePanel
+          kicker="Add or schedule"
+          title="Keep setup hidden until you need it."
+          summary="One place to add chores and reminders with repeat rules and delivery choices."
+          badge="Open setup"
+          className="family-panel family-surface-accent family-ops-form-card rounded-[28px] p-5 md:p-6"
+        >
+          <div className="space-y-5">
+            <form className="space-y-4" onSubmit={addChore}>
+              <p className="family-kicker family-eyebrow">New chore</p>
+              <label className="block text-sm font-medium text-stone-700">
+                Job
+                <input value={choreTitle} onChange={(event) => setChoreTitle(event.target.value)} placeholder="Take out recycling" className="family-input mt-2" />
+              </label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-sm font-medium text-stone-700">
+                  Assign to
+                  <select value={choreAssignee} onChange={(event) => setChoreAssignee(event.target.value)} className="family-select mt-2">
+                    {memberNames.map((member) => (
+                      <option key={member} value={member}>
+                        {member}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm font-medium text-stone-700">
+                  Repeats
+                  <select value={choreCadence} onChange={(event) => setChoreCadence(event.target.value as ChoreCadence)} className="family-select mt-2">
+                    <option value="daily">Every day</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Once a week</option>
+                    <option value="custom">Custom days</option>
+                  </select>
+                </label>
+              </div>
+              {(choreCadence === "custom" || choreCadence === "weekly") ? (
+                <div>
+                  <p className="text-sm font-medium text-stone-700">Days</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {WEEKDAY_OPTIONS.map((day) => (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => toggleChoreDay(day.value)}
+                        className={`family-nav-pill ${choreDays.includes(day.value) ? "family-nav-pill-active" : ""}`}
+                      >
+                        {day.shortLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-sm font-medium text-stone-700">
+                  Due time
+                  <input type="time" value={choreDueTime} onChange={(event) => setChoreDueTime(event.target.value)} className="family-input mt-2" />
+                </label>
+                <label className="block text-sm font-medium text-stone-700">
+                  Points
+                  <input type="number" min="1" step="1" value={chorePoints} onChange={(event) => setChorePoints(event.target.value)} className="family-input mt-2" />
+                </label>
+              </div>
+              <button type="submit" className="family-btn family-btn-primary">
+                Add chore
+              </button>
+            </form>
+
+            <form className="space-y-4 border-t border-[var(--line-soft)] pt-5" onSubmit={addReminder}>
+              <p className="family-kicker family-eyebrow">New reminder</p>
               <label className="block text-sm font-medium text-stone-700">
                 Reminder
                 <input value={reminderTitle} onChange={(event) => setReminderTitle(event.target.value)} placeholder="Dentist forms in backpack" className="family-input mt-2" />
               </label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-sm font-medium text-stone-700">
+                  Date and time
+                  <input
+                    type="datetime-local"
+                    value={reminderScheduledFor}
+                    onChange={(event) => {
+                      setReminderScheduledFor(event.target.value);
+                      setReminderWhen(event.target.value);
+                    }}
+                    className="family-input mt-2"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700">
+                  Repeat
+                  <select value={reminderCadence} onChange={(event) => setReminderCadence(event.target.value as "once" | "daily" | "weekdays" | "weekly")} className="family-select mt-2">
+                    <option value="once">One time</option>
+                    <option value="daily">Every day</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Every week</option>
+                  </select>
+                </label>
+              </div>
               <label className="block text-sm font-medium text-stone-700">
-                When
-                <input value={reminderWhen} onChange={(event) => setReminderWhen(event.target.value)} placeholder="Fri 7:45 AM" className="family-input mt-2" />
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Audience
+                Who gets it
                 <select value={reminderAudience} onChange={(event) => setReminderAudience(event.target.value)} className="family-select mt-2">
                   <option value="Family">Family</option>
                   {memberNames.map((member) => (
@@ -668,38 +790,72 @@ function OperationsPage({
                   ))}
                 </select>
               </label>
-              <button type="submit" className="family-btn family-btn-primary">
-                Save reminder
-              </button>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-stone-700">How it should show up</p>
+                <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
+                  <input type="checkbox" checked={reminderInApp} onChange={(event) => setReminderInApp(event.target.checked)} />
+                  In the app inbox
+                </label>
+                <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
+                  <input type="checkbox" checked={reminderBrowser} onChange={(event) => setReminderBrowser(event.target.checked)} />
+                  Browser alert
+                </label>
+                <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
+                  <input type="checkbox" checked={reminderEmail} onChange={(event) => setReminderEmail(event.target.checked)} />
+                  Email reminder
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" onClick={enableBrowserAlerts} className="family-btn family-btn-soft">
+                    Enable browser alerts
+                  </button>
+                  <button type="submit" className="family-btn family-btn-primary">
+                    Save reminder
+                  </button>
+                </div>
+              </div>
             </form>
-          </DisclosurePanel>
+          </div>
+        </DisclosurePanel>
+      </div>
 
-          <div className="family-route-column">
-            <div>
-              <p className="family-kicker family-eyebrow">Upcoming reminders</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Shared family queue.</h3>
-            </div>
-            <div className="mt-6 space-y-4">
-              {state.reminders.length > 0 ? (
-                state.reminders.map((reminder) => (
-                  <div key={reminder.id} className="family-reminder-card">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="font-serif text-2xl">{reminder.title}</h4>
-                        <p className="family-reminder-time mt-3">{reminder.when}</p>
-                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">For {reminder.audience}</p>
-                      </div>
+      <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7 family-reminder-shell">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="family-kicker family-eyebrow">Reminder queue</p>
+            <h3 className="mt-4 font-serif text-4xl leading-tight">Only the next reminders stay visible.</h3>
+          </div>
+          <span className="family-badge family-badge-accent">{dueReminders.length} due now</span>
+        </div>
+        <div className="mt-6 space-y-4">
+          {upcomingReminders.length > 0 ? (
+            upcomingReminders.map((reminder) => {
+              const status = getReminderStatus(reminder, new Date());
+
+              return (
+                <div key={reminder.id} className="family-reminder-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="font-serif text-2xl">{reminder.title}</h4>
+                      <p className="family-reminder-time mt-3">{formatReminderWhen(reminder)}</p>
+                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                        For {reminder.audience} · {status === "due" ? "Due now" : "Coming up"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`family-badge ${status === "due" ? "family-badge-danger" : "family-badge-gold"}`}>
+                        {status === "due" ? "Due" : "Soon"}
+                      </span>
                       <button type="button" onClick={() => removeReminder(reminder.id)} className="family-btn family-btn-secondary px-3 py-2 text-xs uppercase tracking-[0.2em]">
                         Clear
                       </button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <EmptyState>No reminders yet. Add one for school items, pickup timing, or a weekly household reset.</EmptyState>
-              )}
-            </div>
-          </div>
+                </div>
+              );
+            })
+          ) : (
+            <EmptyState>No active reminders are showing yet. Add one from the tucked-away setup panel when you need it.</EmptyState>
+          )}
         </div>
       </article>
     </div>

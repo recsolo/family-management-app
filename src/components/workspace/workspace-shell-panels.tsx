@@ -445,7 +445,7 @@ export function WorkspaceHeroPanel({
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {activeHeroStats.slice(0, 3).map((stat) => (
+              {activeHeroStats.slice(0, 2).map((stat) => (
               <div key={stat.label} className={pageProfile.heroTone === "dark" ? "family-dark-note" : "family-side-stat"}>
                 <p className={`family-kicker ${pageProfile.heroTone === "dark" ? "text-[rgba(241,214,136,0.76)]" : ""}`}>{stat.label}</p>
                 <p className="mt-3 font-serif text-4xl text-white">{stat.value}</p>

@@ -33,9 +33,10 @@ FamilyFlow AI is a staged Next.js web app for family planning. Stage 5A added ro
 2. Set `NEXTAUTH_URL` to the final public app URL.
 3. Set `NEXTAUTH_SECRET` to a long random value of at least 32 characters. The deployed app now requires this explicitly.
 4. Set `OPENAI_API_KEY` if AI features should be enabled in production.
-5. Run `npm run check:env`.
-6. Run `npm run db:generate`.
-7. Run `npm run build`.
+5. Set `RESEND_API_KEY` and `REMINDER_FROM_EMAIL` if reminder emails should be enabled.
+6. Run `npm run check:env`.
+7. Run `npm run db:generate`.
+8. Run `npm run build`.
 
 ## Railway deploy
 

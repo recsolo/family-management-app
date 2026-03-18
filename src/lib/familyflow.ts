@@ -7,14 +7,31 @@ export type Recipe = {
 
 export type BudgetGoal = "stability" | "savings" | "debt";
 export type BudgetStyle = "balanced" | "lean" | "comfort";
+export type ChoreCadence = "daily" | "weekdays" | "weekly" | "custom";
+export type ReminderCadence = "once" | "daily" | "weekdays" | "weekly";
+
+export const WEEKDAY_OPTIONS = [
+  { value: 0, label: "Sun", shortLabel: "Su" },
+  { value: 1, label: "Mon", shortLabel: "Mo" },
+  { value: 2, label: "Tue", shortLabel: "Tu" },
+  { value: 3, label: "Wed", shortLabel: "We" },
+  { value: 4, label: "Thu", shortLabel: "Th" },
+  { value: 5, label: "Fri", shortLabel: "Fr" },
+  { value: 6, label: "Sat", shortLabel: "Sa" },
+] as const;
 
 export type Chore = {
   id: string;
   title: string;
   assignee: string;
-  frequency: string;
+  cadence: ChoreCadence;
+  customDays: number[];
+  dueTime: string;
+  points: number;
   done: boolean;
   completedOn: string | null;
+  streakCount: number;
+  lastCompletedOn: string | null;
 };
 
 export type Reminder = {
@@ -22,6 +39,16 @@ export type Reminder = {
   title: string;
   when: string;
   audience: string;
+  cadence: ReminderCadence;
+  scheduledFor: string | null;
+  delivery: {
+    inApp: boolean;
+    browser: boolean;
+    email: boolean;
+  };
+  lastDeliveredAt: string | null;
+  lastBrowserDeliveredAt: string | null;
+  lastEmailDeliveredAt: string | null;
 };
 
 export type Routine = {
@@ -298,14 +325,83 @@ export const DEFAULT_STATE: AppState = {
     style: "balanced",
   },
   chores: [
-    { id: "chore-1", title: "Empty dishwasher", assignee: "Jordan", frequency: "Daily", done: false, completedOn: null },
-    { id: "chore-2", title: "Pack school lunches", assignee: "Avery", frequency: "Weekdays", done: true, completedOn: getTodayKey() },
-    { id: "chore-3", title: "Feed the dog", assignee: "Mia", frequency: "Daily", done: false, completedOn: null },
+    {
+      id: "chore-1",
+      title: "Empty dishwasher",
+      assignee: "Jordan",
+      cadence: "daily",
+      customDays: [],
+      dueTime: "18:00",
+      points: 10,
+      done: false,
+      completedOn: null,
+      streakCount: 0,
+      lastCompletedOn: null,
+    },
+    {
+      id: "chore-2",
+      title: "Pack school lunches",
+      assignee: "Avery",
+      cadence: "weekdays",
+      customDays: [],
+      dueTime: "20:00",
+      points: 15,
+      done: true,
+      completedOn: getTodayKey(),
+      streakCount: 3,
+      lastCompletedOn: getTodayKey(),
+    },
+    {
+      id: "chore-3",
+      title: "Feed the dog",
+      assignee: "Mia",
+      cadence: "daily",
+      customDays: [],
+      dueTime: "17:30",
+      points: 8,
+      done: false,
+      completedOn: null,
+      streakCount: 0,
+      lastCompletedOn: null,
+    },
   ],
   reminders: [
-    { id: "reminder-1", title: "Soccer practice pickup", when: "Tue 5:15 PM", audience: "Jordan" },
-    { id: "reminder-2", title: "Review grocery list", when: "Wed 7:30 PM", audience: "Avery" },
-    { id: "reminder-3", title: "Library books back in backpacks", when: "Thu 8:00 PM", audience: "Family" },
+    {
+      id: "reminder-1",
+      title: "Soccer practice pickup",
+      when: "Tue 5:15 PM",
+      audience: "Jordan",
+      cadence: "once",
+      scheduledFor: null,
+      delivery: { inApp: true, browser: false, email: false },
+      lastDeliveredAt: null,
+      lastBrowserDeliveredAt: null,
+      lastEmailDeliveredAt: null,
+    },
+    {
+      id: "reminder-2",
+      title: "Review grocery list",
+      when: "Wed 7:30 PM",
+      audience: "Avery",
+      cadence: "once",
+      scheduledFor: null,
+      delivery: { inApp: true, browser: false, email: false },
+      lastDeliveredAt: null,
+      lastBrowserDeliveredAt: null,
+      lastEmailDeliveredAt: null,
+    },
+    {
+      id: "reminder-3",
+      title: "Library books back in backpacks",
+      when: "Thu 8:00 PM",
+      audience: "Family",
+      cadence: "once",
+      scheduledFor: null,
+      delivery: { inApp: true, browser: false, email: false },
+      lastDeliveredAt: null,
+      lastBrowserDeliveredAt: null,
+      lastEmailDeliveredAt: null,
+    },
   ],
   routines: [
     {
@@ -719,6 +815,181 @@ export function getTodayKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+export function parseDayKey(dayKey: string) {
+  const [year, month, day] = dayKey.split("-").map((part) => Number(part));
+  return new Date(year, (month || 1) - 1, day || 1);
+}
+
+export function formatWeekdayList(days: number[]) {
+  const normalized = Array.from(new Set(days)).sort((left, right) => left - right);
+  return normalized.map((day) => WEEKDAY_OPTIONS.find((entry) => entry.value === day)?.label ?? "Day").join(", ");
+}
+
+export function getChoreCadenceLabel(chore: Chore) {
+  switch (chore.cadence) {
+    case "daily":
+      return "Every day";
+    case "weekdays":
+      return "Weekdays";
+    case "weekly":
+      return `Weekly${chore.customDays[0] !== undefined ? ` on ${formatWeekdayList([chore.customDays[0]])}` : ""}`;
+    case "custom":
+      return chore.customDays.length > 0 ? formatWeekdayList(chore.customDays) : "Custom";
+    default:
+      return "Scheduled";
+  }
+}
+
+export function getReminderCadenceLabel(reminder: Reminder) {
+  switch (reminder.cadence) {
+    case "daily":
+      return "Every day";
+    case "weekdays":
+      return "Weekdays";
+    case "weekly":
+      return "Every week";
+    case "once":
+    default:
+      return "One time";
+  }
+}
+
+export function getReminderOccurrenceKey(reminder: Reminder, now = new Date()) {
+  if (!reminder.scheduledFor) {
+    return null;
+  }
+
+  return reminder.cadence === "once" ? reminder.scheduledFor.slice(0, 16) : getTodayKey(now);
+}
+
+export function isReminderScheduledForDate(reminder: Reminder, now = new Date()) {
+  if (!reminder.scheduledFor) {
+    return false;
+  }
+
+  const scheduledAt = new Date(reminder.scheduledFor);
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return false;
+  }
+
+  switch (reminder.cadence) {
+    case "daily":
+      return true;
+    case "weekdays":
+      return now.getDay() >= 1 && now.getDay() <= 5;
+    case "weekly":
+      return now.getDay() === scheduledAt.getDay();
+    case "once":
+    default:
+      return getTodayKey(now) === getTodayKey(scheduledAt);
+  }
+}
+
+export function getNextChoreStreakCount(chore: Chore, completionDayKey: string) {
+  const previousScheduledDay = findPreviousScheduledDayKey(chore, completionDayKey);
+  if (previousScheduledDay && chore.lastCompletedOn === previousScheduledDay) {
+    return chore.streakCount + 1;
+  }
+
+  return 1;
+}
+
+export function isChoreScheduledForDate(chore: Chore, date = new Date()) {
+  const weekday = date.getDay();
+
+  switch (chore.cadence) {
+    case "daily":
+      return true;
+    case "weekdays":
+      return weekday >= 1 && weekday <= 5;
+    case "weekly":
+      return chore.customDays.length > 0 ? chore.customDays[0] === weekday : true;
+    case "custom":
+      return chore.customDays.includes(weekday);
+    default:
+      return true;
+  }
+}
+
+function buildDateTimeForDay(dayKey: string, timeValue: string) {
+  const [hoursText = "18", minutesText = "00"] = timeValue.split(":");
+  const date = parseDayKey(dayKey);
+  date.setHours(Number(hoursText) || 0, Number(minutesText) || 0, 0, 0);
+  return date;
+}
+
+function findPreviousScheduledDayKey(chore: Chore, dayKey: string) {
+  let cursor = parseDayKey(dayKey);
+
+  for (let index = 0; index < 14; index += 1) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (isChoreScheduledForDate(chore, cursor)) {
+      return getTodayKey(cursor);
+    }
+  }
+
+  return null;
+}
+
+export function getChoreStatus(chore: Chore, now = new Date()) {
+  const todayKey = getTodayKey(now);
+  const isScheduledToday = isChoreScheduledForDate(chore, now);
+
+  if (!isScheduledToday) {
+    return "upcoming" as const;
+  }
+
+  if (chore.done && chore.completedOn === todayKey) {
+    return "done" as const;
+  }
+
+  const dueAt = buildDateTimeForDay(todayKey, chore.dueTime || "18:00");
+  return now >= dueAt ? ("overdue" as const) : ("due" as const);
+}
+
+export function getReminderStatus(reminder: Reminder, now = new Date()) {
+  if (!reminder.scheduledFor) {
+    return "queued" as const;
+  }
+
+  const scheduledAt = new Date(reminder.scheduledFor);
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return "queued" as const;
+  }
+
+  if (!isReminderScheduledForDate(reminder, now)) {
+    return "scheduled" as const;
+  }
+
+  const occurrenceKey = getReminderOccurrenceKey(reminder, now);
+  const deliveredForOccurrence = reminder.lastDeliveredAt === occurrenceKey;
+
+  if (deliveredForOccurrence) {
+    return "delivered" as const;
+  }
+
+  const dueAt = new Date(now);
+  dueAt.setHours(scheduledAt.getHours(), scheduledAt.getMinutes(), 0, 0);
+  return dueAt <= now ? ("due" as const) : ("scheduled" as const);
+}
+
+export function formatReminderWhen(reminder: Reminder) {
+  if (reminder.scheduledFor) {
+    const parsed = new Date(reminder.scheduledFor);
+    if (!Number.isNaN(parsed.getTime())) {
+      const dateLabel = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(parsed);
+      return `${dateLabel}${reminder.cadence !== "once" ? ` · ${getReminderCadenceLabel(reminder)}` : ""}`;
+    }
+  }
+
+  return reminder.when;
+}
+
 export function createDefaultMemberProfile(member: MemberSeed): MemberProfile {
   const shortName = member.name.trim().split(/\s+/)[0] || "Family member";
   return {
@@ -827,38 +1098,75 @@ export function sanitizeState(raw: unknown): AppState {
 
   return {
     ...defaults,
-      ...parsed,
-      pantry: Array.isArray(parsed.pantry) ? parsed.pantry.filter((item): item is string => typeof item === "string") : defaults.pantry,
+    ...parsed,
+    pantry: Array.isArray(parsed.pantry) ? parsed.pantry.filter((item): item is string => typeof item === "string") : defaults.pantry,
     budget: {
       income: clampNumber(budget.income, defaults.budget.income, 0, 1_000_000),
       familySize: clampNumber(budget.familySize, defaults.budget.familySize, 1, 20),
       goal: budget.goal === "stability" || budget.goal === "debt" || budget.goal === "savings" ? budget.goal : defaults.budget.goal,
       style: budget.style === "lean" || budget.style === "comfort" || budget.style === "balanced" ? budget.style : defaults.budget.style,
     },
-      chores: Array.isArray(parsed.chores)
-        ? parsed.chores
+    chores: Array.isArray(parsed.chores)
+      ? parsed.chores
             .filter(isRecord)
             .map((chore) => {
-              const completedOn = typeof chore.completedOn === "string" && chore.completedOn ? chore.completedOn : null;
-              const doneToday = Boolean(chore.done) && completedOn === todayKey;
+              const choreRecord = chore as Record<string, unknown>;
+              const legacyFrequency = typeof choreRecord.frequency === "string" ? choreRecord.frequency : "";
+              const cadence =
+                chore.cadence === "daily" || chore.cadence === "weekdays" || chore.cadence === "weekly" || chore.cadence === "custom"
+                  ? chore.cadence
+                  : legacyFrequency.toLowerCase().includes("week")
+                    ? ("weekdays" as const)
+                    : ("daily" as const);
+            const customDays = Array.isArray(chore.customDays)
+              ? chore.customDays.map((value) => clampNumber(value, 0, 0, 6)).filter((value, index, list) => list.indexOf(value) === index)
+              : cadence === "weekly"
+                ? [1]
+                : [];
+            const completedOn = typeof chore.completedOn === "string" && chore.completedOn ? chore.completedOn : null;
+            const doneToday = Boolean(chore.done) && completedOn === todayKey;
+            const lastCompletedOn = typeof chore.lastCompletedOn === "string" && chore.lastCompletedOn ? chore.lastCompletedOn : completedOn;
 
-              return {
-                id: toTrimmedString(chore.id, createId("chore")),
-                title: toTrimmedString(chore.title),
-                assignee: toTrimmedString(chore.assignee, "Family"),
-                frequency: toTrimmedString(chore.frequency, "Any time"),
-                done: doneToday,
-                completedOn: doneToday ? completedOn : null,
-              };
-            })
-            .filter((chore) => chore.title)
-        : defaults.chores,
-    reminders: Array.isArray(parsed.reminders) ? parsed.reminders.filter(isRecord).map((reminder) => ({
-      id: toTrimmedString(reminder.id, createId("reminder")),
-      title: toTrimmedString(reminder.title),
-      when: toTrimmedString(reminder.when),
-      audience: toTrimmedString(reminder.audience, "Family"),
-    })).filter((reminder) => reminder.title) : defaults.reminders,
+            return {
+              id: toTrimmedString(chore.id, createId("chore")),
+              title: toTrimmedString(chore.title),
+              assignee: toTrimmedString(chore.assignee, "Family"),
+              cadence,
+              customDays,
+              dueTime: toTrimmedString(chore.dueTime, "18:00"),
+              points: clampNumber(chore.points, 10, 1, 500),
+              done: doneToday,
+              completedOn: doneToday ? completedOn : null,
+              streakCount: clampNumber(chore.streakCount, 0, 0, 999),
+              lastCompletedOn: lastCompletedOn || null,
+            };
+          })
+          .filter((chore) => chore.title)
+      : defaults.chores,
+    reminders: Array.isArray(parsed.reminders)
+      ? parsed.reminders
+          .filter(isRecord)
+          .map((reminder) => ({
+            id: toTrimmedString(reminder.id, createId("reminder")),
+            title: toTrimmedString(reminder.title),
+            when: toTrimmedString(reminder.when),
+            audience: toTrimmedString(reminder.audience, "Family"),
+            cadence:
+              reminder.cadence === "daily" || reminder.cadence === "weekdays" || reminder.cadence === "weekly"
+                ? reminder.cadence
+                : ("once" as const),
+            scheduledFor: toTrimmedString(reminder.scheduledFor) || null,
+            delivery: {
+              inApp: reminder.delivery && isRecord(reminder.delivery) ? Boolean(reminder.delivery.inApp ?? true) : true,
+              browser: reminder.delivery && isRecord(reminder.delivery) ? Boolean(reminder.delivery.browser) : false,
+              email: reminder.delivery && isRecord(reminder.delivery) ? Boolean(reminder.delivery.email) : false,
+            },
+            lastDeliveredAt: toTrimmedString(reminder.lastDeliveredAt) || null,
+            lastBrowserDeliveredAt: toTrimmedString(reminder.lastBrowserDeliveredAt) || null,
+            lastEmailDeliveredAt: toTrimmedString(reminder.lastEmailDeliveredAt) || null,
+          }))
+          .filter((reminder) => reminder.title)
+      : defaults.reminders,
     routines: Array.isArray(parsed.routines) ? parsed.routines.filter(isRecord).map((routine) => ({
       id: toTrimmedString(routine.id, createId("routine")),
       name: toTrimmedString(routine.name),

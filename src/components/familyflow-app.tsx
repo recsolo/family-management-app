@@ -12,10 +12,18 @@ import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-
 import { WorkspaceHeroPanel, WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
 import {
   type AppNotification,
+  type ChoreCadence,
   createId,
   type DirectMessage,
+  formatReminderWhen,
   getBudgetPlan,
+  getChoreCadenceLabel,
+  getChoreStatus,
+  getNextChoreStreakCount,
+  getReminderOccurrenceKey,
+  getReminderStatus,
   getTodayKey,
+  isChoreScheduledForDate,
   normalizeIngredient,
   RECIPES,
   type AppState,
@@ -67,9 +75,18 @@ export function FamilyFlowApp({
   const [ingredientInput, setIngredientInput] = useState("");
   const [choreTitle, setChoreTitle] = useState("");
   const [choreAssignee, setChoreAssignee] = useState(initialMemberNames[0] ?? userName);
+  const [choreCadence, setChoreCadence] = useState<ChoreCadence>("daily");
+  const [choreDueTime, setChoreDueTime] = useState("18:00");
+  const [chorePoints, setChorePoints] = useState("10");
+  const [choreDays, setChoreDays] = useState<number[]>([1, 3, 5]);
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderWhen, setReminderWhen] = useState("");
+  const [reminderCadence, setReminderCadence] = useState<"once" | "daily" | "weekdays" | "weekly">("once");
+  const [reminderScheduledFor, setReminderScheduledFor] = useState("");
   const [reminderAudience, setReminderAudience] = useState("Family");
+  const [reminderInApp, setReminderInApp] = useState(true);
+  const [reminderBrowser, setReminderBrowser] = useState(false);
+  const [reminderEmail, setReminderEmail] = useState(false);
   const [routineName, setRoutineName] = useState("");
   const [routineTimeWindow, setRoutineTimeWindow] = useState("");
   const [routineItems, setRoutineItems] = useState("");
@@ -86,6 +103,9 @@ export function FamilyFlowApp({
     "Turn our chores into a simple Saturday reset.",
     "What should we prep tonight to make tomorrow easier?",
   ]);
+  const reminderBrowserSyncRef = useRef(false);
+  const reminderInboxSyncRef = useRef(false);
+  const reminderEmailSyncRef = useRef(false);
 
   const memberNames = useMemo(() => {
     const names = memberList.map((member) => member.name.trim()).filter(Boolean);
@@ -108,7 +128,30 @@ export function FamilyFlowApp({
   const bestRecipe = recipeMatches[0];
   const budgetPlan = useMemo(() => getBudgetPlan(state.budget), [state.budget]);
   const savingsRow = budgetPlan.find((row) => row.label === "savings");
-  const completedChores = state.chores.filter((chore) => chore.done).length;
+  const currentUserMember = useMemo(() => memberList.find((member) => member.id === currentUserId) ?? null, [memberList, currentUserId]);
+  const todayChores = useMemo(() => state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date())), [state.chores]);
+  const completedChores = todayChores.filter((chore) => chore.done).length;
+  const choreStatusSummary = useMemo(() => {
+    const statuses = todayChores.map((chore) => getChoreStatus(chore, new Date()));
+    return {
+      due: statuses.filter((status) => status === "due").length,
+      overdue: statuses.filter((status) => status === "overdue").length,
+      done: statuses.filter((status) => status === "done").length,
+    };
+  }, [todayChores]);
+  const dueReminders = useMemo(
+    () =>
+      state.reminders.filter((reminder) => {
+        const audienceName = reminder.audience.trim().toLowerCase();
+        const matchesUser =
+          reminder.audience === "Family" ||
+          audienceName === currentUserMember?.name.trim().toLowerCase() ||
+          audienceName === userName.trim().toLowerCase();
+
+        return matchesUser && getReminderStatus(reminder, new Date()) === "due";
+      }),
+    [state.reminders, currentUserMember, userName],
+  );
 
   useEffect(() => {
     if (!memberNames.includes(choreAssignee)) {
@@ -129,6 +172,146 @@ export function FamilyFlowApp({
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    if (dueReminders.length === 0 || reminderInboxSyncRef.current) {
+      return;
+    }
+
+    const pendingReminderIds = dueReminders
+      .filter((reminder) => reminder.delivery.inApp && getReminderOccurrenceKey(reminder, new Date()) !== reminder.lastDeliveredAt)
+      .map((reminder) => reminder.id);
+
+    if (pendingReminderIds.length === 0) {
+      return;
+    }
+
+    reminderInboxSyncRef.current = true;
+    const deliveredAt = new Date().toISOString();
+
+    void updateState((current) => {
+      const notifications = current.reminders
+        .filter((reminder) => pendingReminderIds.includes(reminder.id))
+        .flatMap((reminder) =>
+          createNotifications([currentUserId], {
+            kind: "reminder",
+            title: reminder.title,
+            detail: `${formatReminderWhen(reminder)} for ${reminder.audience}`,
+            link: getWorkspacePath("ops"),
+            actorId: null,
+            actorName: "FamilyFlow",
+            createdAt: deliveredAt,
+          }),
+        );
+
+      const nextState: AppState = {
+        ...current,
+        reminders: current.reminders.map((reminder) =>
+          pendingReminderIds.includes(reminder.id)
+            ? {
+                ...reminder,
+                lastDeliveredAt: getReminderOccurrenceKey(reminder, new Date()) ?? deliveredAt,
+              }
+            : reminder,
+        ),
+      };
+
+      return appendNotifications(nextState, notifications);
+    }).finally(() => {
+      reminderInboxSyncRef.current = false;
+    });
+  }, [currentUserId, dueReminders]);
+
+  useEffect(() => {
+    if (
+      dueReminders.length === 0 ||
+      reminderBrowserSyncRef.current ||
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
+
+    const pendingBrowserReminders = dueReminders.filter(
+      (reminder) => reminder.delivery.browser && getReminderOccurrenceKey(reminder, new Date()) !== reminder.lastBrowserDeliveredAt,
+    );
+
+    if (pendingBrowserReminders.length === 0) {
+      return;
+    }
+
+    reminderBrowserSyncRef.current = true;
+    const deliveredAt = new Date().toISOString();
+
+    pendingBrowserReminders.forEach((reminder) => {
+      const notification = new Notification(reminder.title, {
+        body: `${formatReminderWhen(reminder)} · ${reminder.audience}`,
+        tag: reminder.id,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        goToTab("ops");
+      };
+    });
+
+    void updateState((current) => ({
+      ...current,
+      reminders: current.reminders.map((reminder) =>
+        pendingBrowserReminders.some((entry) => entry.id === reminder.id)
+          ? {
+              ...reminder,
+              lastBrowserDeliveredAt: getReminderOccurrenceKey(reminder, new Date()) ?? deliveredAt,
+            }
+          : reminder,
+      ),
+    })).finally(() => {
+      reminderBrowserSyncRef.current = false;
+    });
+  }, [dueReminders]);
+
+  useEffect(() => {
+    if (dueReminders.length === 0 || reminderEmailSyncRef.current) {
+      return;
+    }
+
+    const pendingEmailReminderIds = dueReminders
+      .filter((reminder) => reminder.delivery.email && getReminderOccurrenceKey(reminder, new Date()) !== reminder.lastEmailDeliveredAt)
+      .map((reminder) => reminder.id);
+
+    if (pendingEmailReminderIds.length === 0) {
+      return;
+    }
+
+    reminderEmailSyncRef.current = true;
+    void fetch("/api/reminders/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminderIds: pendingEmailReminderIds }),
+    })
+      .then((response) => response.json().then((body) => ({ ok: response.ok, body })))
+      .then(({ ok, body }) => {
+        if (!ok || !Array.isArray(body.sentReminderIds) || body.sentReminderIds.length === 0) {
+          return;
+        }
+
+        void updateState((current) => ({
+          ...current,
+          reminders: current.reminders.map((reminder) =>
+            body.sentReminderIds.includes(reminder.id)
+              ? {
+                  ...reminder,
+                  lastEmailDeliveredAt: getReminderOccurrenceKey(reminder, new Date()) ?? new Date().toISOString(),
+                }
+              : reminder,
+          ),
+        }));
+      })
+      .finally(() => {
+        reminderEmailSyncRef.current = false;
+      });
+  }, [dueReminders]);
 
   async function persistState(nextState: AppState) {
     stateRef.current = nextState;
@@ -239,6 +422,38 @@ export function FamilyFlowApp({
     return memberList
       .filter((member) => member.name.trim().toLowerCase() === audience.trim().toLowerCase() && member.id !== currentUserId)
       .map((member) => member.id);
+  }
+
+  function getReminderRecipientIds(audience: string) {
+    if (audience === "Family") {
+      return memberList.map((member) => member.id);
+    }
+
+    return memberList
+      .filter((member) => member.name.trim().toLowerCase() === audience.trim().toLowerCase())
+      .map((member) => member.id);
+  }
+
+  function toggleChoreDay(day: number) {
+    setChoreDays((current) =>
+      current.includes(day) ? current.filter((entry) => entry !== day) : [...current, day].sort((left, right) => left - right),
+    );
+  }
+
+  async function enableBrowserAlerts() {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setSaveError("Browser alerts are not supported on this device.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      setSaveError("Browser alerts were not allowed.");
+      return;
+    }
+
+    setReminderBrowser(true);
+    setSaveError(null);
   }
 
   function getPartnerRecipientIds(memberIds: string[]) {
@@ -862,13 +1077,21 @@ export function FamilyFlowApp({
     }
 
     const trimmedTitle = choreTitle.trim();
+    const normalizedCadence = choreCadence;
+    const normalizedCustomDays =
+      normalizedCadence === "custom"
+        ? choreDays
+        : normalizedCadence === "weekly"
+          ? [choreDays[0] ?? 1]
+          : [];
+    const normalizedPoints = Math.max(1, Number(chorePoints) || 10);
     const assigneeMember = memberList.find((member) => member.name.trim().toLowerCase() === choreAssignee.trim().toLowerCase());
     const notifications = createNotifications(
       assigneeMember && assigneeMember.id !== currentUserId ? [assigneeMember.id] : [],
       {
         kind: "system",
         title: `${userName} assigned you a chore`,
-        detail: trimmedTitle,
+        detail: `${trimmedTitle} · ${normalizedPoints} pts`,
         link: getWorkspacePath("ops"),
       },
     );
@@ -882,9 +1105,14 @@ export function FamilyFlowApp({
             id: createId("chore"),
             title: trimmedTitle,
             assignee: choreAssignee,
-            frequency: "Custom",
+            cadence: normalizedCadence,
+            customDays: normalizedCustomDays,
+            dueTime: choreDueTime || "18:00",
+            points: normalizedPoints,
             done: false,
             completedOn: null,
+            streakCount: 0,
+            lastCompletedOn: null,
           },
         ],
       };
@@ -892,32 +1120,86 @@ export function FamilyFlowApp({
       return appendNotifications(nextState, notifications);
     });
     setChoreTitle("");
+    setChoreCadence("daily");
+    setChoreDueTime("18:00");
+    setChorePoints("10");
+    setChoreDays([1, 3, 5]);
   }
 
   async function toggleChore(id: string) {
     const todayKey = getTodayKey();
-    await updateState((current) => ({
-      ...current,
-      chores: current.chores.map((chore) =>
-        chore.id === id
-          ? {
-              ...chore,
-              done: !chore.done,
-              completedOn: !chore.done ? todayKey : null,
-            }
-          : chore,
-      ),
-    }));
+    await updateState((current) => {
+      const targetChore = current.chores.find((chore) => chore.id === id);
+      if (!targetChore) {
+        return current;
+      }
+
+      const assigneeMember = memberList.find((member) => member.name.trim().toLowerCase() === targetChore.assignee.trim().toLowerCase());
+      const nextDone = !targetChore.done;
+      const nextStreak = nextDone ? getNextChoreStreakCount(targetChore, todayKey) : Math.max(0, targetChore.streakCount - 1);
+      const pointsDelta = nextDone ? targetChore.points : -targetChore.points;
+      const notifications =
+        nextDone && assigneeMember
+          ? createNotifications([assigneeMember.id], {
+              kind: "achievement",
+              title: `Nice work on ${targetChore.title}`,
+              detail: `${targetChore.points} points added to your total.`,
+              link: getMemberProfilePath(assigneeMember.id),
+              actorId: currentUserId,
+              actorName: userName,
+            })
+          : [];
+
+      const nextState: AppState = {
+        ...current,
+        chores: current.chores.map((chore) =>
+          chore.id === id
+            ? {
+                ...chore,
+                done: nextDone,
+                completedOn: nextDone ? todayKey : null,
+                streakCount: nextStreak,
+                lastCompletedOn: nextDone ? todayKey : chore.lastCompletedOn,
+              }
+            : chore,
+        ),
+        memberProfiles: assigneeMember
+          ? current.memberProfiles.map((profile) =>
+              profile.memberId === assigneeMember.id
+                ? {
+                    ...profile,
+                    pointsBalance: Math.max(0, profile.pointsBalance + pointsDelta),
+                    lifetimePoints: Math.max(profile.lifetimePoints, profile.lifetimePoints + Math.max(pointsDelta, 0)),
+                  }
+                : profile,
+            )
+          : current.memberProfiles,
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function addReminder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!reminderTitle.trim() || !reminderWhen.trim()) {
+    if (!reminderTitle.trim() || !reminderScheduledFor.trim()) {
       return;
     }
 
     const trimmedTitle = reminderTitle.trim();
-    const trimmedWhen = reminderWhen.trim();
+    const scheduledForDate = new Date(reminderScheduledFor);
+    const trimmedWhen = Number.isNaN(scheduledForDate.getTime()) ? reminderWhen.trim() : formatReminderWhen({
+      id: "preview",
+      title: trimmedTitle,
+      when: reminderWhen.trim(),
+      audience: reminderAudience,
+      cadence: reminderCadence,
+      scheduledFor: scheduledForDate.toISOString(),
+      delivery: { inApp: reminderInApp, browser: reminderBrowser, email: reminderEmail },
+      lastDeliveredAt: null,
+      lastBrowserDeliveredAt: null,
+      lastEmailDeliveredAt: null,
+    });
     const notifications = createNotifications(getNotificationRecipientsForAudience(reminderAudience), {
       kind: "reminder",
       title: `${userName} added a reminder`,
@@ -934,6 +1216,16 @@ export function FamilyFlowApp({
             title: trimmedTitle,
             when: trimmedWhen,
             audience: reminderAudience,
+            cadence: reminderCadence,
+            scheduledFor: Number.isNaN(scheduledForDate.getTime()) ? null : scheduledForDate.toISOString(),
+            delivery: {
+              inApp: reminderInApp,
+              browser: reminderBrowser,
+              email: reminderEmail,
+            },
+            lastDeliveredAt: null,
+            lastBrowserDeliveredAt: null,
+            lastEmailDeliveredAt: null,
           },
           ...current.reminders,
         ],
@@ -943,7 +1235,12 @@ export function FamilyFlowApp({
     });
     setReminderTitle("");
     setReminderWhen("");
+    setReminderCadence("once");
+    setReminderScheduledFor("");
     setReminderAudience("Family");
+    setReminderInApp(true);
+    setReminderBrowser(false);
+    setReminderEmail(false);
   }
 
   async function removeReminder(id: string) {
@@ -1262,7 +1559,7 @@ export function FamilyFlowApp({
     }));
   }
 
-  const openChores = state.chores.length - completedChores;
+  const openChores = choreStatusSummary.due + choreStatusSummary.overdue;
   const savingsPercent = savingsRow?.percent ?? 0;
   const savingsAmount = savingsRow?.amount ?? 0;
   const primarySuggestion = assistantSuggestions[0] ?? "Ask the assistant for a weekly family planning reset.";
@@ -1521,12 +1818,30 @@ export function FamilyFlowApp({
                     setChoreTitle={setChoreTitle}
                     choreAssignee={choreAssignee}
                     setChoreAssignee={setChoreAssignee}
+                    choreCadence={choreCadence}
+                    setChoreCadence={setChoreCadence}
+                    choreDueTime={choreDueTime}
+                    setChoreDueTime={setChoreDueTime}
+                    chorePoints={chorePoints}
+                    setChorePoints={setChorePoints}
+                    choreDays={choreDays}
+                    toggleChoreDay={toggleChoreDay}
                     reminderTitle={reminderTitle}
                     setReminderTitle={setReminderTitle}
                     reminderWhen={reminderWhen}
                     setReminderWhen={setReminderWhen}
+                    reminderCadence={reminderCadence}
+                    setReminderCadence={setReminderCadence}
+                    reminderScheduledFor={reminderScheduledFor}
+                    setReminderScheduledFor={setReminderScheduledFor}
                     reminderAudience={reminderAudience}
                     setReminderAudience={setReminderAudience}
+                    reminderInApp={reminderInApp}
+                    setReminderInApp={setReminderInApp}
+                    reminderBrowser={reminderBrowser}
+                    setReminderBrowser={setReminderBrowser}
+                    reminderEmail={reminderEmail}
+                    setReminderEmail={setReminderEmail}
                     routineName={routineName}
                     setRoutineName={setRoutineName}
                     routineTimeWindow={routineTimeWindow}
@@ -1602,6 +1917,9 @@ export function FamilyFlowApp({
                     }}
                     addRoutine={(event) => {
                       void addRoutine(event);
+                    }}
+                    enableBrowserAlerts={() => {
+                      void enableBrowserAlerts();
                     }}
                   />
                 </section>

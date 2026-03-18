@@ -74,3 +74,14 @@ export function getAuthRuntimeConfig() {
     useSecureCookies: isProductionLikeEnvironment(),
   };
 }
+
+export function getReminderEmailConfig() {
+  const apiKey = process.env.RESEND_API_KEY?.trim() || "";
+  const fromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || "";
+
+  return {
+    apiKey,
+    fromEmail,
+    configured: Boolean(apiKey && fromEmail),
+  };
+}
