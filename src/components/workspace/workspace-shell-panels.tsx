@@ -157,68 +157,68 @@ export function WorkspaceTopBar({
             <span />
           </span>
         </button>
+
+        {menuOpen ? (
+          <>
+            <button type="button" aria-label="Close navigation menu" className="family-command-backdrop" onClick={() => setMenuOpen(false)} />
+            <div id="family-command-menu" className="family-command-popout" role="dialog" aria-label="Page navigation">
+              <div className="family-command-popout__header">
+                <div>
+                  <p className="family-kicker family-eyebrow">Command menu</p>
+                  <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Jump to a page</h2>
+                </div>
+                <button type="button" onClick={() => setMenuOpen(false)} className="family-btn family-btn-secondary">
+                  Close
+                </button>
+              </div>
+
+              <nav className="family-command-popout__nav mt-4 grid" aria-label="Workspace pages">
+                {navigation.map((item) => {
+                  const isActive = item.value === activeTab;
+
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onNavigate(item.value);
+                      }}
+                      className={`family-command-link ${isActive ? "family-command-link-active" : ""}`}
+                    >
+                      <span>
+                        <span className="family-kicker family-eyebrow">{item.detail}</span>
+                        <span className="family-command-link__title mt-2 block font-serif leading-tight">{item.label}</span>
+                      </span>
+                      <span className={`family-badge ${isActive ? "family-badge-accent" : "family-badge-warm"}`}>
+                        {isActive ? "Open" : item.badge ?? "Go"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="family-command-popout__footer mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
+                <div>
+                  <p className="family-kicker family-eyebrow">Account</p>
+                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Signed in as {userName}.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onSignOut();
+                  }}
+                  className="family-btn family-btn-secondary"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
-
-      {menuOpen ? (
-        <>
-          <button type="button" aria-label="Close navigation menu" className="family-command-backdrop" onClick={() => setMenuOpen(false)} />
-          <div id="family-command-menu" className="family-command-popout" role="dialog" aria-label="Page navigation">
-            <div className="family-command-popout__header">
-              <div>
-                <p className="family-kicker family-eyebrow">Command menu</p>
-                <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Jump to a page</h2>
-              </div>
-              <button type="button" onClick={() => setMenuOpen(false)} className="family-btn family-btn-secondary">
-                Close
-              </button>
-            </div>
-
-            <nav className="family-command-popout__nav mt-4 grid" aria-label="Workspace pages">
-              {navigation.map((item) => {
-                const isActive = item.value === activeTab;
-
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onNavigate(item.value);
-                    }}
-                    className={`family-command-link ${isActive ? "family-command-link-active" : ""}`}
-                  >
-                    <span>
-                      <span className="family-kicker family-eyebrow">{item.detail}</span>
-                      <span className="family-command-link__title mt-2 block font-serif leading-tight">{item.label}</span>
-                    </span>
-                    <span className={`family-badge ${isActive ? "family-badge-accent" : "family-badge-warm"}`}>
-                      {isActive ? "Open" : item.badge ?? "Go"}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="family-command-popout__footer mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
-              <div>
-                <p className="family-kicker family-eyebrow">Account</p>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Signed in as {userName}.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onSignOut();
-                }}
-                className="family-btn family-btn-secondary"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </>
-      ) : null}
 
       {notificationsOpen ? (
         <>

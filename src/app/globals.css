@@ -1608,6 +1608,8 @@ textarea:focus-visible {
   align-items: center;
   gap: 0.85rem;
   margin-left: auto;
+  position: relative;
+  overflow: visible;
 }
 
 .family-topbar__meta {
@@ -1709,9 +1711,9 @@ textarea:focus-visible {
 }
 
 .family-command-popout {
-  position: fixed;
-  top: 5.7rem;
-  right: max(1rem, calc((100vw - 1280px) / 2 + 1rem));
+  position: absolute;
+  top: calc(100% + 0.7rem);
+  right: 0;
   z-index: 40;
   width: min(18.5rem, calc(100vw - 2rem));
   border: 1px solid rgba(18, 18, 18, 0.1);
@@ -1897,11 +1899,11 @@ textarea:focus-visible {
   }
 
   .family-command-popout {
-    top: auto;
-    right: 1rem;
-    left: 1rem;
-    bottom: 1rem;
-    width: auto;
+    top: calc(100% + 0.7rem);
+    right: 0;
+    left: auto;
+    bottom: auto;
+    width: min(18.5rem, calc(100vw - 2rem));
     max-height: min(78vh, 34rem);
     overflow: auto;
   }
@@ -1940,6 +1942,8 @@ textarea:focus-visible {
   .family-command-popout {
     padding: 0.8rem;
     border-radius: 22px;
+    right: 0;
+    left: auto;
   }
 
   .family-command-popout__title {
