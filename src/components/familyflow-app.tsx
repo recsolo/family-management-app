@@ -29,6 +29,7 @@ import {
   getTodayKey,
   isChoreScheduledForDate,
   normalizeIngredient,
+  type PartnerRewardCategory,
   recalculateFamilyQuestBoard,
   RECIPES,
   type AppState,
@@ -1146,7 +1147,13 @@ export function FamilyFlowApp({
     }));
   }
 
-  async function addPartnerReward(reward: { title: string; detail: string; cost: number }) {
+  async function addPartnerReward(reward: {
+    title: string;
+    detail: string;
+    cost: number;
+    category: PartnerRewardCategory;
+    favorite: boolean;
+  }) {
     if (!state.partnerSpace) {
       return;
     }
@@ -1157,24 +1164,36 @@ export function FamilyFlowApp({
         ? {
             ...current.partnerSpace,
             privateRewards: [
-              {
-                id: createId("partner-reward"),
-                title: reward.title,
-                detail: reward.detail,
-                cost: reward.cost,
-                createdByMemberId: currentUserId,
-                createdByName: userName,
-                redemptions: 0,
-                lastRedeemedAt: null,
-              },
-              ...current.partnerSpace.privateRewards,
-            ],
+                {
+                  id: createId("partner-reward"),
+                  title: reward.title,
+                  detail: reward.detail,
+                  cost: reward.cost,
+                  category: reward.category,
+                  favorite: reward.favorite,
+                  createdByMemberId: currentUserId,
+                  createdByName: userName,
+                  redemptions: 0,
+                  lastRedeemedAt: null,
+                  redemptionHistory: [],
+                },
+                ...current.partnerSpace.privateRewards,
+              ],
           }
         : current.partnerSpace,
     }));
   }
 
-  async function updatePartnerReward(rewardId: string, reward: { title: string; detail: string; cost: number }) {
+  async function updatePartnerReward(
+    rewardId: string,
+    reward: {
+      title: string;
+      detail: string;
+      cost: number;
+      category: PartnerRewardCategory;
+      favorite: boolean;
+    },
+  ) {
     if (!state.partnerSpace) {
       return;
     }
@@ -1186,14 +1205,16 @@ export function FamilyFlowApp({
             ...current.partnerSpace,
             privateRewards: current.partnerSpace.privateRewards.map((entry) =>
               entry.id === rewardId
-                ? {
-                    ...entry,
-                    title: reward.title,
-                    detail: reward.detail,
-                    cost: reward.cost,
-                  }
-                : entry,
-            ),
+                  ? {
+                      ...entry,
+                      title: reward.title,
+                      detail: reward.detail,
+                      cost: reward.cost,
+                      category: reward.category,
+                      favorite: reward.favorite,
+                    }
+                  : entry,
+              ),
           }
         : current.partnerSpace,
     }));
@@ -1231,7 +1252,17 @@ export function FamilyFlowApp({
         return current;
       }
 
-      return {
+      const redeemedAt = new Date().toISOString();
+      const recipientIds = getPartnerRecipientIds(current.partnerSpace?.memberIds ?? []);
+      const notifications = createNotifications(recipientIds, {
+        kind: "partner",
+        title: `${userName} used ${reward.title}`,
+        detail: reward.detail || `${reward.cost} points turned into something fun for the two of you.`,
+        link: getWorkspacePath("partner"),
+        createdAt: redeemedAt,
+      });
+
+      const nextState: AppState = {
         ...current,
         memberProfiles: current.memberProfiles.map((profile) =>
           profile.memberId === currentUserId ? { ...profile, pointsBalance: profile.pointsBalance - reward.cost } : profile,
@@ -1241,12 +1272,27 @@ export function FamilyFlowApp({
               ...current.partnerSpace,
               privateRewards: current.partnerSpace.privateRewards.map((entry) =>
                 entry.id === rewardId
-                  ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: new Date().toISOString() }
+                  ? {
+                      ...entry,
+                      redemptions: entry.redemptions + 1,
+                      lastRedeemedAt: redeemedAt,
+                      redemptionHistory: [
+                        {
+                          id: createId("partner-reward-redemption"),
+                          redeemedAt,
+                          redeemedByMemberId: currentUserId,
+                          redeemedByName: userName,
+                        },
+                        ...entry.redemptionHistory,
+                      ].slice(0, 20),
+                    }
                   : entry,
               ),
             }
           : current.partnerSpace,
       };
+
+      return appendNotifications(nextState, notifications);
     });
   }
 

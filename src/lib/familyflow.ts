@@ -249,15 +249,27 @@ export type FamilyQuestBoard = {
   rewards: FamilySharedReward[];
 };
 
+export type PartnerRewardCategory = "romance" | "rest" | "adventure" | "flirty";
+
+export type PartnerRewardRedemption = {
+  id: string;
+  redeemedAt: string;
+  redeemedByMemberId: string;
+  redeemedByName: string;
+};
+
 export type PartnerReward = {
   id: string;
   title: string;
   detail: string;
   cost: number;
+  category: PartnerRewardCategory;
+  favorite: boolean;
   createdByMemberId: string;
   createdByName: string;
   redemptions: number;
   lastRedeemedAt: string | null;
+  redemptionHistory: PartnerRewardRedemption[];
 };
 
 export type PartnerAnniversary = {
@@ -1079,10 +1091,35 @@ function sanitizePartnerReward(value: unknown): PartnerReward | null {
     title,
     detail: toTrimmedString(value.detail),
     cost: clampNumber(value.cost, 40, 1, 5000),
+    category:
+      value.category === "rest" || value.category === "adventure" || value.category === "flirty" || value.category === "romance"
+        ? value.category
+        : "romance",
+    favorite: Boolean(value.favorite),
     createdByMemberId,
     createdByName: toTrimmedString(value.createdByName, "Partner"),
     redemptions: clampNumber(value.redemptions, 0, 0, 5000),
     lastRedeemedAt: typeof value.lastRedeemedAt === "string" && value.lastRedeemedAt ? value.lastRedeemedAt : null,
+    redemptionHistory: Array.isArray(value.redemptionHistory)
+      ? value.redemptionHistory
+          .filter(isRecord)
+          .map((entry) => {
+            const redeemedByMemberId = toTrimmedString(entry.redeemedByMemberId);
+            const redeemedAt = toTrimmedString(entry.redeemedAt);
+            if (!redeemedByMemberId || !redeemedAt) {
+              return null;
+            }
+
+            return {
+              id: toTrimmedString(entry.id, createId("partner-reward-redemption")),
+              redeemedAt,
+              redeemedByMemberId,
+              redeemedByName: toTrimmedString(entry.redeemedByName, "Partner"),
+            } satisfies PartnerRewardRedemption;
+          })
+          .filter(isDefined)
+          .slice(0, 20)
+      : [],
   };
 }
 
@@ -1774,6 +1811,10 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
           privateRewards: sanitized.partnerSpace.privateRewards.map((reward) => ({
             ...reward,
             createdByName: memberMap.get(reward.createdByMemberId)?.name ?? reward.createdByName,
+            redemptionHistory: reward.redemptionHistory.map((entry) => ({
+              ...entry,
+              redeemedByName: memberMap.get(entry.redeemedByMemberId)?.name ?? entry.redeemedByName,
+            })),
           })),
           connectionNotes: sanitized.partnerSpace.connectionNotes.map((note) => ({
             ...note,

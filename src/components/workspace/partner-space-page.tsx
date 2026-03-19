@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 
 import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
-import type { AppState } from "@/lib/familyflow";
+import type { AppState, PartnerRewardCategory } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
@@ -14,6 +14,14 @@ type PartnerConnectionNote = PartnerSpaceState["connectionNotes"][number];
 type PartnerReward = PartnerSpaceState["privateRewards"][number];
 type PartnerAnniversary = PartnerSpaceState["anniversaries"][number];
 type PartnerBucketListItem = PartnerSpaceState["bucketList"][number];
+type PartnerRewardInput = {
+  title: string;
+  detail: string;
+  cost: number;
+  category: PartnerRewardCategory;
+  favorite: boolean;
+};
+type RewardFilter = "all" | "favorites" | PartnerRewardCategory;
 
 type Props = {
   currentUserId: string;
@@ -27,8 +35,8 @@ type Props = {
   onSendMessage: (content: string) => void;
   onEditMessage: (messageId: string, content: string) => void;
   onDeleteMessage: (messageId: string) => void;
-  onAddPrivateReward: (reward: { title: string; detail: string; cost: number }) => void;
-  onUpdatePrivateReward: (rewardId: string, reward: { title: string; detail: string; cost: number }) => void;
+  onAddPrivateReward: (reward: PartnerRewardInput) => void;
+  onUpdatePrivateReward: (rewardId: string, reward: PartnerRewardInput) => void;
   onDeletePrivateReward: (rewardId: string) => void;
   onRedeemPrivateReward: (rewardId: string) => void;
   onAddDatePlan: (plan: {
@@ -196,9 +204,16 @@ const DATE_VIBES = [
 ];
 
 const PRIVATE_REWARD_IDEAS = [
-  { title: "Massage night", detail: "One cozy, no-rush back rub and quiet time together.", cost: 40 },
-  { title: "Sleep-in pass", detail: "One partner takes the morning so the other can fully rest.", cost: 55 },
-  { title: "Pick the whole date", detail: "Choose the plan, the vibe, and the food with zero debate.", cost: 70 },
+  { title: "Massage night", detail: "One cozy, no-rush back rub and quiet time together.", cost: 40, category: "romance" as const },
+  { title: "Sleep-in pass", detail: "One partner takes the morning so the other can fully rest.", cost: 55, category: "rest" as const },
+  { title: "Pick the whole date", detail: "Choose the plan, the vibe, and the food with zero debate.", cost: 70, category: "adventure" as const },
+];
+
+const PARTNER_REWARD_CATEGORIES: Array<{ value: PartnerRewardCategory; label: string }> = [
+  { value: "romance", label: "Romance" },
+  { value: "rest", label: "Rest" },
+  { value: "adventure", label: "Adventure" },
+  { value: "flirty", label: "Flirty" },
 ];
 
 const CLOSER_NOTE_PROMPTS = [
@@ -242,6 +257,10 @@ export function PartnerSpacePage({
   const [rewardTitle, setRewardTitle] = useState("");
   const [rewardDetail, setRewardDetail] = useState("");
   const [rewardCost, setRewardCost] = useState("50");
+  const [rewardCategory, setRewardCategory] = useState<PartnerRewardCategory>("romance");
+  const [rewardFavorite, setRewardFavorite] = useState(false);
+  const [rewardFilter, setRewardFilter] = useState<RewardFilter>("all");
+  const [surpriseRewardId, setSurpriseRewardId] = useState<string | null>(null);
   const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [dateTitle, setDateTitle] = useState("");
   const [dateWhen, setDateWhen] = useState("");
@@ -285,6 +304,18 @@ export function PartnerSpacePage({
   const redeemedRewards = partnerSpace?.privateRewards.reduce((total, reward) => total + reward.redemptions, 0) ?? 0;
   const anniversaries = partnerSpace?.anniversaries ?? [];
   const bucketList = partnerSpace?.bucketList ?? [];
+  const filteredRewards = useMemo(() => {
+    const rewards = partnerSpace?.privateRewards ?? [];
+    if (rewardFilter === "all") {
+      return rewards;
+    }
+    if (rewardFilter === "favorites") {
+      return rewards.filter((reward) => reward.favorite);
+    }
+    return rewards.filter((reward) => reward.category === rewardFilter);
+  }, [partnerSpace?.privateRewards, rewardFilter]);
+  const affordableRewards = filteredRewards.filter((reward) => (currentProfile?.pointsBalance ?? 0) >= reward.cost);
+  const favoriteRewards = partnerSpace?.privateRewards.filter((reward) => reward.favorite) ?? [];
   const nextAnniversary = useMemo(
     () =>
       anniversaries
@@ -294,6 +325,7 @@ export function PartnerSpacePage({
     [anniversaries],
   );
   const doneBucketCount = bucketList.filter((entry) => entry.status === "done").length;
+  const surpriseReward = filteredRewards.find((reward) => reward.id === surpriseRewardId) ?? null;
 
   function savePair(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -314,6 +346,8 @@ export function PartnerSpacePage({
       title: rewardTitle.trim(),
       detail: rewardDetail.trim(),
       cost: Number(rewardCost) || 50,
+      category: rewardCategory,
+      favorite: rewardFavorite,
     };
 
     if (editingRewardId) {
@@ -324,6 +358,8 @@ export function PartnerSpacePage({
     setRewardTitle("");
     setRewardDetail("");
     setRewardCost("50");
+    setRewardCategory("romance");
+    setRewardFavorite(false);
     setEditingRewardId(null);
   }
 
@@ -468,6 +504,8 @@ export function PartnerSpacePage({
     setRewardTitle(reward.title);
     setRewardDetail(reward.detail);
     setRewardCost(String(reward.cost));
+    setRewardCategory(reward.category);
+    setRewardFavorite(reward.favorite);
   }
 
   function resetRewardEditor() {
@@ -475,6 +513,25 @@ export function PartnerSpacePage({
     setRewardTitle("");
     setRewardDetail("");
     setRewardCost("50");
+    setRewardCategory("romance");
+    setRewardFavorite(false);
+  }
+
+  function pickSurpriseReward() {
+    const pool =
+      affordableRewards.length > 0
+        ? affordableRewards
+        : filteredRewards.length > 0
+          ? filteredRewards
+          : partnerSpace?.privateRewards ?? [];
+    const prioritizedPool = pool.some((reward) => reward.favorite) ? pool.filter((reward) => reward.favorite) : pool;
+    if (prioritizedPool.length === 0) {
+      setSurpriseRewardId(null);
+      return;
+    }
+
+    const picked = prioritizedPool[Math.floor(Math.random() * prioritizedPool.length)];
+    setSurpriseRewardId(picked?.id ?? null);
   }
 
   function startEditingAnniversary(entry: PartnerAnniversary) {
@@ -785,8 +842,8 @@ export function PartnerSpacePage({
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
               <DisclosurePanel
                 kicker="Private rewards"
-                title="Turn points into playful rewards."
-                summary="Open this builder when you want to add something new to the private reward shelf."
+                title="Build a reward shelf that feels personal."
+                summary="Save sweet, playful, or restful rewards here, then mark favorites so Surprise Me gets smarter."
                 badge={`${partnerSpace.privateRewards.length} saved`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
@@ -799,6 +856,8 @@ export function PartnerSpacePage({
                         setRewardTitle(reward.title);
                         setRewardDetail(reward.detail);
                         setRewardCost(String(reward.cost));
+                        setRewardCategory(reward.category);
+                        setRewardFavorite(false);
                       }}
                       className="family-btn family-btn-soft"
                     >
@@ -809,6 +868,17 @@ export function PartnerSpacePage({
                 <form className="family-profile-form-grid" onSubmit={submitReward}>
                   <input value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} placeholder="Late-sleep Saturday" className="family-input" />
                   <input type="number" min="1" value={rewardCost} onChange={(event) => setRewardCost(event.target.value)} placeholder="Points cost" className="family-input" />
+                  <select value={rewardCategory} onChange={(event) => setRewardCategory(event.target.value as PartnerRewardCategory)} className="family-select">
+                    {PARTNER_REWARD_CATEGORIES.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="flex items-center gap-3 rounded-[20px] border border-[var(--line-soft)] bg-white/72 px-4 py-3 text-sm text-[var(--muted)]">
+                    <input type="checkbox" checked={rewardFavorite} onChange={(event) => setRewardFavorite(event.target.checked)} />
+                    Save as a favorite
+                  </label>
                   <textarea value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} rows={4} placeholder="Keep it romantic, relaxing, playful, or just for the two of you." className="family-textarea family-profile-form-grid__wide" />
                   <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">
                     {editingRewardId ? "Update private reward" : "Save private reward"}
@@ -825,22 +895,81 @@ export function PartnerSpacePage({
                 <p className="family-kicker family-eyebrow">Reward shelf</p>
                 <h3 className="mt-3 font-serif text-4xl leading-tight">Spend points on each other.</h3>
                 <div className="mt-4 rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
-                  <p className="family-kicker family-eyebrow">Current balance</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {partnerPointCards.map(({ member, profile }) => (
-                      <span key={member.id} className="family-badge family-badge-gold">
-                        {member.name}: {profile?.pointsBalance ?? 0} pts
-                      </span>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="family-kicker family-eyebrow">Current balance</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {partnerPointCards.map(({ member, profile }) => (
+                          <span key={member.id} className="family-badge family-badge-gold">
+                            {member.name}: {profile?.pointsBalance ?? 0} pts
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" onClick={pickSurpriseReward} className="family-btn family-btn-primary">
+                      Surprise me
+                    </button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setRewardFilter("all")} className={`family-btn ${rewardFilter === "all" ? "family-btn-primary" : "family-btn-soft"}`}>
+                      All
+                    </button>
+                    <button type="button" onClick={() => setRewardFilter("favorites")} className={`family-btn ${rewardFilter === "favorites" ? "family-btn-primary" : "family-btn-soft"}`}>
+                      Favorites
+                    </button>
+                    {PARTNER_REWARD_CATEGORIES.map((category) => (
+                      <button
+                        key={category.value}
+                        type="button"
+                        onClick={() => setRewardFilter(category.value)}
+                        className={`family-btn ${rewardFilter === category.value ? "family-btn-primary" : "family-btn-soft"}`}
+                      >
+                        {category.label}
+                      </button>
                     ))}
                   </div>
                 </div>
+                {surpriseReward ? (
+                  <div className="mt-4 rounded-[24px] border border-[rgba(214,178,92,0.32)] bg-[rgba(255,248,232,0.82)] p-4">
+                    <p className="family-kicker family-eyebrow">Tonight&apos;s surprise pick</p>
+                    <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-serif text-2xl">{surpriseReward.title}</h4>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                          {surpriseReward.detail || "A private reward waiting for its moment."}
+                        </p>
+                      </div>
+                      <span className="family-badge family-badge-gold">{surpriseReward.cost} pts</span>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
+                    <p className="family-kicker family-eyebrow">Favorites</p>
+                    <p className="mt-2 font-serif text-3xl">{favoriteRewards.length}</p>
+                  </div>
+                  <div className="rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
+                    <p className="family-kicker family-eyebrow">Times redeemed</p>
+                    <p className="mt-2 font-serif text-3xl">{redeemedRewards}</p>
+                  </div>
+                  <div className="rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
+                    <p className="family-kicker family-eyebrow">Showing</p>
+                    <p className="mt-2 font-serif text-3xl">{filteredRewards.length}</p>
+                  </div>
+                </div>
                 <div className="mt-5 grid gap-3">
-                  {partnerSpace.privateRewards.length > 0 ? (
-                    partnerSpace.privateRewards.map((reward) => (
+                  {filteredRewards.length > 0 ? (
+                    filteredRewards.map((reward) => (
                       <div key={reward.id} className="family-profile-reward-card">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="family-kicker family-eyebrow">{reward.cost} points</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="family-badge family-badge-gold">{reward.cost} points</span>
+                              <span className="family-badge family-badge-warm">
+                                {PARTNER_REWARD_CATEGORIES.find((category) => category.value === reward.category)?.label ?? reward.category}
+                              </span>
+                              {reward.favorite ? <span className="family-badge family-badge-accent">Favorite</span> : null}
+                            </div>
                             <h4 className="mt-2 font-serif text-2xl">{reward.title}</h4>
                             <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reward.detail || "A private reward waiting to be claimed."}</p>
                             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Added by {reward.createdByName}</p>
@@ -854,6 +983,29 @@ export function PartnerSpacePage({
                             {(currentProfile?.pointsBalance ?? 0) >= reward.cost ? "Use points" : "Need points"}
                           </button>
                         </div>
+                        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                          <div className="rounded-[20px] border border-[var(--line-soft)] bg-white/70 p-4">
+                            <p className="family-kicker family-eyebrow">Redeemed history</p>
+                            {reward.redemptionHistory.length > 0 ? (
+                              <div className="mt-3 space-y-2 text-sm leading-7 text-[var(--muted)]">
+                                {reward.redemptionHistory.slice(0, 3).map((entry) => (
+                                  <p key={entry.id}>
+                                    {entry.redeemedByName} used this on {formatTimestamp(entry.redeemedAt)}.
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">No one has used this one yet.</p>
+                            )}
+                          </div>
+                          <div className="rounded-[20px] border border-[var(--line-soft)] bg-white/70 p-4">
+                            <p className="family-kicker family-eyebrow">Redemption stats</p>
+                            <p className="mt-2 font-serif text-3xl">{reward.redemptions}</p>
+                            <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                              {reward.lastRedeemedAt ? `Last used ${formatTimestamp(reward.lastRedeemedAt)}.` : "Still waiting for its first moment."}
+                            </p>
+                          </div>
+                        </div>
                         <div className="mt-4 flex flex-wrap gap-3">
                           <button type="button" onClick={() => startEditingReward(reward)} className="family-btn family-btn-soft">
                             Edit
@@ -866,7 +1018,7 @@ export function PartnerSpacePage({
                     ))
                   ) : (
                     <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
-                      Add a private reward to make points feel playful and personal.
+                      No rewards match this view yet. Try a different filter or save a new private reward.
                     </div>
                   )}
                 </div>
