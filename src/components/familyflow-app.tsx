@@ -1254,6 +1254,60 @@ export function FamilyFlowApp({
     });
   }
 
+  async function updatePartnerDatePlan(
+    planId: string,
+    plan: {
+      title: string;
+      when: string;
+      location: string;
+      detail: string;
+      budget: string;
+      status: "idea" | "planned" | "booked";
+    },
+  ) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            datePlans: current.partnerSpace.datePlans.map((entry) =>
+              entry.id === planId
+                ? {
+                    ...entry,
+                    title: plan.title,
+                    when: plan.when,
+                    location: plan.location,
+                    detail: plan.detail,
+                    budget: plan.budget,
+                    status: plan.status,
+                  }
+                : entry,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerDatePlan(planId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            datePlans: current.partnerSpace.datePlans.filter((entry) => entry.id !== planId),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
   async function addPartnerConnectionNote(note: { title: string; content: string }) {
     if (!state.partnerSpace) {
       return;
@@ -1291,6 +1345,48 @@ export function FamilyFlowApp({
 
       return appendNotifications(nextState, notifications);
     });
+  }
+
+  async function updatePartnerConnectionNote(noteId: string, note: { title: string; content: string }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            connectionNotes: current.partnerSpace.connectionNotes.map((entry) =>
+              entry.id === noteId && entry.authorId === currentUserId
+                ? {
+                    ...entry,
+                    title: note.title,
+                    content: note.content,
+                  }
+                : entry,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerConnectionNote(noteId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            connectionNotes: current.partnerSpace.connectionNotes.filter(
+              (entry) => !(entry.id === noteId && entry.authorId === currentUserId),
+            ),
+          }
+        : current.partnerSpace,
+    }));
   }
 
   async function updateMemberProfile(memberId: string, updater: (profile: AppState["memberProfiles"][number]) => AppState["memberProfiles"][number]) {
@@ -2406,14 +2502,26 @@ export function FamilyFlowApp({
                   onRedeemPrivateReward={(rewardId) => {
                     void redeemPartnerReward(rewardId);
                   }}
-                  onAddDatePlan={(plan) => {
-                    void addPartnerDatePlan(plan);
-                  }}
-                  onAddConnectionNote={(note) => {
-                    void addPartnerConnectionNote(note);
-                  }}
-                />
-              ) : null}
+                    onAddDatePlan={(plan) => {
+                      void addPartnerDatePlan(plan);
+                    }}
+                    onUpdateDatePlan={(planId, plan) => {
+                      void updatePartnerDatePlan(planId, plan);
+                    }}
+                    onDeleteDatePlan={(planId) => {
+                      void deletePartnerDatePlan(planId);
+                    }}
+                    onAddConnectionNote={(note) => {
+                      void addPartnerConnectionNote(note);
+                    }}
+                    onUpdateConnectionNote={(noteId, note) => {
+                      void updatePartnerConnectionNote(noteId, note);
+                    }}
+                    onDeleteConnectionNote={(noteId) => {
+                      void deletePartnerConnectionNote(noteId);
+                    }}
+                  />
+                ) : null}
 
               {activeTab === "games" ? (
                 <GameRoomPage

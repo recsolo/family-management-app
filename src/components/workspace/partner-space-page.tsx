@@ -8,6 +8,9 @@ import type { HouseholdMember } from "@/lib/workspace";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
 type PartnerTab = "chat" | "date-night" | "private-rewards" | "closer";
+type PartnerSpaceState = NonNullable<AppState["partnerSpace"]>;
+type PartnerDatePlan = PartnerSpaceState["datePlans"][number];
+type PartnerConnectionNote = PartnerSpaceState["connectionNotes"][number];
 
 type Props = {
   currentUserId: string;
@@ -31,7 +34,21 @@ type Props = {
     budget: string;
     status: "idea" | "planned" | "booked";
   }) => void;
+  onUpdateDatePlan: (
+    planId: string,
+    plan: {
+      title: string;
+      when: string;
+      location: string;
+      detail: string;
+      budget: string;
+      status: "idea" | "planned" | "booked";
+    },
+  ) => void;
+  onDeleteDatePlan: (planId: string) => void;
   onAddConnectionNote: (note: { title: string; content: string }) => void;
+  onUpdateConnectionNote: (noteId: string, note: { title: string; content: string }) => void;
+  onDeleteConnectionNote: (noteId: string) => void;
 };
 
 function formatTimestamp(value: string) {
@@ -164,7 +181,11 @@ export function PartnerSpacePage({
   onAddPrivateReward,
   onRedeemPrivateReward,
   onAddDatePlan,
+  onUpdateDatePlan,
+  onDeleteDatePlan,
   onAddConnectionNote,
+  onUpdateConnectionNote,
+  onDeleteConnectionNote,
 }: Props) {
   const [activeTab, setActiveTab] = useState<PartnerTab>("chat");
   const [pairA, setPairA] = useState(partnerSpace?.memberIds[0] ?? members[0]?.id ?? "");
@@ -178,8 +199,10 @@ export function PartnerSpacePage({
   const [dateDetail, setDateDetail] = useState("");
   const [dateBudget, setDateBudget] = useState("");
   const [dateStatus, setDateStatus] = useState<"idea" | "planned" | "booked">("idea");
+  const [editingDatePlanId, setEditingDatePlanId] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   const currentProfile = memberProfiles.find((profile) => profile.memberId === currentUserId);
   const partnerPointCards = useMemo(
@@ -231,20 +254,27 @@ export function PartnerSpacePage({
       return;
     }
 
-    onAddDatePlan({
+    const nextPlan = {
       title: dateTitle.trim(),
       when: dateWhen.trim(),
       location: dateLocation.trim(),
       detail: dateDetail.trim(),
       budget: dateBudget.trim(),
       status: dateStatus,
-    });
+    };
+
+    if (editingDatePlanId) {
+      onUpdateDatePlan(editingDatePlanId, nextPlan);
+    } else {
+      onAddDatePlan(nextPlan);
+    }
     setDateTitle("");
     setDateWhen("");
     setDateLocation("");
     setDateDetail("");
     setDateBudget("");
     setDateStatus("idea");
+    setEditingDatePlanId(null);
   }
 
   function submitConnectionNote(event: FormEvent<HTMLFormElement>) {
@@ -253,10 +283,49 @@ export function PartnerSpacePage({
       return;
     }
 
-    onAddConnectionNote({
+    const nextNote = {
       title: noteTitle.trim() || "A little love note",
       content: noteContent.trim(),
-    });
+    };
+
+    if (editingNoteId) {
+      onUpdateConnectionNote(editingNoteId, nextNote);
+    } else {
+      onAddConnectionNote(nextNote);
+    }
+    setNoteTitle("");
+    setNoteContent("");
+    setEditingNoteId(null);
+  }
+
+  function startEditingDatePlan(plan: PartnerDatePlan) {
+    setEditingDatePlanId(plan.id);
+    setDateTitle(plan.title);
+    setDateWhen(plan.when);
+    setDateLocation(plan.location);
+    setDateDetail(plan.detail);
+    setDateBudget(plan.budget);
+    setDateStatus(plan.status);
+  }
+
+  function resetDatePlanEditor() {
+    setEditingDatePlanId(null);
+    setDateTitle("");
+    setDateWhen("");
+    setDateLocation("");
+    setDateDetail("");
+    setDateBudget("");
+    setDateStatus("idea");
+  }
+
+  function startEditingConnectionNote(note: PartnerConnectionNote) {
+    setEditingNoteId(note.id);
+    setNoteTitle(note.title);
+    setNoteContent(note.content);
+  }
+
+  function resetConnectionNoteEditor() {
+    setEditingNoteId(null);
     setNoteTitle("");
     setNoteContent("");
   }
@@ -463,8 +532,13 @@ export function PartnerSpacePage({
                   </select>
                   <textarea value={dateDetail} onChange={(event) => setDateDetail(event.target.value)} rows={4} placeholder="What would make this date feel special?" className="family-textarea family-profile-form-grid__wide" />
                   <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">
-                    Save date plan
+                    {editingDatePlanId ? "Update date plan" : "Save date plan"}
                   </button>
+                  {editingDatePlanId ? (
+                    <button type="button" onClick={resetDatePlanEditor} className="family-btn family-btn-soft family-profile-form-grid__wide">
+                      Cancel edit
+                    </button>
+                  ) : null}
                 </form>
               </DisclosurePanel>
 
@@ -500,6 +574,14 @@ export function PartnerSpacePage({
                             <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{plan.detail || "No extra details yet."}</p>
                           </div>
                           <span className={`family-badge ${plan.status === "booked" ? "family-badge-accent" : "family-badge-warm"}`}>{plan.status}</span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button type="button" onClick={() => startEditingDatePlan(plan)} className="family-btn family-btn-soft">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => onDeleteDatePlan(plan.id)} className="family-btn family-btn-secondary">
+                            Delete
+                          </button>
                         </div>
                       </div>
                     ))
@@ -619,8 +701,13 @@ export function PartnerSpacePage({
                     className="family-textarea"
                   />
                   <button type="submit" className="family-btn family-btn-primary">
-                    Save connection note
+                    {editingNoteId ? "Update connection note" : "Save connection note"}
                   </button>
+                  {editingNoteId ? (
+                    <button type="button" onClick={resetConnectionNoteEditor} className="family-btn family-btn-soft">
+                      Cancel edit
+                    </button>
+                  ) : null}
                 </form>
                 <div className="mt-5 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
                   <p className="family-kicker family-eyebrow">Easy closeness ideas</p>
@@ -651,6 +738,16 @@ export function PartnerSpacePage({
                         <h4 className="mt-2 font-serif text-2xl">{note.authorName}</h4>
                         <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{note.content}</p>
                         <p className="mt-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{formatTimestamp(note.createdAt)}</p>
+                        {note.authorId === currentUserId ? (
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button type="button" onClick={() => startEditingConnectionNote(note)} className="family-btn family-btn-soft">
+                              Edit
+                            </button>
+                            <button type="button" onClick={() => onDeleteConnectionNote(note.id)} className="family-btn family-btn-secondary">
+                              Delete
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     ))
                   ) : (
