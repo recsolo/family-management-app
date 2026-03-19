@@ -7,10 +7,13 @@ import type { AppState } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
-type PartnerTab = "chat" | "date-night" | "private-rewards" | "closer";
+type PartnerTab = "chat" | "date-night" | "private-rewards" | "milestones" | "closer";
 type PartnerSpaceState = NonNullable<AppState["partnerSpace"]>;
 type PartnerDatePlan = PartnerSpaceState["datePlans"][number];
 type PartnerConnectionNote = PartnerSpaceState["connectionNotes"][number];
+type PartnerReward = PartnerSpaceState["privateRewards"][number];
+type PartnerAnniversary = PartnerSpaceState["anniversaries"][number];
+type PartnerBucketListItem = PartnerSpaceState["bucketList"][number];
 
 type Props = {
   currentUserId: string;
@@ -25,6 +28,8 @@ type Props = {
   onEditMessage: (messageId: string, content: string) => void;
   onDeleteMessage: (messageId: string) => void;
   onAddPrivateReward: (reward: { title: string; detail: string; cost: number }) => void;
+  onUpdatePrivateReward: (rewardId: string, reward: { title: string; detail: string; cost: number }) => void;
+  onDeletePrivateReward: (rewardId: string) => void;
   onRedeemPrivateReward: (rewardId: string) => void;
   onAddDatePlan: (plan: {
     title: string;
@@ -49,6 +54,27 @@ type Props = {
   onAddConnectionNote: (note: { title: string; content: string }) => void;
   onUpdateConnectionNote: (noteId: string, note: { title: string; content: string }) => void;
   onDeleteConnectionNote: (noteId: string) => void;
+  onAddAnniversary: (entry: { title: string; date: string; detail: string; memory: string }) => void;
+  onUpdateAnniversary: (anniversaryId: string, entry: { title: string; date: string; detail: string; memory: string }) => void;
+  onDeleteAnniversary: (anniversaryId: string) => void;
+  onAddBucketListItem: (entry: {
+    title: string;
+    detail: string;
+    targetWhen: string;
+    memory: string;
+    status: "idea" | "planned" | "done";
+  }) => void;
+  onUpdateBucketListItem: (
+    itemId: string,
+    entry: {
+      title: string;
+      detail: string;
+      targetWhen: string;
+      memory: string;
+      status: "idea" | "planned" | "done";
+    },
+  ) => void;
+  onDeleteBucketListItem: (itemId: string) => void;
 };
 
 function formatTimestamp(value: string) {
@@ -121,6 +147,21 @@ function getConnectionStreak(values: string[]) {
   return streak;
 }
 
+function getDaysUntil(dateValue: string) {
+  if (!dateValue) {
+    return null;
+  }
+
+  const target = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(target.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  const todayAtNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0);
+  return Math.round((target.getTime() - todayAtNoon.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 const QUICK_PARTNER_MESSAGES = [
   "Thinking about you today.",
   "What would feel fun for us this week?",
@@ -179,6 +220,8 @@ export function PartnerSpacePage({
   onEditMessage,
   onDeleteMessage,
   onAddPrivateReward,
+  onUpdatePrivateReward,
+  onDeletePrivateReward,
   onRedeemPrivateReward,
   onAddDatePlan,
   onUpdateDatePlan,
@@ -186,6 +229,12 @@ export function PartnerSpacePage({
   onAddConnectionNote,
   onUpdateConnectionNote,
   onDeleteConnectionNote,
+  onAddAnniversary,
+  onUpdateAnniversary,
+  onDeleteAnniversary,
+  onAddBucketListItem,
+  onUpdateBucketListItem,
+  onDeleteBucketListItem,
 }: Props) {
   const [activeTab, setActiveTab] = useState<PartnerTab>("chat");
   const [pairA, setPairA] = useState(partnerSpace?.memberIds[0] ?? members[0]?.id ?? "");
@@ -193,6 +242,7 @@ export function PartnerSpacePage({
   const [rewardTitle, setRewardTitle] = useState("");
   const [rewardDetail, setRewardDetail] = useState("");
   const [rewardCost, setRewardCost] = useState("50");
+  const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [dateTitle, setDateTitle] = useState("");
   const [dateWhen, setDateWhen] = useState("");
   const [dateLocation, setDateLocation] = useState("");
@@ -203,6 +253,17 @@ export function PartnerSpacePage({
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [anniversaryTitle, setAnniversaryTitle] = useState("");
+  const [anniversaryDate, setAnniversaryDate] = useState("");
+  const [anniversaryDetail, setAnniversaryDetail] = useState("");
+  const [anniversaryMemory, setAnniversaryMemory] = useState("");
+  const [editingAnniversaryId, setEditingAnniversaryId] = useState<string | null>(null);
+  const [bucketTitle, setBucketTitle] = useState("");
+  const [bucketDetail, setBucketDetail] = useState("");
+  const [bucketWhen, setBucketWhen] = useState("");
+  const [bucketMemory, setBucketMemory] = useState("");
+  const [bucketStatus, setBucketStatus] = useState<"idea" | "planned" | "done">("idea");
+  const [editingBucketId, setEditingBucketId] = useState<string | null>(null);
 
   const currentProfile = memberProfiles.find((profile) => profile.memberId === currentUserId);
   const partnerPointCards = useMemo(
@@ -222,6 +283,17 @@ export function PartnerSpacePage({
   const plannedDates = partnerSpace?.datePlans.filter((plan) => plan.status === "planned" || plan.status === "booked") ?? [];
   const nextDate = plannedDates[0] ?? partnerSpace?.datePlans[0] ?? null;
   const redeemedRewards = partnerSpace?.privateRewards.reduce((total, reward) => total + reward.redemptions, 0) ?? 0;
+  const anniversaries = partnerSpace?.anniversaries ?? [];
+  const bucketList = partnerSpace?.bucketList ?? [];
+  const nextAnniversary = useMemo(
+    () =>
+      anniversaries
+        .map((entry) => ({ entry, daysUntil: getDaysUntil(entry.date) }))
+        .filter((entry): entry is { entry: PartnerAnniversary; daysUntil: number } => entry.daysUntil !== null)
+        .sort((left, right) => left.daysUntil - right.daysUntil)[0] ?? null,
+    [anniversaries],
+  );
+  const doneBucketCount = bucketList.filter((entry) => entry.status === "done").length;
 
   function savePair(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -238,14 +310,21 @@ export function PartnerSpacePage({
       return;
     }
 
-    onAddPrivateReward({
+    const nextReward = {
       title: rewardTitle.trim(),
       detail: rewardDetail.trim(),
       cost: Number(rewardCost) || 50,
-    });
+    };
+
+    if (editingRewardId) {
+      onUpdatePrivateReward(editingRewardId, nextReward);
+    } else {
+      onAddPrivateReward(nextReward);
+    }
     setRewardTitle("");
     setRewardDetail("");
     setRewardCost("50");
+    setEditingRewardId(null);
   }
 
   function submitDatePlan(event: FormEvent<HTMLFormElement>) {
@@ -298,6 +377,60 @@ export function PartnerSpacePage({
     setEditingNoteId(null);
   }
 
+  function submitAnniversary(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!anniversaryTitle.trim() || !anniversaryDate) {
+      return;
+    }
+
+    const nextEntry = {
+      title: anniversaryTitle.trim(),
+      date: anniversaryDate,
+      detail: anniversaryDetail.trim(),
+      memory: anniversaryMemory.trim(),
+    };
+
+    if (editingAnniversaryId) {
+      onUpdateAnniversary(editingAnniversaryId, nextEntry);
+    } else {
+      onAddAnniversary(nextEntry);
+    }
+
+    setAnniversaryTitle("");
+    setAnniversaryDate("");
+    setAnniversaryDetail("");
+    setAnniversaryMemory("");
+    setEditingAnniversaryId(null);
+  }
+
+  function submitBucketItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!bucketTitle.trim()) {
+      return;
+    }
+
+    const nextEntry = {
+      title: bucketTitle.trim(),
+      detail: bucketDetail.trim(),
+      targetWhen: bucketWhen.trim(),
+      memory: bucketMemory.trim(),
+      status: bucketStatus,
+    };
+
+    if (editingBucketId) {
+      onUpdateBucketListItem(editingBucketId, nextEntry);
+    } else {
+      onAddBucketListItem(nextEntry);
+    }
+
+    setBucketTitle("");
+    setBucketDetail("");
+    setBucketWhen("");
+    setBucketMemory("");
+    setBucketStatus("idea");
+    setEditingBucketId(null);
+  }
+
   function startEditingDatePlan(plan: PartnerDatePlan) {
     setEditingDatePlanId(plan.id);
     setDateTitle(plan.title);
@@ -328,6 +461,54 @@ export function PartnerSpacePage({
     setEditingNoteId(null);
     setNoteTitle("");
     setNoteContent("");
+  }
+
+  function startEditingReward(reward: PartnerReward) {
+    setEditingRewardId(reward.id);
+    setRewardTitle(reward.title);
+    setRewardDetail(reward.detail);
+    setRewardCost(String(reward.cost));
+  }
+
+  function resetRewardEditor() {
+    setEditingRewardId(null);
+    setRewardTitle("");
+    setRewardDetail("");
+    setRewardCost("50");
+  }
+
+  function startEditingAnniversary(entry: PartnerAnniversary) {
+    setEditingAnniversaryId(entry.id);
+    setAnniversaryTitle(entry.title);
+    setAnniversaryDate(entry.date);
+    setAnniversaryDetail(entry.detail);
+    setAnniversaryMemory(entry.memory);
+  }
+
+  function resetAnniversaryEditor() {
+    setEditingAnniversaryId(null);
+    setAnniversaryTitle("");
+    setAnniversaryDate("");
+    setAnniversaryDetail("");
+    setAnniversaryMemory("");
+  }
+
+  function startEditingBucketItem(entry: PartnerBucketListItem) {
+    setEditingBucketId(entry.id);
+    setBucketTitle(entry.title);
+    setBucketDetail(entry.detail);
+    setBucketWhen(entry.targetWhen);
+    setBucketMemory(entry.memory);
+    setBucketStatus(entry.status);
+  }
+
+  function resetBucketEditor() {
+    setEditingBucketId(null);
+    setBucketTitle("");
+    setBucketDetail("");
+    setBucketWhen("");
+    setBucketMemory("");
+    setBucketStatus("idea");
   }
 
   return (
@@ -362,14 +543,18 @@ export function PartnerSpacePage({
               <p className="mt-2 text-sm leading-6 text-stone-200">{nextDate ? formatDateValue(nextDate.when) : "Save one easy plan so it stops living in someday."}</p>
             </div>
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Private rewards</p>
-              <p className="mt-3 font-serif text-3xl text-white">{partnerSpace.privateRewards.length}</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">{redeemedRewards} reward{redeemedRewards === 1 ? "" : "s"} redeemed so far.</p>
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next anniversary</p>
+              <p className="mt-3 font-serif text-3xl text-white">{nextAnniversary ? nextAnniversary.entry.title : "Add one"}</p>
+              <p className="mt-2 text-sm leading-6 text-stone-200">
+                {nextAnniversary
+                  ? `${nextAnniversary.daysUntil === 0 ? "Today" : `${nextAnniversary.daysUntil} day${nextAnniversary.daysUntil === 1 ? "" : "s"}`} until ${formatDateValue(nextAnniversary.entry.date)}.`
+                  : "Track anniversaries and sweet memories with countdowns."}
+              </p>
             </div>
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Closer notes</p>
-              <p className="mt-3 font-serif text-3xl text-white">{partnerSpace.connectionNotes.length}</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">Small appreciation moments stay easy to revisit.</p>
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Bucket list</p>
+              <p className="mt-3 font-serif text-3xl text-white">{doneBucketCount}/{bucketList.length}</p>
+              <p className="mt-2 text-sm leading-6 text-stone-200">Dreams finished versus still waiting for their turn.</p>
             </div>
           </div>
         ) : null}
@@ -423,6 +608,7 @@ export function PartnerSpacePage({
               { value: "chat", label: "Private chat" },
               { value: "date-night", label: "Date night" },
               { value: "private-rewards", label: "Private rewards" },
+              { value: "milestones", label: "Milestones" },
               { value: "closer", label: "Closer" },
             ].map((tab) => (
               <button
@@ -625,8 +811,13 @@ export function PartnerSpacePage({
                   <input type="number" min="1" value={rewardCost} onChange={(event) => setRewardCost(event.target.value)} placeholder="Points cost" className="family-input" />
                   <textarea value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} rows={4} placeholder="Keep it romantic, relaxing, playful, or just for the two of you." className="family-textarea family-profile-form-grid__wide" />
                   <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">
-                    Save private reward
+                    {editingRewardId ? "Update private reward" : "Save private reward"}
                   </button>
+                  {editingRewardId ? (
+                    <button type="button" onClick={resetRewardEditor} className="family-btn family-btn-soft family-profile-form-grid__wide">
+                      Cancel edit
+                    </button>
+                  ) : null}
                 </form>
               </DisclosurePanel>
 
@@ -663,6 +854,14 @@ export function PartnerSpacePage({
                             {(currentProfile?.pointsBalance ?? 0) >= reward.cost ? "Use points" : "Need points"}
                           </button>
                         </div>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button type="button" onClick={() => startEditingReward(reward)} className="family-btn family-btn-soft">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => onDeletePrivateReward(reward.id)} className="family-btn family-btn-secondary">
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -672,6 +871,126 @@ export function PartnerSpacePage({
                   )}
                 </div>
               </article>
+            </div>
+          ) : null}
+
+          {activeTab === "milestones" ? (
+            <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+              <DisclosurePanel
+                kicker="Anniversaries"
+                title="Track your dates and the memories tied to them."
+                summary="Save anniversaries here so the page can keep the countdown visible."
+                badge={`${anniversaries.length} saved`}
+                className="family-panel rounded-[28px] p-5 md:p-6"
+              >
+                <form className="space-y-4" onSubmit={submitAnniversary}>
+                  <input value={anniversaryTitle} onChange={(event) => setAnniversaryTitle(event.target.value)} placeholder="Our wedding day" className="family-input" />
+                  <input type="date" value={anniversaryDate} onChange={(event) => setAnniversaryDate(event.target.value)} className="family-input" />
+                  <input value={anniversaryDetail} onChange={(event) => setAnniversaryDetail(event.target.value)} placeholder="Why this date matters" className="family-input" />
+                  <textarea value={anniversaryMemory} onChange={(event) => setAnniversaryMemory(event.target.value)} rows={4} placeholder="Favorite memory from this day" className="family-textarea" />
+                  <button type="submit" className="family-btn family-btn-primary">
+                    {editingAnniversaryId ? "Update anniversary" : "Save anniversary"}
+                  </button>
+                  {editingAnniversaryId ? (
+                    <button type="button" onClick={resetAnniversaryEditor} className="family-btn family-btn-soft">
+                      Cancel edit
+                    </button>
+                  ) : null}
+                </form>
+                <div className="mt-5 grid gap-3">
+                  {anniversaries.length > 0 ? (
+                    anniversaries.map((entry) => {
+                      const daysUntil = getDaysUntil(entry.date);
+                      return (
+                        <div key={entry.id} className="family-profile-feed-card">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="family-kicker family-eyebrow">{formatDateValue(entry.date)}</p>
+                              <h4 className="mt-2 font-serif text-2xl">{entry.title}</h4>
+                              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{entry.detail || "A date worth protecting."}</p>
+                              {entry.memory ? <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Memory: {entry.memory}</p> : null}
+                            </div>
+                            <span className="family-badge family-badge-gold">
+                              {daysUntil === null ? "Saved" : daysUntil === 0 ? "Today" : `${daysUntil} days`}
+                            </span>
+                          </div>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button type="button" onClick={() => startEditingAnniversary(entry)} className="family-btn family-btn-soft">
+                              Edit
+                            </button>
+                            <button type="button" onClick={() => onDeleteAnniversary(entry.id)} className="family-btn family-btn-secondary">
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
+                      Save your first anniversary so Partner Space can keep the countdown alive for you.
+                    </div>
+                  )}
+                </div>
+              </DisclosurePanel>
+
+              <DisclosurePanel
+                kicker="Bucket list"
+                title="Keep a list of things you still want to do together."
+                summary="Save dreams, date ideas, trips, and little promises with progress and memory notes."
+                badge={`${doneBucketCount}/${bucketList.length} done`}
+                className="family-panel rounded-[28px] p-5 md:p-6"
+              >
+                <form className="space-y-4" onSubmit={submitBucketItem}>
+                  <input value={bucketTitle} onChange={(event) => setBucketTitle(event.target.value)} placeholder="Weekend cabin trip" className="family-input" />
+                  <input value={bucketWhen} onChange={(event) => setBucketWhen(event.target.value)} placeholder="This fall or next spring" className="family-input" />
+                  <select value={bucketStatus} onChange={(event) => setBucketStatus(event.target.value as "idea" | "planned" | "done")} className="family-select">
+                    <option value="idea">Idea</option>
+                    <option value="planned">Planned</option>
+                    <option value="done">Done</option>
+                  </select>
+                  <textarea value={bucketDetail} onChange={(event) => setBucketDetail(event.target.value)} rows={3} placeholder="Why this is on your list" className="family-textarea" />
+                  <textarea value={bucketMemory} onChange={(event) => setBucketMemory(event.target.value)} rows={3} placeholder="Memory note after you do it" className="family-textarea" />
+                  <button type="submit" className="family-btn family-btn-primary">
+                    {editingBucketId ? "Update bucket item" : "Save bucket item"}
+                  </button>
+                  {editingBucketId ? (
+                    <button type="button" onClick={resetBucketEditor} className="family-btn family-btn-soft">
+                      Cancel edit
+                    </button>
+                  ) : null}
+                </form>
+                <div className="mt-5 grid gap-3">
+                  {bucketList.length > 0 ? (
+                    bucketList.map((entry) => (
+                      <div key={entry.id} className="family-profile-feed-card">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="family-kicker family-eyebrow">{entry.targetWhen || "Any time"}</p>
+                            <h4 className="mt-2 font-serif text-2xl">{entry.title}</h4>
+                            <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{entry.detail || "Something worth making time for together."}</p>
+                            {entry.memory ? <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Memory: {entry.memory}</p> : null}
+                          </div>
+                          <span className={`family-badge ${entry.status === "done" ? "family-badge-accent" : entry.status === "planned" ? "family-badge-gold" : "family-badge-warm"}`}>
+                            {entry.status}
+                          </span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button type="button" onClick={() => startEditingBucketItem(entry)} className="family-btn family-btn-soft">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => onDeleteBucketListItem(entry.id)} className="family-btn family-btn-secondary">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
+                      Add your first bucket-list idea so the page starts holding shared dreams, not just daily logistics.
+                    </div>
+                  )}
+                </div>
+              </DisclosurePanel>
             </div>
           ) : null}
 

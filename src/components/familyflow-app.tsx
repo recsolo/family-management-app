@@ -1060,6 +1060,8 @@ export function FamilyFlowApp({
             memberIds: nextMemberIds,
             messages: [],
             privateRewards: [],
+            anniversaries: [],
+            bucketList: [],
             datePlans: [],
             connectionNotes: [],
           },
@@ -1172,6 +1174,47 @@ export function FamilyFlowApp({
     }));
   }
 
+  async function updatePartnerReward(rewardId: string, reward: { title: string; detail: string; cost: number }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            privateRewards: current.partnerSpace.privateRewards.map((entry) =>
+              entry.id === rewardId
+                ? {
+                    ...entry,
+                    title: reward.title,
+                    detail: reward.detail,
+                    cost: reward.cost,
+                  }
+                : entry,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerReward(rewardId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            privateRewards: current.partnerSpace.privateRewards.filter((entry) => entry.id !== rewardId),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
   async function redeemPartnerReward(rewardId: string) {
     if (!state.partnerSpace) {
       return;
@@ -1205,6 +1248,160 @@ export function FamilyFlowApp({
           : current.partnerSpace,
       };
     });
+  }
+
+  async function addPartnerAnniversary(entry: { title: string; date: string; detail: string; memory: string }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            anniversaries: [
+              {
+                id: createId("partner-anniversary"),
+                title: entry.title,
+                date: entry.date,
+                detail: entry.detail,
+                memory: entry.memory,
+              },
+              ...current.partnerSpace.anniversaries,
+            ].slice(0, 24),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function updatePartnerAnniversary(
+    anniversaryId: string,
+    entry: { title: string; date: string; detail: string; memory: string },
+  ) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            anniversaries: current.partnerSpace.anniversaries.map((anniversary) =>
+              anniversary.id === anniversaryId
+                ? {
+                    ...anniversary,
+                    title: entry.title,
+                    date: entry.date,
+                    detail: entry.detail,
+                    memory: entry.memory,
+                  }
+                : anniversary,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerAnniversary(anniversaryId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            anniversaries: current.partnerSpace.anniversaries.filter((entry) => entry.id !== anniversaryId),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function addPartnerBucketListItem(entry: {
+    title: string;
+    detail: string;
+    targetWhen: string;
+    memory: string;
+    status: "idea" | "planned" | "done";
+  }) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            bucketList: [
+              {
+                id: createId("partner-bucket"),
+                title: entry.title,
+                detail: entry.detail,
+                targetWhen: entry.targetWhen,
+                memory: entry.memory,
+                status: entry.status,
+              },
+              ...current.partnerSpace.bucketList,
+            ].slice(0, 40),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function updatePartnerBucketListItem(
+    itemId: string,
+    entry: {
+      title: string;
+      detail: string;
+      targetWhen: string;
+      memory: string;
+      status: "idea" | "planned" | "done";
+    },
+  ) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            bucketList: current.partnerSpace.bucketList.map((item) =>
+              item.id === itemId
+                ? {
+                    ...item,
+                    title: entry.title,
+                    detail: entry.detail,
+                    targetWhen: entry.targetWhen,
+                    memory: entry.memory,
+                    status: entry.status,
+                  }
+                : item,
+            ),
+          }
+        : current.partnerSpace,
+    }));
+  }
+
+  async function deletePartnerBucketListItem(itemId: string) {
+    if (!state.partnerSpace) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      partnerSpace: current.partnerSpace
+        ? {
+            ...current.partnerSpace,
+            bucketList: current.partnerSpace.bucketList.filter((entry) => entry.id !== itemId),
+          }
+        : current.partnerSpace,
+    }));
   }
 
   async function addPartnerDatePlan(plan: {
@@ -2496,12 +2693,18 @@ export function FamilyFlowApp({
                   onDeleteMessage={(messageId) => {
                     void deletePartnerMessage(messageId);
                   }}
-                  onAddPrivateReward={(reward) => {
-                    void addPartnerReward(reward);
-                  }}
-                  onRedeemPrivateReward={(rewardId) => {
-                    void redeemPartnerReward(rewardId);
-                  }}
+                    onAddPrivateReward={(reward) => {
+                      void addPartnerReward(reward);
+                    }}
+                    onUpdatePrivateReward={(rewardId, reward) => {
+                      void updatePartnerReward(rewardId, reward);
+                    }}
+                    onDeletePrivateReward={(rewardId) => {
+                      void deletePartnerReward(rewardId);
+                    }}
+                    onRedeemPrivateReward={(rewardId) => {
+                      void redeemPartnerReward(rewardId);
+                    }}
                     onAddDatePlan={(plan) => {
                       void addPartnerDatePlan(plan);
                     }}
@@ -2519,6 +2722,24 @@ export function FamilyFlowApp({
                     }}
                     onDeleteConnectionNote={(noteId) => {
                       void deletePartnerConnectionNote(noteId);
+                    }}
+                    onAddAnniversary={(entry) => {
+                      void addPartnerAnniversary(entry);
+                    }}
+                    onUpdateAnniversary={(anniversaryId, entry) => {
+                      void updatePartnerAnniversary(anniversaryId, entry);
+                    }}
+                    onDeleteAnniversary={(anniversaryId) => {
+                      void deletePartnerAnniversary(anniversaryId);
+                    }}
+                    onAddBucketListItem={(entry) => {
+                      void addPartnerBucketListItem(entry);
+                    }}
+                    onUpdateBucketListItem={(itemId, entry) => {
+                      void updatePartnerBucketListItem(itemId, entry);
+                    }}
+                    onDeleteBucketListItem={(itemId) => {
+                      void deletePartnerBucketListItem(itemId);
                     }}
                   />
                 ) : null}

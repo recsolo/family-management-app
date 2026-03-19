@@ -260,6 +260,23 @@ export type PartnerReward = {
   lastRedeemedAt: string | null;
 };
 
+export type PartnerAnniversary = {
+  id: string;
+  title: string;
+  date: string;
+  detail: string;
+  memory: string;
+};
+
+export type PartnerBucketListItem = {
+  id: string;
+  title: string;
+  detail: string;
+  targetWhen: string;
+  memory: string;
+  status: "idea" | "planned" | "done";
+};
+
 export type DateNightPlan = {
   id: string;
   title: string;
@@ -283,6 +300,8 @@ export type PartnerSpace = {
   memberIds: string[];
   messages: DirectMessage[];
   privateRewards: PartnerReward[];
+  anniversaries: PartnerAnniversary[];
+  bucketList: PartnerBucketListItem[];
   datePlans: DateNightPlan[];
   connectionNotes: ConnectionNote[];
 };
@@ -1067,6 +1086,46 @@ function sanitizePartnerReward(value: unknown): PartnerReward | null {
   };
 }
 
+function sanitizePartnerAnniversary(value: unknown): PartnerAnniversary | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  const date = toTrimmedString(value.date);
+  if (!title || !date) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("partner-anniversary")),
+    title,
+    date,
+    detail: toTrimmedString(value.detail),
+    memory: toTrimmedString(value.memory),
+  };
+}
+
+function sanitizePartnerBucketListItem(value: unknown): PartnerBucketListItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  if (!title) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("partner-bucket")),
+    title,
+    detail: toTrimmedString(value.detail),
+    targetWhen: toTrimmedString(value.targetWhen),
+    memory: toTrimmedString(value.memory),
+    status: value.status === "planned" || value.status === "done" ? value.status : "idea",
+  };
+}
+
 function sanitizeDateNightPlan(value: unknown): DateNightPlan | null {
   if (!isRecord(value)) {
     return null;
@@ -1124,6 +1183,8 @@ function sanitizePartnerSpace(value: unknown): PartnerSpace | null {
     memberIds,
     messages: Array.isArray(value.messages) ? value.messages.map(sanitizeDirectMessage).filter(isDefined).slice(-160) : [],
     privateRewards: Array.isArray(value.privateRewards) ? value.privateRewards.map(sanitizePartnerReward).filter(isDefined) : [],
+    anniversaries: Array.isArray(value.anniversaries) ? value.anniversaries.map(sanitizePartnerAnniversary).filter(isDefined).slice(0, 24) : [],
+    bucketList: Array.isArray(value.bucketList) ? value.bucketList.map(sanitizePartnerBucketListItem).filter(isDefined).slice(0, 40) : [],
     datePlans: Array.isArray(value.datePlans) ? value.datePlans.map(sanitizeDateNightPlan).filter(isDefined) : [],
     connectionNotes: Array.isArray(value.connectionNotes) ? value.connectionNotes.map(sanitizeConnectionNote).filter(isDefined).slice(-80) : [],
   };
