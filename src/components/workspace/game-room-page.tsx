@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createId, type AppState, type ArcadeRun, type GameRoomState, type UnoCard, type UnoGame, type UnoPlayableColor } from "@/lib/familyflow";
+import { getExternalGameDefinition, type ExternalGameKey } from "@/lib/game-catalog";
 import type { HouseholdMember } from "@/lib/workspace";
 
 type Props = {
@@ -524,6 +525,8 @@ export function GameRoomPage({
   onRedeemFamilyReward,
 }: Props) {
   const [activeView, setActiveView] = useState<GameView>(initialView);
+  const [launchingGameKey, setLaunchingGameKey] = useState<ExternalGameKey | null>(null);
+  const [launchFeedback, setLaunchFeedback] = useState<string | null>(null);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(() => {
     return getDefaultSelectedPlayerIds(
       memberList,
@@ -560,6 +563,7 @@ export function GameRoomPage({
   const currentUnoHand = currentUnoPlayer?.hand ?? [];
   const activeQuests = familyQuestBoard.quests.slice(0, 3);
   const recentUnoWinners = gameRoom.unoWins.slice(0, 3);
+  const liveExternalArcade = getExternalGameDefinition("star-sprint");
 
   useEffect(() => {
     const nextLastRun = arcadeLeaderboard[0] ?? arcadeStateRef.current.lastRun;
@@ -873,19 +877,97 @@ export function GameRoomPage({
     [],
   );
 
+  async function launchExternalGame(gameKey: ExternalGameKey) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setLaunchFeedback(null);
+    setLaunchingGameKey(gameKey);
+
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (popup) {
+      popup.document.title = "Opening FamilyFlow Play";
+      popup.document.body.innerHTML =
+        "<div style=\"font-family:ui-sans-serif,system-ui;padding:24px;background:#0f1014;color:#f7f1df;min-height:100vh;display:flex;align-items:center;justify-content:center;\">Opening FamilyFlow Play...</div>";
+    }
+
+    try {
+      const response = await fetch("/api/games/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameKey }),
+      });
+      const body = (await response.json().catch(() => null)) as {
+        data?: { launchUrl?: string };
+        error?: string;
+      } | null;
+
+      if (!response.ok || !body?.data?.launchUrl) {
+        throw new Error(body?.error ?? "The game could not be opened yet.");
+      }
+
+      if (popup) {
+        popup.location.href = body.data.launchUrl;
+      } else {
+        window.location.assign(body.data.launchUrl);
+      }
+    } catch (error) {
+      popup?.close();
+      setLaunchFeedback(error instanceof Error ? error.message : "The game could not be opened yet.");
+    } finally {
+      setLaunchingGameKey(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--games family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">Game Room</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Play together without leaving FamilyFlow.</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Launch bigger game nights from one place.</h3>
           </div>
           <div className="family-route-chip">Game night</div>
         </div>
         <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Pick a quick arcade round for instant fun or start a pass-and-play UNO table for the whole family.
+          Open the new full-screen play space for Star Sprint, or keep using the in-app games while UNO gets its own separate table next.
         </p>
+        <div className="mt-6 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="family-list-card">
+            <p className="family-kicker family-eyebrow">FamilyFlow Play</p>
+            <h4 className="mt-3 font-serif text-3xl">{liveExternalArcade.label} is ready.</h4>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              Open a dedicated full-screen game tab now, then send the score back into FamilyFlow points, quests, and celebrations.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void launchExternalGame("star-sprint")}
+                disabled={launchingGameKey !== null}
+                className="family-btn family-btn-primary"
+              >
+                {launchingGameKey === "star-sprint" ? "Opening..." : "Open Star Sprint full screen"}
+              </button>
+              <button type="button" onClick={() => setActiveView("arcade")} className="family-btn family-btn-soft">
+                Keep arcade inside FamilyFlow
+              </button>
+            </div>
+          </div>
+          <div className="family-list-card">
+            <p className="family-kicker family-eyebrow">UNO migration</p>
+            <h4 className="mt-3 font-serif text-3xl">UNO stays here for now.</h4>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              The full-screen external UNO table is the next step. For now, the pass-and-play version stays inside FamilyFlow.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" onClick={() => setActiveView("uno")} className="family-btn family-btn-secondary">
+                Open UNO here
+              </button>
+            </div>
+          </div>
+        </div>
+        {launchFeedback ? <p className="mt-4 text-sm leading-6 text-[var(--accent-strong)]">{launchFeedback}</p> : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"

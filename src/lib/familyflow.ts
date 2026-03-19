@@ -376,6 +376,7 @@ export type UnoGame = {
 export type GameRoomState = {
   selectedArcadeMemberId: string | null;
   arcadeRuns: ArcadeRun[];
+  processedSessionIds: string[];
   unoWins: Array<{
     id: string;
     winnerId: string;
@@ -667,6 +668,7 @@ export const DEFAULT_STATE: AppState = {
   gameRoom: {
     selectedArcadeMemberId: null,
     arcadeRuns: [],
+    processedSessionIds: [],
     unoWins: [],
     uno: null,
   },
@@ -1357,6 +1359,7 @@ function sanitizeGameRoomState(value: unknown): GameRoomState {
     return {
       selectedArcadeMemberId: null,
       arcadeRuns: [],
+      processedSessionIds: [],
       unoWins: [],
       uno: null,
     };
@@ -1365,6 +1368,9 @@ function sanitizeGameRoomState(value: unknown): GameRoomState {
   return {
     selectedArcadeMemberId: toTrimmedString(value.selectedArcadeMemberId) || null,
     arcadeRuns: Array.isArray(value.arcadeRuns) ? value.arcadeRuns.map(sanitizeArcadeRun).filter(isDefined).slice(0, 20) : [],
+    processedSessionIds: Array.isArray(value.processedSessionIds)
+      ? value.processedSessionIds.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).slice(0, 80)
+      : [],
     unoWins: Array.isArray(value.unoWins) ? value.unoWins.map(sanitizeUnoWin).filter(isDefined).slice(0, 20) : [],
     uno: sanitizeUnoGame(value.uno),
   };
@@ -1835,6 +1841,7 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
         memberName: memberMap.get(run.memberId)?.name ?? run.memberName,
       }))
       .slice(0, 20),
+    processedSessionIds: sanitized.gameRoom.processedSessionIds.slice(0, 80),
     unoWins: sanitized.gameRoom.unoWins
       .filter((win) => memberMap.has(win.winnerId))
       .map((win) => ({

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FamilyFlow Play | Star Sprint</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="play-app">
+      <section class="play-shell">
+        <header class="play-topbar">
+          <div class="play-brand">
+            <span class="play-kicker">FamilyFlow Play</span>
+            <strong id="player-name">Loading player...</strong>
+          </div>
+          <div class="play-actions">
+            <span id="household-name" class="play-badge">Loading home...</span>
+            <a id="return-link" class="play-button play-button-secondary" href="/game-room">Back to FamilyFlow</a>
+          </div>
+        </header>
+
+        <section class="play-hero">
+          <p class="play-kicker">Star Sprint</p>
+          <h1 class="play-title">Catch stars. Dodge clouds. Send the score home.</h1>
+          <p class="play-subtitle" style="margin-top: 16px;">
+            This is the first standalone FamilyFlow Play game. Your result syncs back to points, quests, and family celebrations.
+          </p>
+        </section>
+
+        <div class="play-grid play-grid-main">
+          <section class="play-game-shell">
+            <canvas id="game-canvas" class="play-canvas" width="1280" height="720"></canvas>
+            <div class="play-controls" style="margin-top: 16px;">
+              <button id="start-button" class="play-button play-button-primary">Start run</button>
+              <button id="left-button" class="play-button play-button-secondary">Move left</button>
+              <button id="right-button" class="play-button play-button-secondary">Move right</button>
+            </div>
+            <p id="save-feedback" class="play-feedback" style="margin-top: 14px;"></p>
+          </section>
+
+          <aside class="play-panel">
+            <div class="play-stat-grid">
+              <div class="play-stat">
+                <span class="play-kicker">Score</span>
+                <strong id="score-value">0</strong>
+              </div>
+              <div class="play-stat">
+                <span class="play-kicker">Stars</span>
+                <strong id="stars-value">0</strong>
+              </div>
+              <div class="play-stat">
+                <span class="play-kicker">Dodged</span>
+                <strong id="dodged-value">0</strong>
+              </div>
+              <div class="play-stat">
+                <span class="play-kicker">Time</span>
+                <strong id="time-value">35s</strong>
+              </div>
+            </div>
+
+            <section class="play-panel play-panel-soft" style="margin-top: 16px;">
+              <p class="play-kicker">Household best</p>
+              <p id="best-value" class="play-copy" style="margin-top: 12px;">Checking the board...</p>
+            </section>
+
+            <section class="play-panel play-panel-soft" style="margin-top: 16px;">
+              <p class="play-kicker">How to play</p>
+              <div class="play-list" style="margin-top: 12px;">
+                <div class="play-list-item">Use arrow keys or the move buttons.</div>
+                <div class="play-list-item">Catch gold stars for the biggest score boost.</div>
+                <div class="play-list-item">Avoid gray storm clouds so the combo stays cheerful.</div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <footer class="play-footer">
+          <p class="play-note">Tip: this page is designed to lift out to its own future `play.familyflow.com` home without changing the FamilyFlow hub.</p>
+        </footer>
+      </section>
+    </main>
+
+    <script type="module" src="./star-sprint.js"></script>
+  </body>
+</html>
