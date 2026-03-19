@@ -19,7 +19,6 @@ import {
   type DirectMessage,
   formatReminderWhen,
   getBudgetPlan,
-  getChoreCadenceLabel,
   getChoreStatus,
   getNextChoreStreakCount,
   getReminderOccurrenceKey,
@@ -27,6 +26,7 @@ import {
   getTodayKey,
   isChoreScheduledForDate,
   normalizeIngredient,
+  recalculateFamilyQuestBoard,
   RECIPES,
   type AppState,
   type BudgetCoach,
@@ -109,6 +109,13 @@ export function FamilyFlowApp({
   const reminderBrowserSyncRef = useRef(false);
   const reminderInboxSyncRef = useRef(false);
   const reminderEmailSyncRef = useRef(false);
+
+  function refreshQuestBoard(nextState: AppState) {
+    return {
+      ...nextState,
+      familyQuestBoard: recalculateFamilyQuestBoard(nextState.familyQuestBoard, nextState),
+    };
+  }
 
   const memberNames = useMemo(() => {
     const names = memberList.map((member) => member.name.trim()).filter(Boolean);
@@ -317,15 +324,16 @@ export function FamilyFlowApp({
   }, [dueReminders]);
 
   async function persistState(nextState: AppState) {
-    stateRef.current = nextState;
-    setState(nextState);
+    const normalizedState = refreshQuestBoard(nextState);
+    stateRef.current = normalizedState;
+    setState(normalizedState);
     setSaving(true);
     setSaveError(null);
 
     const response = await fetch("/api/workspace", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state: nextState }),
+      body: JSON.stringify({ state: normalizedState }),
     });
 
     setSaving(false);
@@ -342,7 +350,7 @@ export function FamilyFlowApp({
 
   function setLocalState(updater: (current: AppState) => AppState) {
     setState((current) => {
-      const nextState = updater(current);
+      const nextState = refreshQuestBoard(updater(current));
       stateRef.current = nextState;
       return nextState;
     });
@@ -375,20 +383,178 @@ export function FamilyFlowApp({
   }
 
   async function saveArcadeRun(run: ArcadeRun) {
-    await updateGameRoom((current) => ({
-      ...current,
-      selectedArcadeMemberId: run.memberId,
-      arcadeRuns: [...current.arcadeRuns, run]
-        .sort((left, right) => right.score - left.score || right.playedAt.localeCompare(left.playedAt))
-        .slice(0, 20),
-    }));
+    const pointsAwarded = Math.max(6, Math.min(32, Math.floor(run.score / 3) + run.starsCaught));
+    const runner = memberList.find((member) => member.id === run.memberId);
+
+    await updateState((current) => {
+      const notifications = runner
+        ? createNotifications(
+            memberList.filter((member) => member.id !== run.memberId).map((member) => member.id),
+            {
+              kind: "achievement",
+              title: `${runner.name} lit up Star Sprint`,
+              detail: `${run.score} points and ${pointsAwarded} profile points earned.`,
+              link: getWorkspacePath("games"),
+              actorId: run.memberId,
+              actorName: runner.name,
+              createdAt: run.playedAt,
+            },
+          )
+        : [];
+
+      const nextState: AppState = {
+        ...current,
+        memberProfiles: current.memberProfiles.map((profile) =>
+          profile.memberId === run.memberId
+            ? {
+                ...profile,
+                pointsBalance: profile.pointsBalance + pointsAwarded,
+                lifetimePoints: profile.lifetimePoints + pointsAwarded,
+              }
+            : profile,
+        ),
+        familyAchievements: runner
+          ? [
+              {
+                id: createId("achievement"),
+                memberId: run.memberId,
+                memberName: runner.name,
+                title: `${runner.name} won a Star Sprint burst`,
+                detail: `${run.score} points, ${run.starsCaught} stars, ${run.cloudsDodged} dodges.`,
+                points: pointsAwarded,
+                kind: "game" as const,
+                createdAt: run.playedAt,
+              },
+              ...current.familyAchievements,
+            ].slice(0, 60)
+          : current.familyAchievements,
+        gameRoom: {
+          ...current.gameRoom,
+          selectedArcadeMemberId: run.memberId,
+          arcadeRuns: [...current.gameRoom.arcadeRuns, run]
+            .sort((left, right) => right.score - left.score || right.playedAt.localeCompare(left.playedAt))
+            .slice(0, 20),
+        },
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   async function saveUnoGame(game: UnoGame | null) {
-    await updateGameRoom((current) => ({
-      ...current,
-      uno: game,
-    }));
+    await updateState((current) => {
+      const previousGame = current.gameRoom.uno;
+      const justFinished =
+        game?.status === "finished" &&
+        Boolean(game.winnerId) &&
+        (!previousGame || previousGame.status !== "finished" || previousGame.winnerId !== game.winnerId);
+
+      if (!justFinished || !game?.winnerId) {
+        return {
+          ...current,
+          gameRoom: {
+            ...current.gameRoom,
+            uno: game,
+          },
+        };
+      }
+
+      const winner = memberList.find((member) => member.id === game.winnerId);
+      const winnerName = winner?.name ?? game.players.find((player) => player.memberId === game.winnerId)?.name ?? "Family player";
+      const pointsAwarded = 18;
+      const playedAt = game.updatedAt || new Date().toISOString();
+      const notifications = createNotifications(
+        memberList.filter((member) => member.id !== game.winnerId).map((member) => member.id),
+        {
+          kind: "achievement",
+          title: `${winnerName} won the UNO round`,
+          detail: `${pointsAwarded} profile points earned for the win.`,
+          link: getWorkspacePath("games"),
+          actorId: game.winnerId,
+          actorName: winnerName,
+          createdAt: playedAt,
+        },
+      );
+
+      const nextState: AppState = {
+        ...current,
+        memberProfiles: current.memberProfiles.map((profile) =>
+          profile.memberId === game.winnerId
+            ? {
+                ...profile,
+                pointsBalance: profile.pointsBalance + pointsAwarded,
+                lifetimePoints: profile.lifetimePoints + pointsAwarded,
+              }
+            : profile,
+        ),
+        familyAchievements: [
+          {
+            id: createId("achievement"),
+            memberId: game.winnerId,
+            memberName: winnerName,
+            title: `${winnerName} won an UNO round`,
+            detail: game.lastAction,
+            points: pointsAwarded,
+            kind: "game" as const,
+            createdAt: playedAt,
+          },
+          ...current.familyAchievements,
+        ].slice(0, 60),
+        gameRoom: {
+          ...current.gameRoom,
+          uno: game,
+          unoWins: [
+            {
+              id: createId("uno-win"),
+              winnerId: game.winnerId,
+              winnerName,
+              playedAt,
+            },
+            ...current.gameRoom.unoWins,
+          ].slice(0, 20),
+        },
+      };
+
+      return appendNotifications(nextState, notifications);
+    });
+  }
+
+  async function redeemFamilySharedReward(rewardId: string) {
+    await updateState((current) => {
+      const reward = current.familyQuestBoard.rewards.find((entry) => entry.id === rewardId);
+      if (!reward || current.familyQuestBoard.sharedPoints < reward.cost) {
+        return current;
+      }
+
+      const redeemedAt = new Date().toISOString();
+      const nextState: AppState = {
+        ...current,
+        familyQuestBoard: {
+          ...current.familyQuestBoard,
+          sharedPoints: current.familyQuestBoard.sharedPoints - reward.cost,
+          rewards: current.familyQuestBoard.rewards.map((entry) =>
+            entry.id === rewardId
+              ? { ...entry, redemptions: entry.redemptions + 1, lastRedeemedAt: redeemedAt }
+              : entry,
+          ),
+        },
+      };
+
+      const notifications = createNotifications(
+        memberList.filter((member) => member.id !== currentUserId).map((member) => member.id),
+        {
+          kind: "reward",
+          title: `${userName} unlocked ${reward.title}`,
+          detail: reward.detail,
+          link: getWorkspacePath("games"),
+          actorId: currentUserId,
+          actorName: userName,
+          createdAt: redeemedAt,
+        },
+      );
+
+      return appendNotifications(nextState, notifications);
+    });
   }
 
   function getSortedParticipantIds(leftId: string, rightId: string) {
@@ -1893,6 +2059,7 @@ export function FamilyFlowApp({
                     unreadNotificationCount={unreadNotificationCount}
                     recipeMatches={recipeMatches}
                     bestRecipe={bestRecipe}
+                    familyQuestBoard={state.familyQuestBoard}
                     budgetPlan={budgetPlan}
                     savingsPercent={savingsPercent}
                     savingsAmount={savingsAmount}
@@ -1911,6 +2078,9 @@ export function FamilyFlowApp({
                     }}
                     markAllNotificationsRead={() => {
                       void markAllNotificationsRead();
+                    }}
+                    redeemFamilySharedReward={(rewardId) => {
+                      void redeemFamilySharedReward(rewardId);
                     }}
                     handleAssistantPrompt={handleAssistantPrompt}
                     generateMealPlan={() => {
@@ -2000,6 +2170,7 @@ export function FamilyFlowApp({
                   currentUserId={currentUserId}
                   memberList={memberList}
                   gameRoom={state.gameRoom}
+                  familyQuestBoard={state.familyQuestBoard}
                   onSelectArcadeMember={(memberId) => {
                     void saveArcadeSelection(memberId);
                   }}
@@ -2008,6 +2179,9 @@ export function FamilyFlowApp({
                   }}
                   onSaveUnoGame={(game) => {
                     void saveUnoGame(game);
+                  }}
+                  onRedeemFamilyReward={(rewardId) => {
+                    void redeemFamilySharedReward(rewardId);
                   }}
                 />
               ) : null}

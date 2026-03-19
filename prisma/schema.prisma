@@ -35,6 +35,7 @@ model Household {
   directThreadsJson     String       @default("[]") @map("direct_threads_json")
   partnerSpaceJson      String?      @map("partner_space_json")
   notificationsJson     String       @default("[]") @map("notifications_json")
+  familyQuestBoardJson  String       @default("{\"sharedPoints\":0,\"lifetimeSharedPoints\":0,\"quests\":[],\"rewards\":[]}") @map("family_quest_board_json")
   gameRoomJson          String       @default("{\"selectedArcadeMemberId\":null,\"arcadeRuns\":[],\"uno\":null}") @map("game_room_json")
   assistantHistoryJson  String       @default("[]") @map("assistant_history_json")
   latestMealPlanJson    String?      @map("latest_meal_plan_json")

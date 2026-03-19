@@ -186,7 +186,41 @@ export type FamilyAchievement = {
   detail: string;
   points: number;
   createdAt: string;
-  kind: "goal" | "reward" | "fitness" | "shoutout";
+  kind: "goal" | "reward" | "fitness" | "shoutout" | "game" | "chore";
+};
+
+export type FamilyQuestCadence = "daily" | "weekly";
+export type FamilyQuestMetric = "chores-done" | "goals-completed" | "game-rounds";
+
+export type FamilyQuest = {
+  id: string;
+  title: string;
+  detail: string;
+  cadence: FamilyQuestCadence;
+  metric: FamilyQuestMetric;
+  target: number;
+  progress: number;
+  rewardPoints: number;
+  rewardTitle: string;
+  windowKey: string;
+  completedAt: string | null;
+};
+
+export type FamilySharedReward = {
+  id: string;
+  title: string;
+  detail: string;
+  cost: number;
+  category: "family" | "game-night";
+  redemptions: number;
+  lastRedeemedAt: string | null;
+};
+
+export type FamilyQuestBoard = {
+  sharedPoints: number;
+  lifetimeSharedPoints: number;
+  quests: FamilyQuest[];
+  rewards: FamilySharedReward[];
 };
 
 export type PartnerReward = {
@@ -285,6 +319,12 @@ export type UnoGame = {
 export type GameRoomState = {
   selectedArcadeMemberId: string | null;
   arcadeRuns: ArcadeRun[];
+  unoWins: Array<{
+    id: string;
+    winnerId: string;
+    winnerName: string;
+    playedAt: string;
+  }>;
   uno: UnoGame | null;
 };
 
@@ -307,6 +347,7 @@ export type AppState = {
   directThreads: DirectThread[];
   partnerSpace: PartnerSpace | null;
   notifications: AppNotification[];
+  familyQuestBoard: FamilyQuestBoard;
   gameRoom: GameRoomState;
 };
 
@@ -375,6 +416,62 @@ const DEFAULT_REWARDS: Array<Pick<MemberReward, "title" | "detail" | "cost">> = 
     title: "Choose a fun outing",
     detail: "Pick a small family adventure or special stop.",
     cost: 75,
+  },
+];
+
+const DEFAULT_FAMILY_SHARED_REWARDS: Array<Pick<FamilySharedReward, "title" | "detail" | "cost" | "category">> = [
+  {
+    title: "Family movie night",
+    detail: "Unlock a movie night with popcorn and full vote power.",
+    cost: 60,
+    category: "family",
+  },
+  {
+    title: "Pick dinner together",
+    detail: "The family chooses a fun dinner or dessert for the week.",
+    cost: 45,
+    category: "family",
+  },
+  {
+    title: "Bonus game night",
+    detail: "Cash in for an extra game-night pick or a longer play session.",
+    cost: 35,
+    category: "game-night",
+  },
+];
+
+const FAMILY_QUEST_TEMPLATES: Array<
+  Pick<FamilyQuest, "id" | "title" | "detail" | "cadence" | "metric" | "target" | "rewardPoints" | "rewardTitle">
+> = [
+  {
+    id: "quest-daily-chores",
+    title: "Daily Team Sweep",
+    detail: "Finish the key chores for today so the house feels lighter tonight.",
+    cadence: "daily",
+    metric: "chores-done",
+    target: 4,
+    rewardPoints: 20,
+    rewardTitle: "Snack stash bonus",
+  },
+  {
+    id: "quest-weekly-goals",
+    title: "Goal Getter Week",
+    detail: "Complete a couple of personal goals this week and share the momentum.",
+    cadence: "weekly",
+    metric: "goals-completed",
+    target: 2,
+    rewardPoints: 35,
+    rewardTitle: "Victory spark",
+  },
+  {
+    id: "quest-weekly-games",
+    title: "Game Night Glow",
+    detail: "Play a few rounds together to turn the app into a real family hangout.",
+    cadence: "weekly",
+    metric: "game-rounds",
+    target: 3,
+    rewardPoints: 25,
+    rewardTitle: "Playful streak",
   },
 ];
 
@@ -498,9 +595,16 @@ export const DEFAULT_STATE: AppState = {
   directThreads: [],
   partnerSpace: null,
   notifications: [],
+  familyQuestBoard: {
+    sharedPoints: 0,
+    lifetimeSharedPoints: 0,
+    quests: [],
+    rewards: [],
+  },
   gameRoom: {
     selectedArcadeMemberId: null,
     arcadeRuns: [],
+    unoWins: [],
     uno: null,
   },
 };
@@ -548,6 +652,18 @@ function createDefaultRewards() {
   })) satisfies MemberReward[];
 }
 
+function createDefaultFamilyRewards() {
+  return DEFAULT_FAMILY_SHARED_REWARDS.map((reward, index) => ({
+    id: `family-reward-template-${index + 1}`,
+    title: reward.title,
+    detail: reward.detail,
+    cost: reward.cost,
+    category: reward.category,
+    redemptions: 0,
+    lastRedeemedAt: null,
+  })) satisfies FamilySharedReward[];
+}
+
 function sanitizeGoal(value: unknown): MemberGoal | null {
   if (!isRecord(value)) {
     return null;
@@ -586,6 +702,58 @@ function sanitizeReward(value: unknown): MemberReward | null {
     title,
     detail: toTrimmedString(value.detail),
     cost: clampNumber(value.cost, 25, 1, 1000),
+    redemptions: clampNumber(value.redemptions, 0, 0, 9999),
+    lastRedeemedAt: typeof value.lastRedeemedAt === "string" && value.lastRedeemedAt ? value.lastRedeemedAt : null,
+  };
+}
+
+function sanitizeFamilyQuest(value: unknown): FamilyQuest | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  if (!title) {
+    return null;
+  }
+
+  const cadence = value.cadence === "weekly" ? "weekly" : "daily";
+  const metric =
+    value.metric === "goals-completed" || value.metric === "game-rounds" || value.metric === "chores-done"
+      ? value.metric
+      : "chores-done";
+
+  return {
+    id: toTrimmedString(value.id, createId("family-quest")),
+    title,
+    detail: toTrimmedString(value.detail),
+    cadence,
+    metric,
+    target: clampNumber(value.target, 1, 1, 500),
+    progress: clampNumber(value.progress, 0, 0, 500),
+    rewardPoints: clampNumber(value.rewardPoints, 10, 1, 1000),
+    rewardTitle: toTrimmedString(value.rewardTitle, "Shared bonus"),
+    windowKey: toTrimmedString(value.windowKey, getQuestWindowKey(cadence)),
+    completedAt: typeof value.completedAt === "string" && value.completedAt ? value.completedAt : null,
+  };
+}
+
+function sanitizeFamilyReward(value: unknown): FamilySharedReward | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  if (!title) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("family-reward")),
+    title,
+    detail: toTrimmedString(value.detail),
+    cost: clampNumber(value.cost, 40, 1, 5000),
+    category: value.category === "game-night" ? "game-night" : "family",
     redemptions: clampNumber(value.redemptions, 0, 0, 9999),
     lastRedeemedAt: typeof value.lastRedeemedAt === "string" && value.lastRedeemedAt ? value.lastRedeemedAt : null,
   };
@@ -697,7 +865,12 @@ function sanitizeAchievement(value: unknown): FamilyAchievement | null {
   }
 
   const kind =
-    value.kind === "reward" || value.kind === "fitness" || value.kind === "shoutout" || value.kind === "goal"
+    value.kind === "reward" ||
+    value.kind === "fitness" ||
+    value.kind === "shoutout" ||
+    value.kind === "goal" ||
+    value.kind === "game" ||
+    value.kind === "chore"
       ? value.kind
       : "goal";
 
@@ -894,6 +1067,24 @@ function sanitizeArcadeRun(value: unknown): ArcadeRun | null {
   };
 }
 
+function sanitizeUnoWin(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const winnerId = toTrimmedString(value.winnerId);
+  if (!winnerId) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("uno-win")),
+    winnerId,
+    winnerName: toTrimmedString(value.winnerName, "Family player"),
+    playedAt: toTrimmedString(value.playedAt, new Date().toISOString()),
+  };
+}
+
 function isUnoColor(value: unknown): value is UnoCardColor {
   return value === "red" || value === "blue" || value === "green" || value === "yellow" || value === "wild";
 }
@@ -985,6 +1176,7 @@ function sanitizeGameRoomState(value: unknown): GameRoomState {
     return {
       selectedArcadeMemberId: null,
       arcadeRuns: [],
+      unoWins: [],
       uno: null,
     };
   }
@@ -992,7 +1184,28 @@ function sanitizeGameRoomState(value: unknown): GameRoomState {
   return {
     selectedArcadeMemberId: toTrimmedString(value.selectedArcadeMemberId) || null,
     arcadeRuns: Array.isArray(value.arcadeRuns) ? value.arcadeRuns.map(sanitizeArcadeRun).filter(isDefined).slice(0, 20) : [],
+    unoWins: Array.isArray(value.unoWins) ? value.unoWins.map(sanitizeUnoWin).filter(isDefined).slice(0, 20) : [],
     uno: sanitizeUnoGame(value.uno),
+  };
+}
+
+function sanitizeFamilyQuestBoard(value: unknown): FamilyQuestBoard {
+  if (!isRecord(value)) {
+    return {
+      sharedPoints: 0,
+      lifetimeSharedPoints: 0,
+      quests: [],
+      rewards: createDefaultFamilyRewards(),
+    };
+  }
+
+  const rewards = Array.isArray(value.rewards) ? value.rewards.map(sanitizeFamilyReward).filter(isDefined) : createDefaultFamilyRewards();
+
+  return {
+    sharedPoints: clampNumber(value.sharedPoints, 0, 0, 100000),
+    lifetimeSharedPoints: clampNumber(value.lifetimeSharedPoints, 0, 0, 100000),
+    quests: Array.isArray(value.quests) ? value.quests.map(sanitizeFamilyQuest).filter(isDefined) : [],
+    rewards: rewards.length > 0 ? rewards : createDefaultFamilyRewards(),
   };
 }
 
@@ -1003,6 +1216,26 @@ export function normalizeIngredient(value: string) {
 export function getTodayKey(date = new Date()) {
   const { year, month, day } = toLocalDateParts(date);
   return `${year}-${month}-${day}`;
+}
+
+export function getWeekKey(date = new Date()) {
+  const cursor = new Date(date);
+  cursor.setHours(0, 0, 0, 0);
+  const weekday = (cursor.getDay() + 6) % 7;
+  cursor.setDate(cursor.getDate() - weekday);
+
+  const yearStart = new Date(cursor.getFullYear(), 0, 1);
+  yearStart.setHours(0, 0, 0, 0);
+  const yearStartWeekday = (yearStart.getDay() + 6) % 7;
+  yearStart.setDate(yearStart.getDate() - yearStartWeekday);
+
+  const diffDays = Math.round((cursor.getTime() - yearStart.getTime()) / 86400000);
+  const weekNumber = Math.floor(diffDays / 7) + 1;
+  return `${cursor.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+}
+
+function getQuestWindowKey(cadence: FamilyQuestCadence, date = new Date()) {
+  return cadence === "daily" ? getTodayKey(date) : getWeekKey(date);
 }
 
 export function parseDayKey(dayKey: string) {
@@ -1180,6 +1413,20 @@ export function formatReminderWhen(reminder: Reminder) {
   return reminder.when;
 }
 
+export function createDefaultFamilyQuestBoard(date = new Date()): FamilyQuestBoard {
+  return {
+    sharedPoints: 0,
+    lifetimeSharedPoints: 0,
+    quests: FAMILY_QUEST_TEMPLATES.map((quest) => ({
+      ...quest,
+      progress: 0,
+      windowKey: getQuestWindowKey(quest.cadence, date),
+      completedAt: null,
+    })),
+    rewards: createDefaultFamilyRewards(),
+  };
+}
+
 export function createDefaultMemberProfile(member: MemberSeed): MemberProfile {
   const shortName = member.name.trim().split(/\s+/)[0] || "Family member";
   return {
@@ -1195,6 +1442,99 @@ export function createDefaultMemberProfile(member: MemberSeed): MemberProfile {
     calendarEvents: [],
     pointsBalance: 0,
     lifetimePoints: 0,
+  };
+}
+
+function getQuestProgress(
+  state: Pick<AppState, "chores" | "memberProfiles" | "gameRoom">,
+  metric: FamilyQuestMetric,
+  now = new Date(),
+) {
+  switch (metric) {
+    case "chores-done": {
+      const todayKey = getTodayKey(now);
+      return state.chores.filter((chore) => chore.done && chore.completedOn === todayKey).length;
+    }
+    case "goals-completed": {
+      const currentWeek = getWeekKey(now);
+      return state.memberProfiles.reduce(
+        (total, profile) =>
+          total +
+          profile.goals.filter((goal) => {
+            if (!goal.completedAt) {
+              return false;
+            }
+
+            const completedAt = new Date(goal.completedAt);
+            return !Number.isNaN(completedAt.getTime()) && getWeekKey(completedAt) === currentWeek;
+          }).length,
+        0,
+      );
+    }
+    case "game-rounds": {
+      const currentWeek = getWeekKey(now);
+      const arcadeRounds = state.gameRoom.arcadeRuns.filter((run) => {
+        const playedAt = new Date(run.playedAt);
+        return !Number.isNaN(playedAt.getTime()) && getWeekKey(playedAt) === currentWeek;
+      }).length;
+      const unoWins = state.gameRoom.unoWins.filter((win) => {
+        const playedAt = new Date(win.playedAt);
+        return !Number.isNaN(playedAt.getTime()) && getWeekKey(playedAt) === currentWeek;
+      }).length;
+      return arcadeRounds + unoWins;
+    }
+    default:
+      return 0;
+  }
+}
+
+export function recalculateFamilyQuestBoard(
+  board: FamilyQuestBoard,
+  state: Pick<AppState, "chores" | "memberProfiles" | "gameRoom">,
+  now = new Date(),
+): FamilyQuestBoard {
+  const sanitizedBoard = sanitizeFamilyQuestBoard(board);
+  const defaults = createDefaultFamilyQuestBoard(now);
+  const existingQuestMap = new Map(sanitizedBoard.quests.map((quest) => [quest.id, quest]));
+  let sharedPoints = sanitizedBoard.sharedPoints;
+  let lifetimeSharedPoints = sanitizedBoard.lifetimeSharedPoints;
+
+  const quests = defaults.quests.map((defaultQuest) => {
+    const existing = existingQuestMap.get(defaultQuest.id);
+    const currentWindowKey = getQuestWindowKey(defaultQuest.cadence, now);
+    const activeQuest =
+      existing && existing.windowKey === currentWindowKey
+        ? {
+            ...defaultQuest,
+            ...existing,
+            windowKey: currentWindowKey,
+          }
+        : defaultQuest;
+    const progress = Math.min(activeQuest.target, getQuestProgress(state, activeQuest.metric, now));
+    const wasCompletedThisWindow = Boolean(existing && existing.windowKey === currentWindowKey && existing.completedAt);
+    const completedNow = progress >= activeQuest.target && !wasCompletedThisWindow;
+
+    if (completedNow) {
+      sharedPoints += activeQuest.rewardPoints;
+      lifetimeSharedPoints += activeQuest.rewardPoints;
+    }
+
+    return {
+      ...activeQuest,
+      progress,
+      windowKey: currentWindowKey,
+      completedAt:
+        progress >= activeQuest.target
+          ? (wasCompletedThisWindow ? existing?.completedAt ?? new Date().toISOString() : new Date().toISOString())
+          : null,
+    };
+  });
+
+  return {
+    sharedPoints,
+    lifetimeSharedPoints,
+    quests,
+    rewards: sanitizedBoard.rewards.length > 0 ? sanitizedBoard.rewards : defaults.rewards,
   };
 }
 
@@ -1273,6 +1613,13 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
         memberName: memberMap.get(run.memberId)?.name ?? run.memberName,
       }))
       .slice(0, 20),
+    unoWins: sanitized.gameRoom.unoWins
+      .filter((win) => memberMap.has(win.winnerId))
+      .map((win) => ({
+        ...win,
+        winnerName: memberMap.get(win.winnerId)?.name ?? win.winnerName,
+      }))
+      .slice(0, 20),
     uno:
       sanitized.gameRoom.uno &&
       sanitized.gameRoom.uno.players.length >= 2 &&
@@ -1288,10 +1635,10 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
                 ? sanitized.gameRoom.uno.winnerId
                 : null,
           }
-        : null,
+          : null,
   };
 
-  return {
+  const nextState = {
     ...sanitized,
     memberProfiles,
     familyAchievements,
@@ -1299,6 +1646,11 @@ export function syncStateWithMembers(state: AppState, members: MemberSeed[]): Ap
     partnerSpace,
     notifications,
     gameRoom,
+  };
+
+  return {
+    ...nextState,
+    familyQuestBoard: recalculateFamilyQuestBoard(sanitized.familyQuestBoard, nextState),
   };
 }
 
@@ -1407,6 +1759,7 @@ export function sanitizeState(raw: unknown): AppState {
     directThreads: Array.isArray(parsed.directThreads) ? parsed.directThreads.map(sanitizeDirectThread).filter(isDefined) : defaults.directThreads,
     partnerSpace: sanitizePartnerSpace(parsed.partnerSpace),
     notifications: Array.isArray(parsed.notifications) ? parsed.notifications.map(sanitizeNotification).filter(isDefined).slice(0, 200) : defaults.notifications,
+    familyQuestBoard: sanitizeFamilyQuestBoard(parsed.familyQuestBoard),
     gameRoom: sanitizeGameRoomState(parsed.gameRoom),
   };
 }

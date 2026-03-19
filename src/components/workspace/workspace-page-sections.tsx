@@ -101,6 +101,7 @@ type WorkspacePageSectionsProps = {
   unreadNotificationCount: number;
   recipeMatches: RecipeMatch[];
   bestRecipe?: RecipeMatch;
+  familyQuestBoard: AppState["familyQuestBoard"];
   budgetPlan: BudgetPlanRow[];
   savingsPercent: number;
   savingsAmount: number;
@@ -114,6 +115,7 @@ type WorkspacePageSectionsProps = {
   openNotification: (notification: AppNotification) => void;
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: () => void;
+  redeemFamilySharedReward: (rewardId: string) => void;
   handleAssistantPrompt: (prompt: string) => void;
   generateMealPlan: () => void;
   generateBudgetCoach: () => void;
@@ -217,6 +219,7 @@ function DashboardPage({
   openChores,
   currentUserNotifications,
   unreadNotificationCount,
+  familyQuestBoard,
   goToTab,
   toggleChore,
 }: PageProps) {
@@ -400,6 +403,35 @@ function DashboardPage({
       </div>
 
       <div className="grid gap-5">
+        <InsightCard
+          kicker="Family quest board"
+          title={`${familyQuestBoard.sharedPoints} shared points ready`}
+          body="Daily and weekly quests turn chores, goals, and game time into one team reward loop."
+          className="family-panel"
+        >
+          <div className="mt-5 space-y-3">
+            {familyQuestBoard.quests.slice(0, 3).map((quest) => (
+              <div key={quest.id} className="family-list-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-serif text-2xl">{quest.title}</h4>
+                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{quest.detail}</p>
+                  </div>
+                  <span className={`family-badge ${quest.completedAt ? "family-badge-accent" : "family-badge-gold"}`}>
+                    {quest.progress}/{quest.target}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                  {quest.completedAt ? `${quest.rewardTitle} unlocked` : `${quest.rewardPoints} shared points`}
+                </p>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => goToTab("games")} className="family-btn family-btn-secondary mt-5">
+            Open Game Room
+          </button>
+        </InsightCard>
+
         <InsightCard
           kicker="Family in the loop"
           title={`${memberList.length} people are connected.`}
@@ -1235,6 +1267,8 @@ function FamilyPage({
   routineItems,
   setRoutineItems,
   addRoutine,
+  familyQuestBoard,
+  redeemFamilySharedReward,
   ownerCount,
   adminCount,
   goToTab,
@@ -1473,6 +1507,35 @@ function FamilyPage({
             }
             className="family-card family-card-gold"
           />
+
+          <InsightCard
+            kicker="Shared rewards"
+            title={`${familyQuestBoard.sharedPoints} family points ready`}
+            body="Complete quests, then turn the shared point bank into movie nights, dinner picks, or an extra game-night bonus."
+            className="family-panel"
+          >
+            <div className="mt-5 space-y-3">
+              {familyQuestBoard.rewards.slice(0, 2).map((reward) => (
+                <div key={reward.id} className="family-list-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="font-serif text-2xl">{reward.title}</h4>
+                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reward.detail}</p>
+                    </div>
+                    <span className="family-badge family-badge-gold">{reward.cost} pts</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => redeemFamilySharedReward(reward.id)}
+                    disabled={familyQuestBoard.sharedPoints < reward.cost}
+                    className="family-btn family-btn-secondary mt-4"
+                  >
+                    Unlock reward
+                  </button>
+                </div>
+              ))}
+            </div>
+          </InsightCard>
 
           <InsightCard
             kicker="Family wins"

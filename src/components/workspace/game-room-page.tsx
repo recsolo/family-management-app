@@ -2,17 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { createId, type ArcadeRun, type GameRoomState, type UnoCard, type UnoGame, type UnoPlayableColor } from "@/lib/familyflow";
+import { createId, type AppState, type ArcadeRun, type GameRoomState, type UnoCard, type UnoGame, type UnoPlayableColor } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
 
 type Props = {
   currentUserId: string;
   memberList: HouseholdMember[];
   gameRoom: GameRoomState;
+  familyQuestBoard: AppState["familyQuestBoard"];
   initialView?: GameView;
   onSelectArcadeMember: (memberId: string) => void;
   onSaveArcadeRun: (run: ArcadeRun) => void;
   onSaveUnoGame: (game: UnoGame | null) => void;
+  onRedeemFamilyReward: (rewardId: string) => void;
 };
 
 type GameView = "arcade" | "uno";
@@ -514,10 +516,12 @@ export function GameRoomPage({
   currentUserId,
   memberList,
   gameRoom,
+  familyQuestBoard,
   initialView = "arcade",
   onSelectArcadeMember,
   onSaveArcadeRun,
   onSaveUnoGame,
+  onRedeemFamilyReward,
 }: Props) {
   const [activeView, setActiveView] = useState<GameView>(initialView);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(() => {
@@ -554,6 +558,8 @@ export function GameRoomPage({
   );
   const currentUnoPlayer = activeUnoGame?.players[activeUnoGame.currentPlayerIndex] ?? null;
   const currentUnoHand = currentUnoPlayer?.hand ?? [];
+  const activeQuests = familyQuestBoard.quests.slice(0, 3);
+  const recentUnoWinners = gameRoom.unoWins.slice(0, 3);
 
   useEffect(() => {
     const nextLastRun = arcadeLeaderboard[0] ?? arcadeStateRef.current.lastRun;
@@ -1146,6 +1152,17 @@ export function GameRoomPage({
                 )
               ) : (
                 <>
+                  {recentUnoWinners.length > 0 ? (
+                    recentUnoWinners.map((win) => (
+                      <div key={win.id} className="family-game-leaderboard-row">
+                        <div>
+                          <p className="font-semibold text-stone-900">{win.winnerName}</p>
+                          <p className="mt-1 text-sm text-[var(--muted)]">Won a round on {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(win.playedAt))}</p>
+                        </div>
+                        <span className="family-badge family-badge-accent">UNO</span>
+                      </div>
+                    ))
+                  ) : null}
                   <div className="family-game-leaderboard-row">
                     <div>
                       <p className="font-semibold text-stone-900">Match color or symbol</p>
@@ -1158,23 +1175,52 @@ export function GameRoomPage({
                       <p className="mt-1 text-sm text-[var(--muted)]">The screen always shows the current player. Hand the device over each turn.</p>
                     </div>
                   </div>
-                  <div className="family-game-leaderboard-row">
-                    <div>
-                      <p className="font-semibold text-stone-900">Wild cards need a color</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">After tapping Wild or Wild +4, choose the next table color.</p>
-                    </div>
-                  </div>
                 </>
               )}
             </div>
           </article>
 
           <article className="family-card family-card-dark rounded-[28px] p-6">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best for families</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight text-white">Short rounds. Big laughs.</h3>
-            <p className="mt-4 text-sm leading-7 text-stone-200">
-              Keep this room playful. The arcade game is fast enough for quick turns, and UNO gives everyone something familiar to share.
-            </p>
+            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Family quests</p>
+            <h3 className="mt-4 font-serif text-4xl leading-tight text-white">{familyQuestBoard.sharedPoints} shared points in the bank.</h3>
+            <div className="mt-5 space-y-3">
+              {activeQuests.map((quest) => (
+                <div key={quest.id} className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-white">{quest.title}</p>
+                      <p className="mt-2 text-sm leading-7 text-stone-200">{quest.detail}</p>
+                    </div>
+                    <span className="family-badge family-badge-gold">{quest.progress}/{quest.target}</span>
+                  </div>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(241,214,136,0.9)]">
+                    {quest.completedAt ? `${quest.rewardTitle} unlocked` : `${quest.rewardPoints} shared points`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="family-panel rounded-[28px] p-6">
+            <p className="family-kicker family-eyebrow">Shared reward shelf</p>
+            <div className="mt-4 space-y-3">
+              {familyQuestBoard.rewards.slice(0, 3).map((reward) => (
+                <div key={reward.id} className="family-game-leaderboard-row">
+                  <div>
+                    <p className="font-semibold text-stone-900">{reward.title}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{reward.detail}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onRedeemFamilyReward(reward.id)}
+                    disabled={familyQuestBoard.sharedPoints < reward.cost}
+                    className="family-btn family-btn-secondary"
+                  >
+                    {reward.cost} pts
+                  </button>
+                </div>
+              ))}
+            </div>
           </article>
         </aside>
       </div>
