@@ -208,6 +208,25 @@ export type FamilyQuest = {
   completedAt: string | null;
 };
 
+export type FamilyQuestCompletion = {
+  id: string;
+  questId: string;
+  title: string;
+  cadence: FamilyQuestCadence;
+  rewardPoints: number;
+  rewardTitle: string;
+  completedAt: string;
+  windowKey: string;
+};
+
+export type FamilyQuestMedal = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "gold" | "silver" | "bronze";
+  earnedAt: string;
+};
+
 export type FamilySharedReward = {
   id: string;
   title: string;
@@ -221,7 +240,12 @@ export type FamilySharedReward = {
 export type FamilyQuestBoard = {
   sharedPoints: number;
   lifetimeSharedPoints: number;
+  completedQuestCount: number;
+  currentStreak: number;
+  longestStreak: number;
   quests: FamilyQuest[];
+  recentCompletions: FamilyQuestCompletion[];
+  medals: FamilyQuestMedal[];
   rewards: FamilySharedReward[];
 };
 
@@ -601,7 +625,12 @@ export const DEFAULT_STATE: AppState = {
   familyQuestBoard: {
     sharedPoints: 0,
     lifetimeSharedPoints: 0,
+    completedQuestCount: 0,
+    currentStreak: 0,
+    longestStreak: 0,
     quests: [],
+    recentCompletions: [],
+    medals: [],
     rewards: [],
   },
   gameRoom: {
@@ -744,6 +773,50 @@ function sanitizeFamilyQuest(value: unknown): FamilyQuest | null {
     rewardTitle: toTrimmedString(value.rewardTitle, "Shared bonus"),
     windowKey: toTrimmedString(value.windowKey, getQuestWindowKey(cadence)),
     completedAt: typeof value.completedAt === "string" && value.completedAt ? value.completedAt : null,
+  };
+}
+
+function sanitizeFamilyQuestCompletion(value: unknown): FamilyQuestCompletion | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const questId = toTrimmedString(value.questId);
+  const title = toTrimmedString(value.title);
+  const completedAt = toTrimmedString(value.completedAt);
+  if (!questId || !title || !completedAt) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("quest-completion")),
+    questId,
+    title,
+    cadence: value.cadence === "weekly" ? "weekly" : "daily",
+    rewardPoints: clampNumber(value.rewardPoints, 10, 1, 1000),
+    rewardTitle: toTrimmedString(value.rewardTitle, "Shared bonus"),
+    completedAt,
+    windowKey: toTrimmedString(value.windowKey, ""),
+  };
+}
+
+function sanitizeFamilyQuestMedal(value: unknown): FamilyQuestMedal | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = toTrimmedString(value.title);
+  const earnedAt = toTrimmedString(value.earnedAt);
+  if (!title || !earnedAt) {
+    return null;
+  }
+
+  return {
+    id: toTrimmedString(value.id, createId("quest-medal")),
+    title,
+    detail: toTrimmedString(value.detail),
+    tone: value.tone === "silver" || value.tone === "bronze" ? value.tone : "gold",
+    earnedAt,
   };
 }
 
@@ -1204,17 +1277,31 @@ function sanitizeFamilyQuestBoard(value: unknown): FamilyQuestBoard {
     return {
       sharedPoints: 0,
       lifetimeSharedPoints: 0,
+      completedQuestCount: 0,
+      currentStreak: 0,
+      longestStreak: 0,
       quests: [],
+      recentCompletions: [],
+      medals: [],
       rewards: createDefaultFamilyRewards(),
     };
   }
 
   const rewards = Array.isArray(value.rewards) ? value.rewards.map(sanitizeFamilyReward).filter(isDefined) : createDefaultFamilyRewards();
+  const recentCompletions = Array.isArray(value.recentCompletions)
+    ? value.recentCompletions.map(sanitizeFamilyQuestCompletion).filter(isDefined).slice(0, 30)
+    : [];
+  const medals = Array.isArray(value.medals) ? value.medals.map(sanitizeFamilyQuestMedal).filter(isDefined).slice(0, 12) : [];
 
   return {
     sharedPoints: clampNumber(value.sharedPoints, 0, 0, 100000),
     lifetimeSharedPoints: clampNumber(value.lifetimeSharedPoints, 0, 0, 100000),
+    completedQuestCount: clampNumber(value.completedQuestCount, recentCompletions.length, 0, 100000),
+    currentStreak: clampNumber(value.currentStreak, 0, 0, 3650),
+    longestStreak: clampNumber(value.longestStreak, 0, 0, 3650),
     quests: Array.isArray(value.quests) ? value.quests.map(sanitizeFamilyQuest).filter(isDefined) : [],
+    recentCompletions,
+    medals,
     rewards: rewards.length > 0 ? rewards : createDefaultFamilyRewards(),
   };
 }
@@ -1427,6 +1514,9 @@ export function createDefaultFamilyQuestBoard(date = new Date()): FamilyQuestBoa
   return {
     sharedPoints: 0,
     lifetimeSharedPoints: 0,
+    completedQuestCount: 0,
+    currentStreak: 0,
+    longestStreak: 0,
     quests: FAMILY_QUEST_TEMPLATES.map((quest) => ({
       ...quest,
       source: "default" as const,
@@ -1434,6 +1524,8 @@ export function createDefaultFamilyQuestBoard(date = new Date()): FamilyQuestBoa
       windowKey: getQuestWindowKey(quest.cadence, date),
       completedAt: null,
     })),
+    recentCompletions: [],
+    medals: [],
     rewards: createDefaultFamilyRewards(),
   };
 }
@@ -1556,7 +1648,12 @@ export function recalculateFamilyQuestBoard(
   return {
     sharedPoints,
     lifetimeSharedPoints,
+    completedQuestCount: sanitizedBoard.completedQuestCount,
+    currentStreak: sanitizedBoard.currentStreak,
+    longestStreak: sanitizedBoard.longestStreak,
     quests,
+    recentCompletions: sanitizedBoard.recentCompletions,
+    medals: sanitizedBoard.medals,
     rewards: sanitizedBoard.rewards.length > 0 ? sanitizedBoard.rewards : defaults.rewards,
   };
 }

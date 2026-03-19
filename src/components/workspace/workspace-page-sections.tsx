@@ -188,6 +188,45 @@ function EmptyState({ children, className }: EmptyStateProps) {
   return <div className={`family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)] ${className ?? ""}`}>{children}</div>;
 }
 
+function QuestMedalShelf({ board }: { board: AppState["familyQuestBoard"] }) {
+  return (
+    <div className="mt-5 space-y-3">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="family-list-card">
+          <p className="family-kicker family-eyebrow">Quest streak</p>
+          <p className="mt-3 font-serif text-3xl text-stone-900">{board.currentStreak} days</p>
+        </div>
+        <div className="family-list-card">
+          <p className="family-kicker family-eyebrow">Best streak</p>
+          <p className="mt-3 font-serif text-3xl text-stone-900">{board.longestStreak} days</p>
+        </div>
+        <div className="family-list-card">
+          <p className="family-kicker family-eyebrow">Quest wins</p>
+          <p className="mt-3 font-serif text-3xl text-stone-900">{board.completedQuestCount}</p>
+        </div>
+      </div>
+      {board.medals.length > 0 ? (
+        <div className="rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
+          <p className="family-kicker family-eyebrow">Medal shelf</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {board.medals.slice(0, 4).map((medal) => (
+              <span
+                key={medal.id}
+                className={`family-badge ${
+                  medal.tone === "gold" ? "family-badge-gold" : medal.tone === "silver" ? "family-badge-accent" : "family-badge-warm"
+                }`}
+                title={medal.detail}
+              >
+                {medal.title}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatNotificationTime(value: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -451,6 +490,7 @@ function DashboardPage({
               </p>
             </div>
           ) : null}
+          <QuestMedalShelf board={familyQuestBoard} />
           <button type="button" onClick={() => goToTab("games")} className="family-btn family-btn-secondary mt-5">
             Open Game Room
           </button>
@@ -1591,6 +1631,7 @@ function FamilyPage({
                 </div>
               ))}
             </div>
+            <QuestMedalShelf board={familyQuestBoard} />
           </InsightCard>
 
           <DisclosurePanel

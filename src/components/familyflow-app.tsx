@@ -58,6 +58,43 @@ type Props = {
   memberProfileId?: string;
 };
 
+const QUEST_MEDAL_RULES = [
+  {
+    id: "quest-medal-first-win",
+    title: "First Spark",
+    detail: "Complete the first family quest.",
+    tone: "bronze" as const,
+    matches: (board: AppState["familyQuestBoard"]) => board.completedQuestCount >= 1,
+  },
+  {
+    id: "quest-medal-streak-3",
+    title: "On a Roll",
+    detail: "Hit a 3-day quest streak.",
+    tone: "silver" as const,
+    matches: (board: AppState["familyQuestBoard"]) => board.currentStreak >= 3,
+  },
+  {
+    id: "quest-medal-streak-7",
+    title: "Family Fire",
+    detail: "Hit a 7-day quest streak.",
+    tone: "gold" as const,
+    matches: (board: AppState["familyQuestBoard"]) => board.currentStreak >= 7,
+  },
+  {
+    id: "quest-medal-points-200",
+    title: "Treasure Chest",
+    detail: "Bank 200 lifetime shared quest points.",
+    tone: "gold" as const,
+    matches: (board: AppState["familyQuestBoard"]) => board.lifetimeSharedPoints >= 200,
+  },
+] satisfies Array<{
+  id: string;
+  title: string;
+  detail: string;
+  tone: "gold" | "silver" | "bronze";
+  matches: (board: AppState["familyQuestBoard"]) => boolean;
+}>;
+
 export function FamilyFlowApp({
   activeTab,
   currentUserId,
@@ -113,6 +150,68 @@ export function FamilyFlowApp({
   const reminderInboxSyncRef = useRef(false);
   const reminderEmailSyncRef = useRef(false);
 
+  function getQuestDayKey(value: string) {
+    return value.slice(0, 10);
+  }
+
+  function computeQuestStreak(completions: AppState["familyQuestBoard"]["recentCompletions"]) {
+    const uniqueDays = Array.from(
+      new Set(
+        completions
+          .map((completion) => getQuestDayKey(completion.completedAt))
+          .filter(Boolean),
+      ),
+    ).sort((left, right) => right.localeCompare(left));
+
+    if (uniqueDays.length === 0) {
+      return { current: 0, longest: 0 };
+    }
+
+    let current = 1;
+    for (let index = 1; index < uniqueDays.length; index += 1) {
+      const previous = new Date(`${uniqueDays[index - 1]}T12:00:00`);
+      const next = new Date(`${uniqueDays[index]}T12:00:00`);
+      const diffDays = Math.round((previous.getTime() - next.getTime()) / (24 * 60 * 60 * 1000));
+      if (diffDays !== 1) {
+        break;
+      }
+      current += 1;
+    }
+
+    let longest = 1;
+    let running = 1;
+    for (let index = 1; index < uniqueDays.length; index += 1) {
+      const previous = new Date(`${uniqueDays[index - 1]}T12:00:00`);
+      const next = new Date(`${uniqueDays[index]}T12:00:00`);
+      const diffDays = Math.round((previous.getTime() - next.getTime()) / (24 * 60 * 60 * 1000));
+
+      if (diffDays === 1) {
+        running += 1;
+        longest = Math.max(longest, running);
+      } else {
+        running = 1;
+      }
+    }
+
+    return { current, longest };
+  }
+
+  function awardQuestMedals(board: AppState["familyQuestBoard"], earnedAt: string) {
+    const medalIds = new Set(board.medals.map((medal) => medal.id));
+    const newMedals = QUEST_MEDAL_RULES.filter((rule) => rule.matches(board) && !medalIds.has(rule.id)).map((rule) => ({
+      id: rule.id,
+      title: rule.title,
+      detail: rule.detail,
+      tone: rule.tone,
+      earnedAt,
+    }));
+
+    return {
+      board: newMedals.length > 0 ? { ...board, medals: [...newMedals, ...board.medals].slice(0, 12) } : board,
+      newMedals,
+    };
+  }
+
   function refreshQuestBoard(nextState: AppState) {
     return {
       ...nextState,
@@ -134,6 +233,30 @@ export function FamilyFlowApp({
       return nextState;
     }
 
+    const earnedAt = newlyCompletedQuests[0]?.completedAt ?? new Date().toISOString();
+    const recentCompletions = [
+      ...newlyCompletedQuests.map((quest) => ({
+        id: createId("quest-completion"),
+        questId: quest.id,
+        title: quest.title,
+        cadence: quest.cadence,
+        rewardPoints: quest.rewardPoints,
+        rewardTitle: quest.rewardTitle,
+        completedAt: quest.completedAt ?? earnedAt,
+        windowKey: quest.windowKey,
+      })),
+      ...nextState.familyQuestBoard.recentCompletions,
+    ].slice(0, 30);
+    const streak = computeQuestStreak(recentCompletions);
+    const questBoardWithHistory = {
+      ...nextState.familyQuestBoard,
+      completedQuestCount: nextState.familyQuestBoard.completedQuestCount + newlyCompletedQuests.length,
+      currentStreak: streak.current,
+      longestStreak: Math.max(nextState.familyQuestBoard.longestStreak, streak.longest),
+      recentCompletions,
+    };
+    const { board: nextQuestBoard, newMedals } = awardQuestMedals(questBoardWithHistory, earnedAt);
+
     const nextAchievements = [
       ...newlyCompletedQuests.map((quest) => ({
         id: createId("achievement"),
@@ -145,27 +268,54 @@ export function FamilyFlowApp({
         createdAt: quest.completedAt ?? new Date().toISOString(),
         kind: "quest" as const,
       })),
+      ...newMedals.map((medal) => ({
+        id: createId("achievement"),
+        memberId: currentUserId,
+        memberName: userName,
+        title: `${medal.title} medal earned`,
+        detail: medal.detail,
+        points: 0,
+        createdAt: medal.earnedAt,
+        kind: "quest" as const,
+      })),
       ...nextState.familyAchievements,
     ].slice(0, 60);
 
-    const notifications = newlyCompletedQuests.flatMap((quest) =>
-      createNotifications(
-        memberList.filter((member) => member.id !== currentUserId).map((member) => member.id),
-        {
-          kind: "achievement",
-          title: `${quest.title} is complete`,
-          detail: `${quest.rewardTitle} unlocked and ${quest.rewardPoints} shared points were added.`,
-          link: getWorkspacePath("family"),
-          actorId: currentUserId,
-          actorName: userName,
-          createdAt: quest.completedAt ?? new Date().toISOString(),
-        },
+    const notifications = [
+      ...newlyCompletedQuests.flatMap((quest) =>
+        createNotifications(
+          memberList.filter((member) => member.id !== currentUserId).map((member) => member.id),
+          {
+            kind: "achievement",
+            title: `${quest.title} is complete`,
+            detail: `${quest.rewardTitle} unlocked and ${quest.rewardPoints} shared points were added.`,
+            link: getWorkspacePath("family"),
+            actorId: currentUserId,
+            actorName: userName,
+            createdAt: quest.completedAt ?? new Date().toISOString(),
+          },
+        ),
       ),
-    );
+      ...newMedals.flatMap((medal) =>
+        createNotifications(
+          memberList.filter((member) => member.id !== currentUserId).map((member) => member.id),
+          {
+            kind: "achievement",
+            title: `${medal.title} medal earned`,
+            detail: medal.detail,
+            link: getWorkspacePath("family"),
+            actorId: currentUserId,
+            actorName: userName,
+            createdAt: medal.earnedAt,
+          },
+        ),
+      ),
+    ];
 
     return appendNotifications(
       {
         ...nextState,
+        familyQuestBoard: nextQuestBoard,
         familyAchievements: nextAchievements,
       },
       notifications,
