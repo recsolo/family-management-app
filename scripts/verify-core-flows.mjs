@@ -12,6 +12,7 @@ const pantryIngredients = [`smoke-rice-${timestamp}`, `smoke-beans-${timestamp}`
 const profileGoalTitle = `Profile goal ${timestamp}`;
 const profileEventTitle = `Profile event ${timestamp}`;
 const profileKeepsakeTitle = `Keepsake ${timestamp}`;
+const reminderScheduledFor = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
 
 function getCountFromText(text) {
   const match = text.match(/(\d+)/);
@@ -71,9 +72,10 @@ async function main() {
     results.push({ step: "weather-route", ok: true });
 
     await navigateWithMenu(page, "Family Ops", "/family-ops");
+    await page.getByText("Keep setup hidden until you need it.", { exact: true }).click();
 
-    await page.getByLabel("New chore").fill(choreTitle);
-    await page.getByRole("button", { name: "Add to board" }).click();
+    await page.getByLabel("Job").fill(choreTitle);
+    await page.getByRole("button", { name: "Add chore" }).click();
     await page.getByText(choreTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "add-chore", ok: true });
 
@@ -84,8 +86,8 @@ async function main() {
     });
     results.push({ step: "toggle-chore", ok: true });
 
-    await page.getByLabel("Reminder").fill(reminderTitle);
-    await page.getByLabel("When").fill("Fri 7:45 AM");
+    await page.getByRole("textbox", { name: "Reminder", exact: true }).fill(reminderTitle);
+    await page.getByLabel("Date and time").fill(reminderScheduledFor);
     await page.getByRole("button", { name: "Save reminder" }).click();
     await page.getByText(reminderTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "add-reminder", ok: true });
@@ -108,6 +110,7 @@ async function main() {
     results.push({ step: "add-pantry-items", ok: true, before: pantryCountBefore });
 
     await navigateWithMenu(page, "Budget Lab", "/budget-lab");
+    await page.getByText("Set the family money plan.", { exact: true }).click();
     await page.getByLabel("Monthly take-home income").fill("6800");
     await page.getByLabel("Family size").fill("4");
     const incomeValue = await page.getByLabel("Monthly take-home income").inputValue();
@@ -129,6 +132,7 @@ async function main() {
     await page.getByText("Shared", { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "profile-goal-flow", ok: true });
 
+    await page.getByText("Track today's progress.", { exact: true }).click();
     await page.getByPlaceholder("Steps").fill("4200");
     await page.getByPlaceholder("Active minutes").fill("35");
     await page.getByPlaceholder("Water cups").fill("6");
@@ -136,11 +140,13 @@ async function main() {
     await page.getByRole("button", { name: /Save today's tracker/i }).click();
     results.push({ step: "profile-fitness-save", ok: true });
 
+    await page.getByText("Today and what comes next.", { exact: true }).click();
     await page.getByPlaceholder("New event").fill(profileEventTitle);
     await page.getByRole("button", { name: "Add event" }).click();
     await page.getByText(profileEventTitle, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
     results.push({ step: "profile-calendar-event", ok: true });
 
+    await page.getByText("Save photos and favorite items.", { exact: true }).click();
     await page.getByPlaceholder("Keepsake title").fill(profileKeepsakeTitle);
     await page.getByPlaceholder("Keepsake note").fill("Smoke test keepsake upload");
     await page.locator('input[type="file"]').nth(1).setInputFiles({
