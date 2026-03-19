@@ -100,6 +100,7 @@ type BuildWorkspaceShellDataArgs = {
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
   { value: "dashboard", label: "Today", detail: "Today at a glance" },
   { value: "games", label: "Game Room", detail: "Play together" },
+  { value: "help", label: "Help", detail: "How-to and answers" },
   { value: "inbox", label: "Family Inbox", detail: "Alerts and updates" },
   { value: "ops", label: "Family Ops", detail: "Chores and reminders" },
   { value: "meals", label: "Meal Planner", detail: "Pantry and recipes" },
@@ -123,6 +124,13 @@ export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
     description:
       "Game Room mixes a quick all-ages arcade challenge with a pass-and-play UNO table for the whole family.",
     spotlight: "Open this page when you want a break, a laugh, or a quick family challenge.",
+  },
+  help: {
+    eyebrow: "Need help?",
+    headline: "Learn the app and ask FamilyFlow questions.",
+    description:
+      "Help keeps the how-to guidance in one place, so the rest of the app can stay cleaner and more focused.",
+    spotlight: "Open this page when you want a how-to, a walkthrough, or a quick answer.",
   },
   inbox: {
     eyebrow: "Stay in the loop",
@@ -233,6 +241,13 @@ export function buildWorkspaceShellData({
           { label: "Top score", value: topArcadeRun ? topArcadeRun.score : "Ready" },
           { label: "UNO seats", value: activeUnoPlayers },
           { label: "Table state", value: state.gameRoom.uno ? state.gameRoom.uno.status : "Open" },
+        ];
+      case "help":
+        return [
+          { label: "Quick guides", value: 4 },
+          { label: "Prompt ideas", value: assistantSuggestions.length },
+          { label: "Unread alerts", value: unreadNotificationCount },
+          { label: "Members", value: memberList.length },
         ];
       case "ops":
         return [
@@ -348,6 +363,59 @@ export function buildWorkspaceShellData({
             topArcadeRun ? `Top arcade player: ${topArcadeRun.memberName}` : "No arcade leader yet.",
             state.gameRoom.uno ? `UNO players seated: ${activeUnoPlayers}` : "No UNO table has started yet.",
             state.gameRoom.uno ? `Current UNO color: ${state.gameRoom.uno.activeColor}` : "UNO is waiting for a fresh deal.",
+          ],
+        };
+      case "help":
+        return {
+          heroTone: "light",
+          heroClass: "family-panel family-surface-accent",
+          focusKicker: "Help desk",
+          focusTitle: "Keep the how-to guidance in one page.",
+          focusBody: "This page is the one place to learn the app, ask questions, and get guided answers from the assistant.",
+          focusNote: "The rest of the app can stay simpler because the explanations live here.",
+          featureClass: "family-card family-card-dark",
+          featureKicker: "Ask the AI",
+          featureTitle: "Get a quick how-to answer.",
+          featureBody: "Ask how invites, quests, rewards, chores, profiles, or private spaces work.",
+          featureMeta: `${assistantSuggestions.length} help prompts are ready to start with.`,
+          featureAction: {
+            label: "Open AI Studio",
+            onClick: () => actions.goToTab("ai"),
+            tone: "primary",
+          },
+          signalClass: "family-panel",
+          signalKicker: "Clean pages",
+          signalTitle: "Explanations now live here.",
+          signalBody: "Use this route when someone needs help learning the app or wants the AI to explain what to do next.",
+          signalTags: ["Invite family", "Points", "Quests", "Profiles"],
+          railLabel: "Help center",
+          railDescription: "This route is for learning and support, not planning or operations.",
+          railCards: [
+            {
+              kicker: "Best use",
+              title: "How-to questions",
+              body: "Ask where to invite people, how points work, or how to use a specific page.",
+              className: "family-card family-card-gold",
+            },
+            {
+              kicker: "AI support",
+              title: "Same family context",
+              body: "The assistant can answer with the real state of this household in mind.",
+              className: "family-card family-card-dark",
+            },
+            {
+              kicker: "Why this page exists",
+              title: "Keep the rest of the app cleaner",
+              body: "Putting explanations here means the other pages can focus on the task itself.",
+              className: "family-panel",
+            },
+          ],
+          contextTitle: "What helps the assistant teach the app well.",
+          contextItems: [
+            `Current household members: ${memberList.length}`,
+            `Unread inbox items: ${unreadNotificationCount}`,
+            `Prompt starters available: ${assistantSuggestions.length}`,
+            `Shared app context is still available to the assistant here.`,
           ],
         };
       case "ops":

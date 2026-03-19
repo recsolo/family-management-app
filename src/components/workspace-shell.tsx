@@ -9,7 +9,7 @@ import { FamilyFlowApp } from "@/components/familyflow-app";
 import { WorkspaceRecoveryPanel } from "@/components/workspace-recovery-panel";
 import type { AppState } from "@/lib/familyflow";
 import type { ActiveTab } from "@/lib/workspace-tabs";
-import { getWorkspacePath } from "@/lib/workspace-tabs";
+import { getMemberProfilePath, getWorkspacePath } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
 type WorkspaceResponse = {
@@ -88,7 +88,12 @@ export function WorkspaceShell({ activeTab, view = "default", memberProfileId, r
   if (status !== "authenticated") {
     return (
       <AuthPanel
-        onSuccess={() => {
+        onSuccess={(userId) => {
+          if (userId) {
+            router.replace(getMemberProfilePath(userId));
+            return;
+          }
+
           router.replace(redirectPath ?? getWorkspacePath(activeTab));
           router.refresh();
         }}

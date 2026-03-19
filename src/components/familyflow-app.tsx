@@ -10,7 +10,7 @@ import { MemberProfilePage } from "@/components/workspace/member-profile-page-co
 import { PartnerSpacePage } from "@/components/workspace/partner-space-page";
 import { WorkspacePageSections } from "@/components/workspace/workspace-page-sections";
 import { buildWorkspaceShellData } from "@/components/workspace/workspace-shell-data";
-import { WorkspaceHeroPanel, WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
+import { WorkspaceTopBar } from "@/components/workspace/workspace-shell-panels";
 import {
   type AppNotification,
   type ArcadeRun,
@@ -2363,7 +2363,7 @@ export function FamilyFlowApp({
     .filter((member): member is HouseholdMember => Boolean(member)) ?? [];
   const currentUserIsPartner = Boolean(state.partnerSpace?.memberIds.includes(currentUserId));
   const canConfigurePartnerSpace = role === "owner" || role === "admin";
-  const { navigation, activeMeta, activeNav, activeHeroStats, pageProfile } = buildWorkspaceShellData({
+  const { navigation, activeNav } = buildWorkspaceShellData({
     activeTab,
     state,
     memberList,
@@ -2399,12 +2399,8 @@ export function FamilyFlowApp({
       },
     },
   });
-  const topBarTitle =
-    view === "member-profile" && activeMember ? `${activeMember.name} profile` : activeMeta.headline;
-  const topBarDetail =
-    view === "member-profile" && activeMember
-      ? "Profile, calendar, weather, rewards, and direct messages."
-      : activeMeta.spotlight;
+  const topBarTitle = view === "member-profile" && activeMember ? `${activeMember.name} profile` : activeNav.label;
+  const topBarDetail = "";
 
   if (view === "member-profile" && (!activeMember || !activeProfile)) {
     return (
@@ -2522,7 +2518,7 @@ export function FamilyFlowApp({
               currentUserId={currentUserId}
               familyAchievements={state.familyAchievements}
               directMessages={activeDirectThread?.messages ?? []}
-              onBackToFamilyRoom={() => goToTab("family")}
+              onBackToFamilyRoom={() => goToTab(activeMember.id === currentUserId ? "dashboard" : "family")}
               onSendMessage={(content) => {
                 void sendDirectMessage(activeMember.id, content);
               }}
@@ -2574,15 +2570,6 @@ export function FamilyFlowApp({
             />
           ) : (
             <>
-              <WorkspaceHeroPanel
-                activeTab={activeTab}
-                aiTask={aiTask}
-                activeMeta={activeMeta}
-                activeNav={activeNav}
-                activeHeroStats={activeHeroStats}
-                pageProfile={pageProfile}
-              />
-
               {activeTab !== "partner" && activeTab !== "games" ? (
                 <section className="space-y-5">
                   <WorkspacePageSections

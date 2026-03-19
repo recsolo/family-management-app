@@ -119,7 +119,7 @@ export function WorkspaceTopBar({
       <div className="family-topbar__brand">
         <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
         <h1 className="mt-2 font-serif text-3xl leading-tight">{activeTitle}</h1>
-        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{activeDetail}</p>
+        {activeDetail ? <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{activeDetail}</p> : null}
       </div>
 
       <div className="family-topbar__actions">

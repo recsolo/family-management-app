@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { AuthPanel } from "@/components/auth-panel";
-import { getWorkspacePath } from "@/lib/workspace-tabs";
+import { getMemberProfilePath } from "@/lib/workspace-tabs";
 
 export default function Page() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(getWorkspacePath("dashboard"));
+    if (status === "authenticated" && session?.user?.id) {
+      router.replace(getMemberProfilePath(session.user.id));
     }
-  }, [router, status]);
+  }, [router, session?.user?.id, status]);
 
   if (status === "loading" || status === "authenticated") {
     return (
@@ -26,10 +26,7 @@ export default function Page() {
         <div className="mx-auto max-w-3xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
           <div className="family-panel rounded-[32px] p-8 md:p-10">
             <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
-            <h1 className="mt-4 font-serif text-5xl leading-tight">Opening your workspace...</h1>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
-              Taking you to the dashboard so each planning area has its own dedicated page.
-            </p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">Opening your profile...</h1>
           </div>
         </div>
       </main>
@@ -38,8 +35,12 @@ export default function Page() {
 
   return (
     <AuthPanel
-      onSuccess={() => {
-        router.replace(getWorkspacePath("dashboard"));
+      onSuccess={(userId) => {
+        if (userId) {
+          router.replace(getMemberProfilePath(userId));
+          return;
+        }
+
         router.refresh();
       }}
     />

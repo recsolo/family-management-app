@@ -1,6 +1,7 @@
 export const WORKSPACE_TAB_ROUTES = {
   dashboard: "/dashboard",
   games: "/game-room",
+  help: "/help-center",
   inbox: "/family-inbox",
   ops: "/family-ops",
   meals: "/meal-planner",
@@ -25,6 +26,8 @@ export function getActiveTabFromSegment(segment: string | null | undefined): Act
       return "dashboard";
     case "game-room":
       return "games";
+    case "help-center":
+      return "help";
     case "family-inbox":
       return "inbox";
     case "family-ops":

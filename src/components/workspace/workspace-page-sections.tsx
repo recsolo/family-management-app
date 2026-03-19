@@ -243,6 +243,8 @@ function formatNotificationTime(value: string) {
 
 export function WorkspacePageSections(props: WorkspacePageSectionsProps) {
   switch (props.activeTab) {
+    case "help":
+      return <HelpPage {...props} />;
     case "inbox":
       return <InboxPage {...props} />;
     case "ops":
@@ -261,12 +263,109 @@ export function WorkspacePageSections(props: WorkspacePageSectionsProps) {
   }
 }
 
+function HelpPage({
+  state,
+  chatInput,
+  setChatInput,
+  handleAssistantPrompt,
+  aiTask,
+  openAiChatFocus,
+}: PageProps) {
+  const helpPrompts = [
+    "How do I invite someone into my family?",
+    "How do points, rewards, and quests work?",
+    "How do I use Partner Space?",
+    "How do I open my profile and update it?",
+  ];
+
+  return (
+    <div className="space-y-5">
+      <article className="family-route-shell family-route-shell--family family-animate-rise rounded-[34px] p-6 md:p-8">
+        <div className="family-route-shell__header">
+          <div>
+            <p className="family-kicker family-eyebrow">Help</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Learn the app here.</h3>
+          </div>
+          <div className="family-route-chip">Help</div>
+        </div>
+      </article>
+
+      <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-5">
+          <InsightCard
+            kicker="Quick guide"
+            title="Where the main things live."
+            body="Use this page when you need a fast answer."
+            className="family-panel"
+          >
+            <div className="mt-5 grid gap-3">
+              <div className="family-list-card">
+                <h4 className="font-serif text-2xl">Today</h4>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Main page with family check, inbox, loop, and quests.</p>
+              </div>
+              <div className="family-list-card">
+                <h4 className="font-serif text-2xl">Profiles</h4>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Each family member gets goals, fitness, rewards, calendar, weather, and keepsakes.</p>
+              </div>
+              <div className="family-list-card">
+                <h4 className="font-serif text-2xl">Family Room</h4>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Invite people, manage members, and open profiles.</p>
+              </div>
+              <div className="family-list-card">
+                <h4 className="font-serif text-2xl">Partner Space</h4>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Private chat, date night plans, private rewards, and shared milestones.</p>
+              </div>
+            </div>
+          </InsightCard>
+
+          <DisclosurePanel
+            kicker="Popular how-tos"
+            title="Tap a question and let the AI answer."
+            summary="These prompts are just quick starts."
+            badge={`${helpPrompts.length} prompts`}
+            defaultOpen
+            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
+          >
+            <div className="grid gap-3">
+              {helpPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handleAssistantPrompt(prompt)}
+                  className="family-btn family-btn-soft justify-start rounded-[20px] px-4 py-4 text-left text-sm font-medium"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </DisclosurePanel>
+
+          <InsightCard
+            kicker="Live household context"
+            title={`${state.memberProfiles.length} profiles and ${state.notifications.length} notifications are ready.`}
+            body="The helper AI can answer using this family's real app data."
+            className="family-card family-card-dark"
+          />
+        </div>
+
+        <AssistantChatPanel
+          history={state.assistantHistory}
+          chatInput={chatInput}
+          onChatInputChange={(value) => setChatInput(value)}
+          onSubmitPrompt={handleAssistantPrompt}
+          aiTask={aiTask}
+          assistantSuggestions={helpPrompts}
+          onOpenFocus={openAiChatFocus}
+        />
+      </div>
+    </div>
+  );
+}
+
 function DashboardPage({
   state,
-  bestRecipe,
   memberList,
   completedChores,
-  openChores,
   currentUserNotifications,
   unreadNotificationCount,
   familyQuestBoard,
@@ -274,10 +373,8 @@ function DashboardPage({
   toggleChore,
 }: PageProps) {
   const todayKey = getTodayKey();
-  const firstReminder = state.reminders[0];
-  const firstRoutine = state.routines[0];
-  const dinnerLead = state.latestMealPlan?.meals[0];
   const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
+  const openTodayChores = todayChores.filter((chore) => !chore.done);
   const latestCompletedQuest = familyQuestBoard.quests
     .filter((quest) => quest.completedAt)
     .slice()
@@ -285,6 +382,7 @@ function DashboardPage({
   const focusReminders = state.reminders
     .filter((reminder) => getReminderStatus(reminder, new Date()) === "due" || getReminderStatus(reminder, new Date()) === "scheduled")
     .slice(0, 3);
+  const latestNotifications = currentUserNotifications.slice(0, 4);
   const todaysEvents = state.memberProfiles.flatMap((profile) =>
     profile.calendarEvents
       .filter((event) => event.date === todayKey)
@@ -295,19 +393,19 @@ function DashboardPage({
   );
   const dashboardMetrics: RouteMetric[] = [
     {
-      label: "Dinner tonight",
-      value: dinnerLead?.recipe ?? bestRecipe?.name ?? "Still deciding",
-      note: dinnerLead ? dinnerLead.whyItFits : bestRecipe ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients already line up.` : "Add pantry staples to unlock smarter dinner guidance.",
+      label: "Open chores",
+      value: `${openTodayChores.length}`,
+      note: openTodayChores[0] ? `${openTodayChores[0].title} is next.` : "No open chores are waiting right now.",
     },
     {
       label: "Today's events",
       value: `${todaysEvents.length}`,
-      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "Member appointments show up here on the day they happen.",
+      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "No calendar events are due today yet.",
     },
     {
-      label: "Household load",
-      value: `${todayChores.filter((chore) => !chore.done).length} chores`,
-      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} are on deck.`,
+      label: "In the loop",
+      value: `${focusReminders.length}`,
+      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} are active today.`,
     },
   ];
 
@@ -317,153 +415,121 @@ function DashboardPage({
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">Today&apos;s family check</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">See what&apos;s next today.</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">See the day fast.</h3>
           </div>
           <div className="family-route-chip">Today</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Keep this page focused on today: dinner, chores, reminders, and appointments that need attention right now.
-        </p>
         <div className="mt-6">
           <RouteMetricStrip items={dashboardMetrics} />
         </div>
       </article>
 
-      <div className="grid gap-5 2xl:grid-cols-[1.04fr_0.96fr]">
-        <InsightCard
-          kicker="Tonight's dinner signal"
-          title={dinnerLead?.recipe ?? bestRecipe?.name ?? "Set the pantry stage"}
-          body={
-            dinnerLead
-              ? `${dinnerLead.day} is already mapped with a dinner choice, so you can move straight into prep instead of debating what to cook.`
-              : bestRecipe
-                ? `${bestRecipe.name} is the strongest current match based on what is already in the house. This makes dinner planning feel like a decision desk instead of a guess.`
-                : "Add pantry items so the meal planner can stop guessing and start suggesting dinner from what the family actually has."
-          }
-          className="family-card family-card-dark family-grid-lines"
-        >
-          {dinnerLead ? (
-            <div className="mt-5 rounded-[22px] border border-white/10 bg-white/10 p-4 text-sm leading-7 text-stone-100">
-              {dinnerLead.whyItFits}
-            </div>
-          ) : bestRecipe ? (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {bestRecipe.ingredients.map((ingredient) => (
-                <span key={ingredient} className="family-badge bg-white/10 text-stone-100">
-                  {ingredient}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </InsightCard>
-
+      <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <DisclosurePanel
-          kicker="Appointments for today"
-          title="Know who needs to be where."
-          summary="Tap to open the day schedule without keeping it on screen all the time."
-          badge={`${todaysEvents.length} today`}
+          kicker="Family Inbox"
+          title={unreadNotificationCount > 0 ? `${unreadNotificationCount} new` : "All clear"}
+          summary="Open the latest alerts."
+          badge={`${latestNotifications.length} shown`}
+          defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
         >
           <div className="space-y-3">
-            {todaysEvents.length > 0 ? (
-              todaysEvents.slice(0, 4).map((event) => (
-                <div key={`${event.memberName}-${event.id}`} className="family-list-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-serif text-2xl">{event.title}</h4>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                        {event.memberName}
-                        {event.time ? ` / ${event.time}` : ""}
-                      </p>
-                    </div>
-                    <span className="family-badge family-badge-accent">Today</span>
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{event.detail || "Open the member profile for more details."}</p>
-                </div>
-              ))
-            ) : (
-              <EmptyState>No appointments are on the calendar for today yet.</EmptyState>
-            )}
-          </div>
-        </DisclosurePanel>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
-        <DisclosurePanel
-          kicker="Chore board"
-          title={`${completedChores}/${todayChores.length} done today`}
-          summary="Open the chore list when you want to clear jobs, then tuck it away again."
-          badge={`${todayChores.filter((chore) => !chore.done).length} open`}
-          defaultOpen
-          className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
-        >
-          <div className="space-y-3">
-            {todayChores.length > 0 ? (
-              todayChores.slice(0, 4).map((chore) => (
+            {latestNotifications.length > 0 ? (
+              latestNotifications.map((notification) => (
                 <button
-                  key={chore.id}
+                  key={notification.id}
                   type="button"
-                  onClick={() => toggleChore(chore.id)}
-                  className={`family-list-card w-full text-left ${chore.done ? "family-list-card-done" : ""}`}
+                  onClick={() => goToTab("inbox")}
+                  className={`family-list-card w-full text-left ${notification.readAt ? "" : "family-list-card-done"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h4 className="font-serif text-2xl">{chore.title}</h4>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                        {chore.assignee} / {getChoreCadenceLabel(chore)}
-                      </p>
+                      <h4 className="font-serif text-2xl">{notification.title}</h4>
+                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{notification.detail}</p>
                     </div>
-                    <span className={`family-badge ${chore.done ? "family-badge-accent" : "family-badge-gold"}`}>
-                      {chore.done ? "Done" : "Open"}
+                    <span className={`family-badge ${notification.readAt ? "family-badge-warm" : "family-badge-accent"}`}>
+                      {notification.readAt ? "Seen" : "New"}
                     </span>
                   </div>
                 </button>
               ))
             ) : (
-              <EmptyState>Add the first chore to start building a visible shared completion board.</EmptyState>
+              <EmptyState>No alerts are waiting right now.</EmptyState>
             )}
           </div>
         </DisclosurePanel>
 
-        <div className="grid gap-5">
-          <InsightCard
-            kicker="Coming up"
-            title={focusReminders[0] ? focusReminders[0].title : firstReminder ? firstReminder.title : "No reminder queued"}
-            body={
-              focusReminders[0]
-                ? `${formatReminderWhen(focusReminders[0])} for ${focusReminders[0].audience}.`
-                : firstReminder
-                  ? `${formatReminderWhen(firstReminder)} for ${firstReminder.audience}.`
-                  : "Capture school items, pickup timing, or household resets so they do not disappear into memory."
-            }
-            className="family-panel family-surface-warm"
-          />
-
-          <InsightCard
-            kicker="Today's rhythm"
-            title={firstRoutine ? firstRoutine.name : "No shared routine yet"}
-            body={
-              firstRoutine
-                ? `${firstRoutine.timeWindow}. ${firstRoutine.items.join(", ")}.`
-                : "Add a repeatable routine so the household has a steady rhythm for mornings, after-school, or evenings."
-            }
-            className="family-card family-card-soft"
-          >
-            <button type="button" onClick={() => goToTab("meals")} className="family-btn family-btn-secondary mt-5">
-              Open Meal Planner
-            </button>
-          </InsightCard>
-        </div>
+        <DisclosurePanel
+          kicker="Family in the loop"
+          title="What the family needs today."
+          summary="Open today's appointments, reminders, and chores."
+          badge={`${todaysEvents.length + focusReminders.length + openTodayChores.length} items`}
+          defaultOpen
+          className="family-panel rounded-[28px] p-5 md:p-6"
+        >
+          <div className="space-y-3">
+            {todaysEvents.slice(0, 2).map((event) => (
+              <div key={`${event.memberName}-${event.id}`} className="family-list-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-serif text-2xl">{event.title}</h4>
+                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                      {event.memberName}
+                      {event.time ? ` / ${event.time}` : ""}
+                    </p>
+                  </div>
+                  <span className="family-badge family-badge-accent">Event</span>
+                </div>
+              </div>
+            ))}
+            {focusReminders.slice(0, 2).map((reminder) => (
+              <div key={reminder.id} className="family-list-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-serif text-2xl">{reminder.title}</h4>
+                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                      {formatReminderWhen(reminder)} / {reminder.audience}
+                    </p>
+                  </div>
+                  <span className="family-badge family-badge-gold">Reminder</span>
+                </div>
+              </div>
+            ))}
+            {openTodayChores.slice(0, 2).map((chore) => (
+              <button
+                key={chore.id}
+                type="button"
+                onClick={() => toggleChore(chore.id)}
+                className="family-list-card w-full text-left"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-serif text-2xl">{chore.title}</h4>
+                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                      {chore.assignee} / {getChoreCadenceLabel(chore)}
+                    </p>
+                  </div>
+                  <span className="family-badge family-badge-warm">Chore</span>
+                </div>
+              </button>
+            ))}
+            {todaysEvents.length === 0 && focusReminders.length === 0 && openTodayChores.length === 0 ? (
+              <EmptyState>Nothing urgent is waiting today.</EmptyState>
+            ) : null}
+          </div>
+        </DisclosurePanel>
       </div>
 
-      <div className="grid gap-5">
-        <InsightCard
-          kicker="Family quest board"
-          title={`${familyQuestBoard.sharedPoints} shared points ready`}
-          body="Daily and weekly quests turn chores, goals, and game time into one team reward loop."
-          className="family-panel"
+      <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+        <DisclosurePanel
+          kicker="Quest board"
+          title={`${familyQuestBoard.sharedPoints} shared points`}
+          summary="Open the active quests and the latest unlock."
+          badge={`${familyQuestBoard.quests.length} quests`}
+          defaultOpen
+          className="family-panel rounded-[28px] p-5 md:p-6"
         >
-          <div className="mt-5 space-y-3">
+          <div className="space-y-3">
             {familyQuestBoard.quests.slice(0, 3).map((quest) => (
               <div key={quest.id} className="family-list-card">
                 <div className="flex items-start justify-between gap-3">
@@ -485,46 +551,46 @@ function DashboardPage({
             <div className="mt-5 rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
               <p className="family-kicker family-eyebrow">Latest unlock</p>
               <p className="mt-3 font-serif text-2xl text-stone-900">{latestCompletedQuest.rewardTitle}</p>
-              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                {latestCompletedQuest.title} just finished, so the family bank grew by {latestCompletedQuest.rewardPoints} points.
-              </p>
             </div>
           ) : null}
           <QuestMedalShelf board={familyQuestBoard} />
-          <button type="button" onClick={() => goToTab("games")} className="family-btn family-btn-secondary mt-5">
-            Open Game Room
-          </button>
-        </InsightCard>
+        </DisclosurePanel>
 
-        <InsightCard
-          kicker="Family in the loop"
-          title={`${memberList.length} people are connected.`}
-          body="Profiles, private chats, and the family room all work better when everyone has their own place in the app."
-          className="family-panel"
+        <DisclosurePanel
+          kicker="Today's family check"
+          title={`${completedChores}/${todayChores.length} chores done`}
+          summary="Open the day board."
+          badge={`${memberList.length} members`}
+          defaultOpen
+          className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
         >
-          <div className="mt-5 flex flex-wrap gap-2">
-            {memberList.slice(0, 6).map((member) => (
-              <span key={member.id} className="family-badge family-badge-accent">
-                {member.name}
-              </span>
-            ))}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Open chores</p>
+              <p className="mt-3 font-serif text-3xl">{openTodayChores.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Today's events</p>
+              <p className="mt-3 font-serif text-3xl">{todaysEvents.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Reminders</p>
+              <p className="mt-3 font-serif text-3xl">{focusReminders.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Inbox</p>
+              <p className="mt-3 font-serif text-3xl">{unreadNotificationCount}</p>
+            </div>
           </div>
-        </InsightCard>
-
-        <InsightCard
-          kicker="Family Inbox"
-          title={unreadNotificationCount > 0 ? `${unreadNotificationCount} fresh alert${unreadNotificationCount === 1 ? "" : "s"}` : "Inbox is calm"}
-          body={
-            currentUserNotifications[0]
-              ? `${currentUserNotifications[0].title}. ${currentUserNotifications[0].detail}`
-              : "New messages, reminders, and shared wins will show up here first."
-          }
-          className="family-card family-card-gold"
-        >
-          <button type="button" onClick={() => goToTab("inbox")} className="family-btn family-btn-secondary mt-5">
-            Open inbox
-          </button>
-        </InsightCard>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="button" onClick={() => goToTab("inbox")} className="family-btn family-btn-secondary">
+              Open inbox
+            </button>
+            <button type="button" onClick={() => goToTab("family")} className="family-btn family-btn-soft">
+              Open family room
+            </button>
+          </div>
+        </DisclosurePanel>
       </div>
     </div>
   );
@@ -551,9 +617,6 @@ function InboxPage({
           </div>
           <div className="family-route-chip">Inbox</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Messages, reminders, partner nudges, and shared wins all land here so the next thing to do is easy to spot.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
           <RouteMetricStrip
             items={[
@@ -564,9 +627,6 @@ function InboxPage({
           />
           <div className="family-route-notice family-route-notice--gold">
             <p className="family-kicker family-eyebrow">Quick action</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Open an alert to jump straight to the right page, or mark items read when you already handled them.
-            </p>
             <button type="button" onClick={markAllNotificationsRead} className="family-btn family-btn-primary mt-4">
               Mark all read
             </button>
@@ -707,9 +767,6 @@ function OperationsPage({
           </div>
           <div className="family-route-chip family-route-chip--dark">Family Ops</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          This page now stays focused on today: what is due, what is late, and what needs to be added.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <RouteMetricStrip
             tone="dark"
@@ -721,9 +778,7 @@ function OperationsPage({
           />
           <div className="family-route-notice family-route-notice--gold">
             <p className="family-kicker family-eyebrow">Simple flow</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Keep the forms tucked away, clear today&apos;s jobs first, and let alerts handle the rest.
-            </p>
+            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">Clear today first</p>
           </div>
         </div>
       </article>
@@ -734,7 +789,6 @@ function OperationsPage({
             <div>
               <p className="family-kicker family-eyebrow">Today&apos;s chore board</p>
               <h3 className="mt-4 font-serif text-4xl leading-tight">Only what matters today.</h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap a card to mark it done. Overdue chores stay at the top.</p>
             </div>
             <span className="family-badge family-badge-gold">{todayChores.filter((chore) => !chore.done).length} open</span>
           </div>
@@ -978,9 +1032,6 @@ function MealsPage({
           </div>
           <div className="family-route-chip">Meal Planner</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Add pantry items, compare recipes, and build a meal plan from one page.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
           <DisclosurePanel
             kicker="Pantry tools"
@@ -1162,9 +1213,6 @@ function BudgetPage({
           </div>
           <div className="family-route-chip family-route-chip--dark">Budget Lab</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          Update your numbers, review the plan, and get budget help without leaving this page.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.06fr_0.94fr]">
           <RouteMetricStrip
             tone="dark"
@@ -1176,9 +1224,6 @@ function BudgetPage({
           />
           <div className="family-route-notice family-route-notice--gold">
             <p className="family-kicker family-eyebrow">Coach ready</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Run the coach when you want translated next steps instead of another static percentage chart.
-            </p>
             <button type="button" onClick={generateBudgetCoach} disabled={aiTask !== null} className="family-btn family-btn-primary mt-5">
               {aiTask === "budget-coach" ? "Generating..." : "Get AI budget coaching"}
             </button>
@@ -1452,9 +1497,6 @@ function FamilyPage({
           </div>
           <div className="family-route-chip">Family Room</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Manage members, share invites, and keep family routines in one place.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
           <RouteMetricStrip
             items={[
@@ -1465,9 +1507,7 @@ function FamilyPage({
           />
           <div className="family-route-notice family-route-notice--gold">
             <p className="family-kicker family-eyebrow">Who can manage what</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              Owners can change roles. Admins can remove standard members. Everyone else can use the family space.
-            </p>
+            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">Owners manage roles</p>
           </div>
         </div>
       </article>
@@ -1476,9 +1516,6 @@ function FamilyPage({
         <article className="family-panel family-route-board family-route-board--family family-animate-rise rounded-[28px] p-6 md:p-7">
           <p className="family-kicker family-eyebrow">Family members</p>
           <h3 className="mt-4 font-serif text-4xl leading-tight">Who is in your family space.</h3>
-          <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-            Owners can update roles. Admins can remove standard members. Everyone else can use the app.
-          </p>
           <div className="mt-5 space-y-3">
             {memberList.map((member) => {
               const isCurrentUser = member.id === currentUserId;
@@ -1784,14 +1821,11 @@ function AiStudioPage({
       <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">FamilyFlow help</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask for help with the whole family plan.</h3>
+            <p className="family-kicker family-eyebrow">AI Studio</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask the family assistant.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">AI Studio</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-stone-200">
-          Ask the assistant for help using your real family data from the rest of the app.
-        </p>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.94fr_1.06fr]">
           <RouteMetricStrip
             tone="dark"
@@ -1803,7 +1837,6 @@ function AiStudioPage({
           />
           <div className="family-route-notice family-route-notice--gold">
             <p className="family-kicker family-eyebrow">Chat tip</p>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">Need a cleaner chat room? Open the chat-only view and the rest of the page disappears.</p>
             <button type="button" onClick={openAiChatFocus} className="family-btn family-btn-primary mt-4">
               Open chat-only view
             </button>
