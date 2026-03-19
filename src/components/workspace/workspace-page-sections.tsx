@@ -8,6 +8,8 @@ import {
   formatReminderWhen,
   getChoreCadenceLabel,
   getChoreStatus,
+  type FamilyQuestCadence,
+  type FamilyQuestMetric,
   getReminderStatus,
   getTodayKey,
   isChoreScheduledForDate,
@@ -116,6 +118,15 @@ type WorkspacePageSectionsProps = {
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: () => void;
   redeemFamilySharedReward: (rewardId: string) => void;
+  addFamilyQuest: (quest: {
+    title: string;
+    detail: string;
+    cadence: FamilyQuestCadence;
+    metric: FamilyQuestMetric;
+    target: number;
+    rewardPoints: number;
+    rewardTitle: string;
+  }) => void;
   handleAssistantPrompt: (prompt: string) => void;
   generateMealPlan: () => void;
   generateBudgetCoach: () => void;
@@ -228,6 +239,10 @@ function DashboardPage({
   const firstRoutine = state.routines[0];
   const dinnerLead = state.latestMealPlan?.meals[0];
   const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
+  const latestCompletedQuest = familyQuestBoard.quests
+    .filter((quest) => quest.completedAt)
+    .slice()
+    .sort((left, right) => (right.completedAt ?? "").localeCompare(left.completedAt ?? ""))[0];
   const focusReminders = state.reminders
     .filter((reminder) => getReminderStatus(reminder, new Date()) === "due" || getReminderStatus(reminder, new Date()) === "scheduled")
     .slice(0, 3);
@@ -427,6 +442,15 @@ function DashboardPage({
               </div>
             ))}
           </div>
+          {latestCompletedQuest ? (
+            <div className="mt-5 rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4">
+              <p className="family-kicker family-eyebrow">Latest unlock</p>
+              <p className="mt-3 font-serif text-2xl text-stone-900">{latestCompletedQuest.rewardTitle}</p>
+              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                {latestCompletedQuest.title} just finished, so the family bank grew by {latestCompletedQuest.rewardPoints} points.
+              </p>
+            </div>
+          ) : null}
           <button type="button" onClick={() => goToTab("games")} className="family-btn family-btn-secondary mt-5">
             Open Game Room
           </button>
@@ -1269,12 +1293,20 @@ function FamilyPage({
   addRoutine,
   familyQuestBoard,
   redeemFamilySharedReward,
+  addFamilyQuest,
   ownerCount,
   adminCount,
   goToTab,
   openMemberProfile,
 }: PageProps) {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [questTitle, setQuestTitle] = useState("");
+  const [questDetail, setQuestDetail] = useState("");
+  const [questCadence, setQuestCadence] = useState<FamilyQuestCadence>("weekly");
+  const [questMetric, setQuestMetric] = useState<FamilyQuestMetric>("game-rounds");
+  const [questTarget, setQuestTarget] = useState("3");
+  const [questRewardPoints, setQuestRewardPoints] = useState("20");
+  const [questRewardTitle, setQuestRewardTitle] = useState("");
 
   function getInviteLink() {
     if (typeof window === "undefined") {
@@ -1344,6 +1376,30 @@ function FamilyPage({
     }
 
     await handleCopyInviteLink();
+  }
+
+  function submitFamilyQuest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!questTitle.trim()) {
+      return;
+    }
+
+    addFamilyQuest({
+      title: questTitle.trim(),
+      detail: questDetail.trim(),
+      cadence: questCadence,
+      metric: questMetric,
+      target: Math.max(1, Number(questTarget) || 1),
+      rewardPoints: Math.max(1, Number(questRewardPoints) || 10),
+      rewardTitle: questRewardTitle.trim() || "Family bonus",
+    });
+    setQuestTitle("");
+    setQuestDetail("");
+    setQuestCadence("weekly");
+    setQuestMetric("game-rounds");
+    setQuestTarget("3");
+    setQuestRewardPoints("20");
+    setQuestRewardTitle("");
   }
 
   return (
@@ -1536,6 +1592,61 @@ function FamilyPage({
               ))}
             </div>
           </InsightCard>
+
+          <DisclosurePanel
+            kicker="Custom family quests"
+            title="Build a quest your family will actually want to chase."
+            summary="Keep the builder tucked away until you want a fresh weekly challenge or a new shared target."
+            badge={`${familyQuestBoard.quests.filter((quest) => quest.source === "custom").length} custom`}
+            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
+          >
+            <form className="grid gap-4 md:grid-cols-2" onSubmit={submitFamilyQuest}>
+              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
+                Quest name
+                <input value={questTitle} onChange={(event) => setQuestTitle(event.target.value)} placeholder="Friday clean-room race" className="family-input mt-2" />
+              </label>
+              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
+                What makes this fun
+                <textarea
+                  value={questDetail}
+                  onChange={(event) => setQuestDetail(event.target.value)}
+                  rows={3}
+                  placeholder="Clear rooms, finish one goal, and then cash in for a treat together."
+                  className="family-textarea mt-2"
+                />
+              </label>
+              <label className="block text-sm font-medium text-stone-700">
+                Repeat
+                <select value={questCadence} onChange={(event) => setQuestCadence(event.target.value as FamilyQuestCadence)} className="family-select mt-2">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-stone-700">
+                Track
+                <select value={questMetric} onChange={(event) => setQuestMetric(event.target.value as FamilyQuestMetric)} className="family-select mt-2">
+                  <option value="chores-done">Chores finished</option>
+                  <option value="goals-completed">Goals completed</option>
+                  <option value="game-rounds">Game rounds played</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-stone-700">
+                Target
+                <input type="number" min="1" value={questTarget} onChange={(event) => setQuestTarget(event.target.value)} className="family-input mt-2" />
+              </label>
+              <label className="block text-sm font-medium text-stone-700">
+                Shared points
+                <input type="number" min="1" value={questRewardPoints} onChange={(event) => setQuestRewardPoints(event.target.value)} className="family-input mt-2" />
+              </label>
+              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
+                Celebration unlock
+                <input value={questRewardTitle} onChange={(event) => setQuestRewardTitle(event.target.value)} placeholder="Ice cream vote" className="family-input mt-2" />
+              </label>
+              <button type="submit" className="family-btn family-btn-primary md:col-span-2">
+                Add custom quest
+              </button>
+            </form>
+          </DisclosurePanel>
 
           <InsightCard
             kicker="Family wins"

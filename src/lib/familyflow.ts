@@ -186,11 +186,12 @@ export type FamilyAchievement = {
   detail: string;
   points: number;
   createdAt: string;
-  kind: "goal" | "reward" | "fitness" | "shoutout" | "game" | "chore";
+  kind: "goal" | "reward" | "fitness" | "shoutout" | "game" | "chore" | "quest";
 };
 
 export type FamilyQuestCadence = "daily" | "weekly";
 export type FamilyQuestMetric = "chores-done" | "goals-completed" | "game-rounds";
+export type FamilyQuestSource = "default" | "custom";
 
 export type FamilyQuest = {
   id: string;
@@ -198,6 +199,7 @@ export type FamilyQuest = {
   detail: string;
   cadence: FamilyQuestCadence;
   metric: FamilyQuestMetric;
+  source: FamilyQuestSource;
   target: number;
   progress: number;
   rewardPoints: number;
@@ -474,6 +476,7 @@ const FAMILY_QUEST_TEMPLATES: Array<
     rewardTitle: "Playful streak",
   },
 ];
+const FAMILY_QUEST_TEMPLATE_IDS = new Set(FAMILY_QUEST_TEMPLATES.map((quest) => quest.id));
 
 export const DEFAULT_STATE: AppState = {
   pantry: ["chicken", "rice", "broccoli", "garlic", "tomatoes", "pasta", "cheese"],
@@ -729,6 +732,12 @@ function sanitizeFamilyQuest(value: unknown): FamilyQuest | null {
     detail: toTrimmedString(value.detail),
     cadence,
     metric,
+    source:
+      value.source === "default" || value.source === "custom"
+        ? value.source
+        : FAMILY_QUEST_TEMPLATE_IDS.has(toTrimmedString(value.id))
+          ? "default"
+          : "custom",
     target: clampNumber(value.target, 1, 1, 500),
     progress: clampNumber(value.progress, 0, 0, 500),
     rewardPoints: clampNumber(value.rewardPoints, 10, 1, 1000),
@@ -870,7 +879,8 @@ function sanitizeAchievement(value: unknown): FamilyAchievement | null {
     value.kind === "shoutout" ||
     value.kind === "goal" ||
     value.kind === "game" ||
-    value.kind === "chore"
+    value.kind === "chore" ||
+    value.kind === "quest"
       ? value.kind
       : "goal";
 
@@ -1234,7 +1244,7 @@ export function getWeekKey(date = new Date()) {
   return `${cursor.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
 }
 
-function getQuestWindowKey(cadence: FamilyQuestCadence, date = new Date()) {
+export function getQuestWindowKey(cadence: FamilyQuestCadence, date = new Date()) {
   return cadence === "daily" ? getTodayKey(date) : getWeekKey(date);
 }
 
@@ -1419,6 +1429,7 @@ export function createDefaultFamilyQuestBoard(date = new Date()): FamilyQuestBoa
     lifetimeSharedPoints: 0,
     quests: FAMILY_QUEST_TEMPLATES.map((quest) => ({
       ...quest,
+      source: "default" as const,
       progress: 0,
       windowKey: getQuestWindowKey(quest.cadence, date),
       completedAt: null,
@@ -1498,8 +1509,14 @@ export function recalculateFamilyQuestBoard(
   const existingQuestMap = new Map(sanitizedBoard.quests.map((quest) => [quest.id, quest]));
   let sharedPoints = sanitizedBoard.sharedPoints;
   let lifetimeSharedPoints = sanitizedBoard.lifetimeSharedPoints;
+  const customQuestSeeds = sanitizedBoard.quests
+    .filter((quest) => quest.source === "custom" || !FAMILY_QUEST_TEMPLATE_IDS.has(quest.id))
+    .map((quest) => ({
+      ...quest,
+      source: "custom" as const,
+    }));
 
-  const quests = defaults.quests.map((defaultQuest) => {
+  const quests = [...defaults.quests, ...customQuestSeeds].map((defaultQuest) => {
     const existing = existingQuestMap.get(defaultQuest.id);
     const currentWindowKey = getQuestWindowKey(defaultQuest.cadence, now);
     const activeQuest =
@@ -1507,9 +1524,15 @@ export function recalculateFamilyQuestBoard(
         ? {
             ...defaultQuest,
             ...existing,
+            source: defaultQuest.source,
             windowKey: currentWindowKey,
           }
-        : defaultQuest;
+        : {
+            ...defaultQuest,
+            progress: 0,
+            windowKey: currentWindowKey,
+            completedAt: null,
+          };
     const progress = Math.min(activeQuest.target, getQuestProgress(state, activeQuest.metric, now));
     const wasCompletedThisWindow = Boolean(existing && existing.windowKey === currentWindowKey && existing.completedAt);
     const completedNow = progress >= activeQuest.target && !wasCompletedThisWindow;

@@ -17,10 +17,13 @@ import {
   type ChoreCadence,
   createId,
   type DirectMessage,
+  type FamilyQuestCadence,
+  type FamilyQuestMetric,
   formatReminderWhen,
   getBudgetPlan,
   getChoreStatus,
   getNextChoreStreakCount,
+  getQuestWindowKey,
   getReminderOccurrenceKey,
   getReminderStatus,
   getTodayKey,
@@ -115,6 +118,58 @@ export function FamilyFlowApp({
       ...nextState,
       familyQuestBoard: recalculateFamilyQuestBoard(nextState.familyQuestBoard, nextState),
     };
+  }
+
+  function applyQuestCelebrations(previousState: AppState, nextState: AppState) {
+    const previouslyCompleted = new Set(
+      previousState.familyQuestBoard.quests
+        .filter((quest) => quest.completedAt)
+        .map((quest) => `${quest.id}:${quest.windowKey}:${quest.completedAt}`),
+    );
+    const newlyCompletedQuests = nextState.familyQuestBoard.quests.filter(
+      (quest) => quest.completedAt && !previouslyCompleted.has(`${quest.id}:${quest.windowKey}:${quest.completedAt}`),
+    );
+
+    if (newlyCompletedQuests.length === 0) {
+      return nextState;
+    }
+
+    const nextAchievements = [
+      ...newlyCompletedQuests.map((quest) => ({
+        id: createId("achievement"),
+        memberId: currentUserId,
+        memberName: userName,
+        title: `${quest.title} is complete`,
+        detail: `${quest.rewardTitle} unlocked and ${quest.rewardPoints} shared points landed in the family bank.`,
+        points: quest.rewardPoints,
+        createdAt: quest.completedAt ?? new Date().toISOString(),
+        kind: "quest" as const,
+      })),
+      ...nextState.familyAchievements,
+    ].slice(0, 60);
+
+    const notifications = newlyCompletedQuests.flatMap((quest) =>
+      createNotifications(
+        memberList.filter((member) => member.id !== currentUserId).map((member) => member.id),
+        {
+          kind: "achievement",
+          title: `${quest.title} is complete`,
+          detail: `${quest.rewardTitle} unlocked and ${quest.rewardPoints} shared points were added.`,
+          link: getWorkspacePath("family"),
+          actorId: currentUserId,
+          actorName: userName,
+          createdAt: quest.completedAt ?? new Date().toISOString(),
+        },
+      ),
+    );
+
+    return appendNotifications(
+      {
+        ...nextState,
+        familyAchievements: nextAchievements,
+      },
+      notifications,
+    );
   }
 
   const memberNames = useMemo(() => {
@@ -344,7 +399,10 @@ export function FamilyFlowApp({
   }
 
   async function updateState(updater: (current: AppState) => AppState) {
-    const nextState = updater(stateRef.current);
+    const currentState = stateRef.current;
+    const updatedState = updater(currentState);
+    const normalizedState = refreshQuestBoard(updatedState);
+    const nextState = applyQuestCelebrations(currentState, normalizedState);
     await persistState(nextState);
   }
 
@@ -555,6 +613,45 @@ export function FamilyFlowApp({
 
       return appendNotifications(nextState, notifications);
     });
+  }
+
+  async function addFamilyQuest(quest: {
+    title: string;
+    detail: string;
+    cadence: FamilyQuestCadence;
+    metric: FamilyQuestMetric;
+    target: number;
+    rewardPoints: number;
+    rewardTitle: string;
+  }) {
+    const trimmedTitle = quest.title.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    await updateState((current) => ({
+      ...current,
+      familyQuestBoard: {
+        ...current.familyQuestBoard,
+        quests: [
+          ...current.familyQuestBoard.quests,
+          {
+            id: createId("family-quest"),
+            title: trimmedTitle,
+            detail: quest.detail.trim(),
+            cadence: quest.cadence,
+            metric: quest.metric,
+            source: "custom",
+            target: Math.max(1, quest.target),
+            progress: 0,
+            rewardPoints: Math.max(1, quest.rewardPoints),
+            rewardTitle: quest.rewardTitle.trim() || "Family bonus",
+            windowKey: getQuestWindowKey(quest.cadence),
+            completedAt: null,
+          },
+        ],
+      },
+    }));
   }
 
   function getSortedParticipantIds(leftId: string, rightId: string) {
@@ -2081,6 +2178,9 @@ export function FamilyFlowApp({
                     }}
                     redeemFamilySharedReward={(rewardId) => {
                       void redeemFamilySharedReward(rewardId);
+                    }}
+                    addFamilyQuest={(quest) => {
+                      void addFamilyQuest(quest);
                     }}
                     handleAssistantPrompt={handleAssistantPrompt}
                     generateMealPlan={() => {
