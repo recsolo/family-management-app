@@ -1376,22 +1376,11 @@ function FamilyPage({
   routineItems,
   setRoutineItems,
   addRoutine,
-  familyQuestBoard,
-  redeemFamilySharedReward,
-  addFamilyQuest,
   ownerCount,
   adminCount,
-  goToTab,
   openMemberProfile,
 }: PageProps) {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
-  const [questTitle, setQuestTitle] = useState("");
-  const [questDetail, setQuestDetail] = useState("");
-  const [questCadence, setQuestCadence] = useState<FamilyQuestCadence>("weekly");
-  const [questMetric, setQuestMetric] = useState<FamilyQuestMetric>("game-rounds");
-  const [questTarget, setQuestTarget] = useState("3");
-  const [questRewardPoints, setQuestRewardPoints] = useState("20");
-  const [questRewardTitle, setQuestRewardTitle] = useState("");
 
   function getInviteLink() {
     if (typeof window === "undefined") {
@@ -1463,30 +1452,6 @@ function FamilyPage({
     await handleCopyInviteLink();
   }
 
-  function submitFamilyQuest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!questTitle.trim()) {
-      return;
-    }
-
-    addFamilyQuest({
-      title: questTitle.trim(),
-      detail: questDetail.trim(),
-      cadence: questCadence,
-      metric: questMetric,
-      target: Math.max(1, Number(questTarget) || 1),
-      rewardPoints: Math.max(1, Number(questRewardPoints) || 10),
-      rewardTitle: questRewardTitle.trim() || "Family bonus",
-    });
-    setQuestTitle("");
-    setQuestDetail("");
-    setQuestCadence("weekly");
-    setQuestMetric("game-rounds");
-    setQuestTarget("3");
-    setQuestRewardPoints("20");
-    setQuestRewardTitle("");
-  }
-
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--family family-animate-rise rounded-[34px] p-6 md:p-8">
@@ -1502,7 +1467,7 @@ function FamilyPage({
             items={[
               { label: "Connected members", value: `${memberList.length}`, note: `${ownerCount} owner and ${adminCount} admin currently manage access.` },
               { label: "Invite path", value: inviteCode, note: canManageHousehold ? "Owners and admins can rotate the code." : "Invite control is limited to admins and owners." },
-              { label: "Routine count", value: `${state.routines.length}`, note: "Shared rhythms live beside household access now." },
+              { label: "Routines", value: `${state.routines.length}`, note: state.routines[0] ? state.routines[0].name : "No routine yet." },
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
@@ -1632,125 +1597,10 @@ function FamilyPage({
 
           <InsightCard
             kicker="Family routine"
-            title={state.routines[0] ? state.routines[0].name : "No routine built yet"}
-            body={
-              state.routines[0]
-                ? `${state.routines[0].timeWindow}. ${state.routines[0].items.join(", ")}.`
-                : "Add the first routine here so the family has one repeatable flow it can keep returning to."
-            }
+            title={state.routines[0] ? state.routines[0].name : "No routine yet"}
+            body={state.routines[0] ? `${state.routines[0].timeWindow}. ${state.routines[0].items.join(", ")}.` : "Add a routine below."}
             className="family-card family-card-gold"
           />
-
-          <InsightCard
-            kicker="Shared rewards"
-            title={`${familyQuestBoard.sharedPoints} family points ready`}
-            body="Complete quests, then turn the shared point bank into movie nights, dinner picks, or an extra game-night bonus."
-            className="family-panel"
-          >
-            <div className="mt-5 space-y-3">
-              {familyQuestBoard.rewards.slice(0, 2).map((reward) => (
-                <div key={reward.id} className="family-list-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-serif text-2xl">{reward.title}</h4>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reward.detail}</p>
-                    </div>
-                    <span className="family-badge family-badge-gold">{reward.cost} pts</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => redeemFamilySharedReward(reward.id)}
-                    disabled={familyQuestBoard.sharedPoints < reward.cost}
-                    className="family-btn family-btn-secondary mt-4"
-                  >
-                    Unlock reward
-                  </button>
-                </div>
-              ))}
-            </div>
-            <QuestMedalShelf board={familyQuestBoard} />
-          </InsightCard>
-
-          <DisclosurePanel
-            kicker="Custom family quests"
-            title="Build a quest your family will actually want to chase."
-            summary="Keep the builder tucked away until you want a fresh weekly challenge or a new shared target."
-            badge={`${familyQuestBoard.quests.filter((quest) => quest.source === "custom").length} custom`}
-            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
-          >
-            <form className="grid gap-4 md:grid-cols-2" onSubmit={submitFamilyQuest}>
-              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-                Quest name
-                <input value={questTitle} onChange={(event) => setQuestTitle(event.target.value)} placeholder="Friday clean-room race" className="family-input mt-2" />
-              </label>
-              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-                What makes this fun
-                <textarea
-                  value={questDetail}
-                  onChange={(event) => setQuestDetail(event.target.value)}
-                  rows={3}
-                  placeholder="Clear rooms, finish one goal, and then cash in for a treat together."
-                  className="family-textarea mt-2"
-                />
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Repeat
-                <select value={questCadence} onChange={(event) => setQuestCadence(event.target.value as FamilyQuestCadence)} className="family-select mt-2">
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Track
-                <select value={questMetric} onChange={(event) => setQuestMetric(event.target.value as FamilyQuestMetric)} className="family-select mt-2">
-                  <option value="chores-done">Chores finished</option>
-                  <option value="goals-completed">Goals completed</option>
-                  <option value="game-rounds">Game rounds played</option>
-                </select>
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Target
-                <input type="number" min="1" value={questTarget} onChange={(event) => setQuestTarget(event.target.value)} className="family-input mt-2" />
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Shared points
-                <input type="number" min="1" value={questRewardPoints} onChange={(event) => setQuestRewardPoints(event.target.value)} className="family-input mt-2" />
-              </label>
-              <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-                Celebration unlock
-                <input value={questRewardTitle} onChange={(event) => setQuestRewardTitle(event.target.value)} placeholder="Ice cream vote" className="family-input mt-2" />
-              </label>
-              <button type="submit" className="family-btn family-btn-primary md:col-span-2">
-                Add custom quest
-              </button>
-            </form>
-          </DisclosurePanel>
-
-          <InsightCard
-            kicker="Family wins"
-            title={state.familyAchievements[0]?.title ?? "No shared wins yet"}
-            body={
-              state.familyAchievements[0]
-                ? `${state.familyAchievements[0].memberName} shared: ${state.familyAchievements[0].detail || "A new family accomplishment just landed."}`
-                : "Profile pages can now send completed goals and fitness wins here for the whole family to celebrate."
-            }
-            className="family-panel"
-          />
-
-          <InsightCard
-            kicker="Partner page"
-            title={state.partnerSpace?.memberIds.length === 2 ? "Private page is ready." : "Set up the grown-up page."}
-            body={
-              state.partnerSpace?.memberIds.length === 2
-                ? "Open Partner Space from the menu for private messages, date-night planning, and rewards."
-                : "Once two partners are chosen, they get a private page for messages, date ideas, and rewards."
-            }
-            className="family-card family-card-dark"
-          >
-            <button type="button" onClick={() => goToTab("partner")} className="family-btn family-btn-primary mt-5">
-              Open Partner Space
-            </button>
-          </InsightCard>
         </div>
       </div>
 
@@ -1821,30 +1671,19 @@ function AiStudioPage({
       <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">AI Studio</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask the family assistant.</h3>
+            <p className="family-kicker family-eyebrow">AI</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask AI</h3>
           </div>
-          <div className="family-route-chip family-route-chip--dark">AI Studio</div>
+          <div className="family-route-chip family-route-chip--dark">AI</div>
         </div>
-        <div className="mt-6 grid gap-4 xl:grid-cols-[0.94fr_1.06fr]">
-          <RouteMetricStrip
-            tone="dark"
-            items={[
-              { label: "Messages", value: `${state.assistantHistory.length}`, note: "The assistant keeps conversation context from this workspace." },
-              { label: "Prompt seeds", value: `${assistantSuggestions.length}`, note: "Quick starts help the family ask higher-quality questions." },
-              { label: "Shared context", value: `${state.pantry.length + state.reminders.length + state.routines.length}`, note: "Pantry, reminders, and routines are all available to the assistant." },
-            ]}
-          />
-          <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Chat tip</p>
-            <button type="button" onClick={openAiChatFocus} className="family-btn family-btn-primary mt-4">
-              Open chat-only view
-            </button>
-          </div>
+        <div className="mt-6">
+          <button type="button" onClick={openAiChatFocus} className="family-btn family-btn-primary">
+            Open chat-only view
+          </button>
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_0.96fr]">
+      <div className="grid gap-5 xl:grid-cols-[1fr_0.82fr]">
         <AssistantChatPanel
           history={state.assistantHistory}
           chatInput={chatInput}
@@ -1855,43 +1694,27 @@ function AiStudioPage({
           onOpenFocus={openAiChatFocus}
         />
 
-        <div className="space-y-5">
-          <DisclosurePanel
-            kicker="Quick ideas"
-            title="Start with a helpful question."
-            summary="Prompt starters stay under one button so the page feels calmer."
-            badge={`${assistantSuggestions.length} prompts`}
-            className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
-          >
-            <div className="grid gap-3">
-              {assistantSuggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => handleAssistantPrompt(suggestion)}
-                  disabled={aiTask !== null}
-                  className="family-btn family-btn-soft justify-start rounded-[20px] px-4 py-4 text-left text-sm font-medium"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </DisclosurePanel>
-
-          <InsightCard
-            kicker="Shared context"
-            title="What FamilyFlow can see."
-            body="The assistant uses live family info, not a blank page."
-            className="family-card family-card-dark"
-          >
-            <ul className="mt-4 space-y-3 text-sm leading-7 text-stone-200">
-              <li>Current pantry and budget settings</li>
-              <li>Shared chores, reminders, and routines</li>
-              <li>Household workspace data from the database</li>
-              <li>Recent conversation history from this family workspace</li>
-            </ul>
-          </InsightCard>
-        </div>
+        <DisclosurePanel
+          kicker="Prompts"
+          title="Quick starts"
+          summary="Tap a prompt to start."
+          badge={`${assistantSuggestions.length} prompts`}
+          className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
+        >
+          <div className="grid gap-3">
+            {assistantSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => handleAssistantPrompt(suggestion)}
+                disabled={aiTask !== null}
+                className="family-btn family-btn-soft justify-start rounded-[20px] px-4 py-4 text-left text-sm font-medium"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </DisclosurePanel>
       </div>
     </div>
   );

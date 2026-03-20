@@ -703,32 +703,6 @@ export function PartnerSpacePage({
                 </div>
               </article>
 
-              <article className="family-panel family-surface-warm rounded-[28px] p-6">
-                <p className="family-kicker family-eyebrow">Chat focus</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Keep it warm and simple.</h3>
-                <div className="mt-5 space-y-3">
-                  <div className="family-sidebar-note">
-                    <p className="family-kicker family-eyebrow">Good use</p>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Quick check-ins, little plans, and kind notes are easier to keep up with when the page is not crowded.</p>
-                  </div>
-                  <div className="family-sidebar-note">
-                    <p className="family-kicker family-eyebrow">New option</p>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">If you send the wrong text, just edit it. If it no longer belongs there, delete it.</p>
-                  </div>
-                  <div className="family-sidebar-note">
-                    <p className="family-kicker family-eyebrow">Private space</p>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Only the chosen pair can open and use this conversation area.</p>
-                  </div>
-                  <div className="family-sidebar-note">
-                    <p className="family-kicker family-eyebrow">Relationship rhythm</p>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                      {connectionStreak > 0
-                        ? `${connectionStreak} day connection streak running.`
-                        : "Start with one kind note today to begin your connection streak."}
-                    </p>
-                  </div>
-                </div>
-              </article>
             </div>
           ) : null}
 
@@ -1177,27 +1151,11 @@ export function PartnerSpacePage({
                     </button>
                   ) : null}
                 </form>
-                <div className="mt-5 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
-                  <p className="family-kicker family-eyebrow">Easy closeness ideas</p>
-                  <ul className="mt-4 space-y-2 text-sm leading-7 text-[var(--muted)]">
-                    <li>Send one warm note before bed.</li>
-                    <li>Keep one date idea booked or planned at all times.</li>
-                    <li>Use rewards for fun, rest, and affection, not just chores.</li>
-                    <li>Celebrate small wins, not just big milestones.</li>
-                  </ul>
-                </div>
-                <div className="mt-4 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
-                  <p className="family-kicker family-eyebrow">Current rhythm</p>
-                  <p className="mt-3 font-serif text-3xl text-stone-900">{connectionStreak} day streak</p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                    A streak grows when private notes or messages keep showing up on new days.
-                  </p>
-                </div>
               </DisclosurePanel>
 
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Saved notes</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Things worth remembering.</h3>
+                <h3 className="mt-3 font-serif text-4xl leading-tight">Notes</h3>
                 <div className="mt-5 grid gap-3">
                   {partnerSpace.connectionNotes.length > 0 ? (
                     partnerSpace.connectionNotes.map((note) => (

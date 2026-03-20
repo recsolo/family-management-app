@@ -517,12 +517,10 @@ export function GameRoomPage({
   currentUserId,
   memberList,
   gameRoom,
-  familyQuestBoard,
   initialView = "arcade",
   onSelectArcadeMember,
   onSaveArcadeRun,
   onSaveUnoGame,
-  onRedeemFamilyReward,
 }: Props) {
   const [activeView, setActiveView] = useState<GameView>(initialView);
   const [launchingGameKey, setLaunchingGameKey] = useState<ExternalGameKey | null>(null);
@@ -561,7 +559,6 @@ export function GameRoomPage({
   );
   const currentUnoPlayer = activeUnoGame?.players[activeUnoGame.currentPlayerIndex] ?? null;
   const currentUnoHand = currentUnoPlayer?.hand ?? [];
-  const activeQuests = familyQuestBoard.quests.slice(0, 3);
   const recentUnoWinners = gameRoom.unoWins.slice(0, 3);
   const liveExternalArcade = getExternalGameDefinition("star-sprint");
 
@@ -1200,13 +1197,8 @@ export function GameRoomPage({
           <article className="family-card family-card-gold rounded-[28px] p-6">
             <p className="family-kicker family-eyebrow">Game picker</p>
             <h3 className="mt-4 font-serif text-4xl leading-tight">
-              {activeView === "arcade" ? "Fast turns for everyone." : "A family classic."}
+              {activeView === "arcade" ? "Arcade" : "UNO"}
             </h3>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-              {activeView === "arcade"
-                ? "Star Sprint is built for quick, cheerful turns so kids and adults can jump in without learning much."
-                : "UNO stays familiar: match color or number, use action cards, and pass the device when the turn changes."}
-            </p>
           </article>
 
           <article className="family-panel rounded-[28px] p-6">
@@ -1262,48 +1254,6 @@ export function GameRoomPage({
             </div>
           </article>
 
-          <article className="family-card family-card-dark rounded-[28px] p-6">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Family quests</p>
-            <h3 className="mt-4 font-serif text-4xl leading-tight text-white">{familyQuestBoard.sharedPoints} shared points in the bank.</h3>
-            <div className="mt-5 space-y-3">
-              {activeQuests.map((quest) => (
-                <div key={quest.id} className="rounded-[22px] border border-white/10 bg-white/10 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-white">{quest.title}</p>
-                      <p className="mt-2 text-sm leading-7 text-stone-200">{quest.detail}</p>
-                    </div>
-                    <span className="family-badge family-badge-gold">{quest.progress}/{quest.target}</span>
-                  </div>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(241,214,136,0.9)]">
-                    {quest.completedAt ? `${quest.rewardTitle} unlocked` : `${quest.rewardPoints} shared points`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Shared reward shelf</p>
-            <div className="mt-4 space-y-3">
-              {familyQuestBoard.rewards.slice(0, 3).map((reward) => (
-                <div key={reward.id} className="family-game-leaderboard-row">
-                  <div>
-                    <p className="font-semibold text-stone-900">{reward.title}</p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{reward.detail}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onRedeemFamilyReward(reward.id)}
-                    disabled={familyQuestBoard.sharedPoints < reward.cost}
-                    className="family-btn family-btn-secondary"
-                  >
-                    {reward.cost} pts
-                  </button>
-                </div>
-              ))}
-            </div>
-          </article>
         </aside>
       </div>
     </div>
