@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { getAppUrl } from "@/lib/env";
 import { isExternalGameKey } from "@/lib/game-catalog";
 import { createGameLaunchBundle } from "@/lib/play-launch";
 import { getWorkspaceForUser } from "@/lib/workspace";
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   const currentMember = workspace.members.find((member) => member.id === workspace.currentUserId);
   const bundle = createGameLaunchBundle({
-    appUrl: request.nextUrl.origin,
+    appUrl: getAppUrl(),
     gameKey: body.gameKey,
     userId: workspace.currentUserId,
     playerName: currentMember?.name ?? session.user?.name ?? "Family player",

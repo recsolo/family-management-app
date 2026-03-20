@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getAppUrl } from "@/lib/env";
 import { applyArcadeRunResult, hasProcessedGameLaunchSession, markProcessedGameLaunchSession } from "@/lib/game-results";
 import { isExternalGameKey } from "@/lib/game-catalog";
 import { recalculateFamilyQuestBoard, type ArcadeRun } from "@/lib/familyflow";
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
         pointsAwarded: applied.pointsAwarded,
         sharedPoints: recalculatedState.familyQuestBoard.sharedPoints,
         leaderboardTopScore: recalculatedState.gameRoom.arcadeRuns[0]?.score ?? run.score,
-        returnUrl: `${request.nextUrl.origin}/game-room`,
+        returnUrl: `${getAppUrl()}/game-room`,
       },
     });
   } catch (error) {

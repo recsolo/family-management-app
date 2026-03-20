@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getAppUrl } from "@/lib/env";
 import { verifyGameLaunchToken } from "@/lib/play-launch";
 import { getWorkspacePath } from "@/lib/workspace-tabs";
 import { getWorkspaceForUser } from "@/lib/workspace";
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
           id: workspace.householdId,
           name: workspace.householdName,
         },
-        returnUrl: `${request.nextUrl.origin}${getWorkspacePath("games")}`,
+        returnUrl: `${getAppUrl()}${getWorkspacePath("games")}`,
         topArcadeRun: topArcadeRun
           ? {
               memberName: topArcadeRun.memberName,
