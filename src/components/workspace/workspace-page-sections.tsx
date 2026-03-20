@@ -382,7 +382,7 @@ function DashboardPage({
   const focusReminders = state.reminders
     .filter((reminder) => getReminderStatus(reminder, new Date()) === "due" || getReminderStatus(reminder, new Date()) === "scheduled")
     .slice(0, 3);
-  const latestNotifications = currentUserNotifications.slice(0, 4);
+  const latestNotifications = currentUserNotifications.slice(0, 3);
   const todaysEvents = state.memberProfiles.flatMap((profile) =>
     profile.calendarEvents
       .filter((event) => event.date === todayKey)
@@ -391,23 +391,6 @@ function DashboardPage({
         memberName: memberList.find((member) => member.id === profile.memberId)?.name ?? "Family member",
       })),
   );
-  const dashboardMetrics: RouteMetric[] = [
-    {
-      label: "Open chores",
-      value: `${openTodayChores.length}`,
-      note: openTodayChores[0] ? `${openTodayChores[0].title} is next.` : "No chores waiting.",
-    },
-    {
-      label: "Today's events",
-      value: `${todaysEvents.length}`,
-      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "No events today.",
-    },
-    {
-      label: "In the loop",
-      value: `${focusReminders.length}`,
-      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} today.`,
-    },
-  ];
 
   return (
     <div className="space-y-5">
@@ -416,19 +399,53 @@ function DashboardPage({
           <div>
             <p className="family-kicker family-eyebrow">Today</p>
             <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Today</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">Only the family items that matter today.</p>
           </div>
           <div className="family-route-chip">Today</div>
-        </div>
-        <div className="mt-6">
-          <RouteMetricStrip items={dashboardMetrics} />
         </div>
       </article>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <DisclosurePanel
+          kicker="Today&apos;s family check"
+          title={`${completedChores}/${todayChores.length} done`}
+          summary="Today only."
+          badge={`${openTodayChores.length} open`}
+          defaultOpen
+          className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Chores left</p>
+              <p className="mt-3 font-serif text-3xl">{openTodayChores.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Events today</p>
+              <p className="mt-3 font-serif text-3xl">{todaysEvents.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Reminders</p>
+              <p className="mt-3 font-serif text-3xl">{focusReminders.length}</p>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">New inbox</p>
+              <p className="mt-3 font-serif text-3xl">{unreadNotificationCount}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="button" onClick={() => goToTab("inbox")} className="family-btn family-btn-secondary">
+              Open inbox
+            </button>
+            <button type="button" onClick={() => goToTab("ops")} className="family-btn family-btn-soft">
+              Open family ops
+            </button>
+          </div>
+        </DisclosurePanel>
+
+        <DisclosurePanel
           kicker="Family Inbox"
           title={unreadNotificationCount > 0 ? `${unreadNotificationCount} new` : "All clear"}
-          summary="Latest alerts."
+          summary="Latest alerts"
           badge={`${latestNotifications.length} shown`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -462,7 +479,7 @@ function DashboardPage({
         <DisclosurePanel
           kicker="Family in the loop"
           title="Today"
-          summary="Events, reminders, and chores."
+          summary="Events, reminders, chores"
           badge={`${todaysEvents.length + focusReminders.length + openTodayChores.length} items`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -475,7 +492,7 @@ function DashboardPage({
                     <h4 className="font-serif text-2xl">{event.title}</h4>
                     <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
                       {event.memberName}
-                      {event.time ? ` / ${event.time}` : ""}
+                      {event.time ? ` at ${event.time}` : ""}
                     </p>
                   </div>
                   <span className="family-badge family-badge-accent">Event</span>
@@ -488,7 +505,7 @@ function DashboardPage({
                   <div>
                     <h4 className="font-serif text-2xl">{reminder.title}</h4>
                     <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                      {formatReminderWhen(reminder)} / {reminder.audience}
+                      {formatReminderWhen(reminder)} for {reminder.audience}
                     </p>
                   </div>
                   <span className="family-badge family-badge-gold">Reminder</span>
@@ -524,7 +541,7 @@ function DashboardPage({
         <DisclosurePanel
           kicker="Quest board"
           title={`${familyQuestBoard.sharedPoints} shared points`}
-          summary="Active quests and rewards."
+          summary="Quest progress"
           badge={`${familyQuestBoard.quests.length} quests`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -553,43 +570,15 @@ function DashboardPage({
               <p className="mt-3 font-serif text-2xl text-stone-900">{latestCompletedQuest.rewardTitle}</p>
             </div>
           ) : null}
-          <QuestMedalShelf board={familyQuestBoard} />
-        </DisclosurePanel>
-
-        <DisclosurePanel
-          kicker="Today's family check"
-          title={`${completedChores}/${todayChores.length} chores done`}
-          summary="Today's totals."
-          badge={`${memberList.length} members`}
-          defaultOpen
-          className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
-        >
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Open chores</p>
-              <p className="mt-3 font-serif text-3xl">{openTodayChores.length}</p>
-            </div>
-            <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Today's events</p>
-              <p className="mt-3 font-serif text-3xl">{todaysEvents.length}</p>
-            </div>
-            <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Reminders</p>
-              <p className="mt-3 font-serif text-3xl">{focusReminders.length}</p>
-            </div>
-            <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Inbox</p>
-              <p className="mt-3 font-serif text-3xl">{unreadNotificationCount}</p>
-            </div>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button type="button" onClick={() => goToTab("inbox")} className="family-btn family-btn-secondary">
-              Open inbox
-            </button>
-            <button type="button" onClick={() => goToTab("family")} className="family-btn family-btn-soft">
-              Open Family Room
-            </button>
-          </div>
+          <DisclosurePanel
+            kicker="Badges"
+            title="Streak medals"
+            summary="Open to see quest medals."
+            badge={`${familyQuestBoard.medals.length} medals`}
+            className="mt-5 rounded-[22px] border border-[var(--line-soft)] bg-white/72 p-4"
+          >
+            <QuestMedalShelf board={familyQuestBoard} />
+          </DisclosurePanel>
         </DisclosurePanel>
       </div>
     </div>
@@ -1022,39 +1011,42 @@ function MealsPage({
   aiTask,
   generateMealPlan,
 }: PageProps) {
+  const topRecipeMatches = recipeMatches.slice(0, 4);
+
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--meals family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">Meal time</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Pick meals from what you already have.</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Meal Planner</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">Pick dinner from your pantry, then let AI build the plan.</p>
           </div>
           <div className="family-route-chip">Meal Planner</div>
         </div>
         <div className="mt-6 grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
           <DisclosurePanel
-            kicker="Pantry tools"
-            title="Add what you have."
-            summary="Open this only when you want to update pantry items or check the shelf."
+            kicker="Pantry"
+            title="Add food"
+            summary="Update the pantry when you need to."
             badge={`${state.pantry.length} items`}
             defaultOpen
             className="family-panel family-surface-warm family-meals-form-card rounded-[28px] p-5 md:p-6"
           >
             <form className="space-y-4" onSubmit={addPantryItems}>
               <label className="block text-sm font-medium text-stone-700">
-                Add ingredients
+                Pantry items
                 <input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" />
               </label>
               <button type="submit" className="family-btn family-btn-primary">
-                Add pantry items
+                Save pantry items
               </button>
             </form>
             <div className="family-pantry-shelf mt-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="family-kicker family-eyebrow">Pantry shelf</p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">These are the ingredients your meal page can already work with.</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">What your meal plan can use right now.</p>
                 </div>
                 <span className="family-badge family-badge-gold">{state.pantry.length} items</span>
               </div>
@@ -1067,19 +1059,19 @@ function MealsPage({
                   ))}
                 </div>
               ) : (
-                <EmptyState className="mt-4">Add a few staples and this shelf will start filling in.</EmptyState>
+                <EmptyState className="mt-4">Add a few staples to get started.</EmptyState>
               )}
             </div>
           </DisclosurePanel>
 
           <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="family-route-notice family-route-notice--dark family-meals-match-card">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best match</p>
-              <h4 className="mt-4 font-serif text-3xl text-white">{bestRecipe ? bestRecipe.name : "No pantry leader yet"}</h4>
-              <p className="mt-3 text-sm leading-7 text-stone-200">
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Dinner pick</p>
+              <h4 className="mt-4 font-serif text-3xl text-white">{bestRecipe ? bestRecipe.name : "No dinner pick yet"}</h4>
+              <p className="mt-3 text-sm leading-6 text-stone-200">
                 {bestRecipe
-                  ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients are already covered. Missing: ${bestRecipe.missing.length > 0 ? bestRecipe.missing.join(", ") : "nothing extra needed"}.`
-                  : "Once the pantry has a few staples, this route becomes the fastest path from ingredients to dinner."}
+                  ? `${bestRecipe.matches}/${bestRecipe.ingredients.length} ingredients are ready. ${bestRecipe.missing.length > 0 ? `Still needed: ${bestRecipe.missing.join(", ")}.` : "Nothing extra needed."}`
+                  : "Add pantry items to pick a dinner match."}
               </p>
               {bestRecipe ? (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -1093,10 +1085,10 @@ function MealsPage({
             </div>
             <div className="family-route-notice family-route-notice--gold family-meals-ai-card">
               <p className="family-kicker family-eyebrow">AI help</p>
-              <h4 className="mt-4 font-serif text-3xl leading-tight">Turn your pantry into a meal plan.</h4>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Generate a plan and get shopping needs, prep notes, and meal order.</p>
+              <h4 className="mt-4 font-serif text-3xl leading-tight">Build the plan</h4>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Get dinner order, prep notes, and a short shopping list.</p>
               <button type="button" onClick={generateMealPlan} disabled={aiTask !== null} className="family-btn family-btn-secondary mt-5">
-                {aiTask === "meal-plan" ? "Generating..." : "Generate AI meal plan"}
+                {aiTask === "meal-plan" ? "Generating..." : "Generate meal plan"}
               </button>
             </div>
           </div>
@@ -1107,23 +1099,23 @@ function MealsPage({
         <article className="family-panel family-route-board family-route-board--meals family-animate-rise rounded-[30px] p-6 md:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="family-kicker family-eyebrow">Recipe ideas</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Meals that fit your pantry.</h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">The top card is the strongest current match, then everything else follows behind it.</p>
+              <p className="family-kicker family-eyebrow">Dinner ideas</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Best matches</h3>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">The top pantry matches right now.</p>
             </div>
             <span className="family-badge family-badge-gold">{state.pantry.length} pantry items</span>
           </div>
           <div className="mt-6 grid gap-4">
-            {recipeMatches.map((recipe, index) => (
+            {topRecipeMatches.map((recipe, index) => (
               <article key={recipe.name} className={`family-recipe-card ${index === 0 ? "family-recipe-card-top" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4 className="font-serif text-2xl">{recipe.name}</h4>
-                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{recipe.description}</p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{recipe.description}</p>
                   </div>
                   <span className={`family-badge ${recipe.matches > 0 ? "family-badge-accent" : "family-badge-warm"}`}>{recipe.matches}/{recipe.ingredients.length} ready</span>
                 </div>
-                <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
+                <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
                   {recipe.missing.length > 0 ? `Still needed: ${recipe.missing.join(", ")}.` : "You already have everything needed for this recipe."}
                 </p>
                 <div className="family-recipe-meter mt-4">
@@ -1147,10 +1139,10 @@ function MealsPage({
             <div className="mt-4 space-y-6">
               <div>
                 <h3 className="font-serif text-4xl leading-tight">{state.latestMealPlan.headline}</h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{state.latestMealPlan.summary}</p>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{state.latestMealPlan.summary}</p>
               </div>
               <div className="space-y-4">
-                {state.latestMealPlan.meals.map((meal) => (
+                {state.latestMealPlan.meals.slice(0, 3).map((meal) => (
                   <div key={`${meal.day}-${meal.recipe}`} className="family-meal-day">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -1159,7 +1151,7 @@ function MealsPage({
                       </div>
                       <span className="family-badge family-badge-gold">{meal.missingIngredients.length > 0 ? "Needs a few extras" : "Ready to cook"}</span>
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{meal.whyItFits}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{meal.whyItFits}</p>
                     <div className="family-meal-day__grid mt-4">
                       <div>
                         <p className="family-kicker family-eyebrow">Uses</p>
@@ -1177,7 +1169,7 @@ function MealsPage({
               <div className="family-shopping-card">
                 <p className="family-kicker family-eyebrow">Shopping list</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {state.latestMealPlan.shoppingList.map((item) => (
+                  {state.latestMealPlan.shoppingList.slice(0, 8).map((item) => (
                     <span key={item} className="family-badge family-badge-warm">
                       {item}
                     </span>
@@ -1186,7 +1178,7 @@ function MealsPage({
               </div>
             </div>
           ) : (
-            <EmptyState className="mt-4">Generate a meal plan and the assistant will turn your pantry into a practical multi-day cooking plan.</EmptyState>
+            <EmptyState className="mt-4">Generate a plan to turn your pantry into dinner ideas.</EmptyState>
           )}
         </article>
       </div>

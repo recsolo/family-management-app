@@ -75,13 +75,23 @@ export function getAuthRuntimeConfig() {
   };
 }
 
-export function getReminderEmailConfig() {
-  const apiKey = process.env.RESEND_API_KEY?.trim() || "";
-  const fromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || "";
+export function getMailConfig() {
+  const smtpUser = process.env.GMAIL_SMTP_USER?.trim() || "";
+  const smtpAppPassword = process.env.GMAIL_SMTP_APP_PASSWORD?.trim() || "";
+  const fromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || smtpUser;
 
   return {
-    apiKey,
+    smtpUser,
+    smtpAppPassword,
     fromEmail,
-    configured: Boolean(apiKey && fromEmail),
+    configured: Boolean(smtpUser && smtpAppPassword && fromEmail),
   };
+}
+
+export function getReminderEmailConfig() {
+  return getMailConfig();
+}
+
+export function getReminderDispatchSecret() {
+  return process.env.REMINDER_DISPATCH_SECRET?.trim() || "";
 }

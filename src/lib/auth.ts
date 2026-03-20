@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 
 import { db } from "@/lib/db";
-import { getAppUrl, getAuthRuntimeConfig } from "@/lib/env";
+import { getAppUrl, getAuthRuntimeConfig, getMailConfig } from "@/lib/env";
 import { consumeRateLimit, getHeaderClientId } from "@/lib/rate-limit";
 import type { HouseholdRole } from "@/lib/workspace";
 
@@ -12,6 +12,7 @@ type AuthRow = {
   name: string;
   email: string;
   password_hash: string;
+  email_verified_at: Date | null;
   household_id: string | null;
   household_name: string | null;
   invite_code: string | null;
@@ -41,6 +42,7 @@ async function findUserByEmail(email: string) {
     name: user.name,
     email: user.email,
     password_hash: user.passwordHash,
+    email_verified_at: user.emailVerifiedAt,
     household_id: membership?.household.id ?? null,
     household_name: membership?.household.name ?? null,
     invite_code: membership?.household.inviteCode ?? null,
@@ -98,6 +100,10 @@ export const authOptions: NextAuthOptions = {
 
         const isValid = await compare(credentials.password, user.password_hash);
         if (!isValid) {
+          return null;
+        }
+
+        if (getMailConfig().configured && !user.email_verified_at) {
           return null;
         }
 

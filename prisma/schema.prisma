@@ -11,6 +11,7 @@ model User {
   name         String
   email        String       @unique
   passwordHash String       @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at")
   memberships  Membership[]
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")

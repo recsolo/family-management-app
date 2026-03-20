@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
 
+import { isAccountEmailConfigured } from "@/lib/account-security";
 import {
   type AppNotification,
   cloneDefaultState,
@@ -32,6 +33,13 @@ type RegisterInput = {
   password: string;
   householdName?: string;
   inviteCode?: string;
+};
+
+type RegisteredUser = {
+  id: string;
+  name: string;
+  email: string;
+  verificationRequired: boolean;
 };
 
 type AttachHouseholdInput =
@@ -166,6 +174,12 @@ async function getMemberInHousehold(householdId: string, memberId: string) {
 async function findHouseholdByInviteCode(inviteCode: string) {
   return db.household.findUnique({
     where: { inviteCode: inviteCode.trim().toUpperCase() },
+  });
+}
+
+export async function findUserByEmail(email: string) {
+  return db.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
   });
 }
 
@@ -432,9 +446,9 @@ export async function attachUserToHousehold(input: AttachHouseholdInput) {
   return getWorkspaceForUser(input.userId);
 }
 
-export async function registerUser(input: RegisterInput) {
+export async function registerUser(input: RegisterInput): Promise<RegisteredUser> {
   const email = input.email.trim().toLowerCase();
-  const existing = await db.user.findUnique({ where: { email } });
+  const existing = await findUserByEmail(email);
   if (existing) {
     throw new Error("An account with that email already exists.");
   }
@@ -446,6 +460,8 @@ export async function registerUser(input: RegisterInput) {
 
   const createdAt = new Date();
   const passwordHash = await hash(input.password, 10);
+  const verificationRequired = isAccountEmailConfigured();
+  let createdUser: RegisteredUser | null = null;
 
   await db.$transaction(async (tx) => {
     const userId = randomUUID();
@@ -456,10 +472,18 @@ export async function registerUser(input: RegisterInput) {
         name: input.name.trim(),
         email,
         passwordHash,
+        emailVerifiedAt: verificationRequired ? null : createdAt,
         createdAt,
         updatedAt: createdAt,
       },
     });
+
+    createdUser = {
+      id: userId,
+      name: input.name.trim(),
+      email,
+      verificationRequired,
+    };
 
     let householdId = joinedHousehold?.id;
 
@@ -506,4 +530,10 @@ export async function registerUser(input: RegisterInput) {
       },
     });
   });
+
+  if (!createdUser) {
+    throw new Error("Account creation did not finish.");
+  }
+
+  return createdUser;
 }

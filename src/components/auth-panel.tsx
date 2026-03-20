@@ -8,7 +8,7 @@ type Props = {
   onSuccess: (userId?: string) => void;
 };
 
-type Mode = "signin" | "create" | "join";
+type Mode = "signin" | "create" | "join" | "forgot" | "verify";
 
 export function AuthPanel({ onSuccess }: Props) {
   const searchParams = useSearchParams();
@@ -29,6 +29,7 @@ export function AuthPanel({ onSuccess }: Props) {
   const [householdName, setHouseholdName] = useState("");
   const [inviteCodeInput, setInviteCodeInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const mode = modeOverride ?? defaultMode;
@@ -42,7 +43,7 @@ export function AuthPanel({ onSuccess }: Props) {
     });
 
     if (result?.error) {
-      throw new Error("Sign-in failed. Check your email and password.");
+      throw new Error("Sign-in failed. Check your email, password, or verify your email first.");
     }
 
     const sessionResponse = await fetch("/api/auth/session", { cache: "no-store" });
@@ -54,10 +55,37 @@ export function AuthPanel({ onSuccess }: Props) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setNotice(null);
 
     try {
       if (mode === "signin") {
         await finishSignIn();
+        return;
+      }
+
+      if (mode === "forgot") {
+        await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        setNotice("If that email is in FamilyFlow, a reset link is on the way.");
+        setBusy(false);
+        return;
+      }
+
+      if (mode === "verify") {
+        const response = await fetch("/api/auth/resend-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { error?: string; sent?: boolean };
+        if (!response.ok) {
+          throw new Error(body.error ?? "Could not send that email.");
+        }
+        setNotice(body.sent ? "Verification email sent." : "If this account still needs verification, a new email is on the way.");
+        setBusy(false);
         return;
       }
 
@@ -74,9 +102,17 @@ export function AuthPanel({ onSuccess }: Props) {
         }),
       });
 
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as { error?: string; verificationRequired?: boolean; verificationSent?: boolean };
       if (!response.ok) {
         throw new Error(body.error ?? "Registration failed.");
+      }
+
+      if (body.verificationRequired) {
+        setModeOverride("signin");
+        setPassword("");
+        setNotice(body.verificationSent ? "Check your email and verify your account before signing in." : "Your account is ready, but email delivery is not available yet.");
+        setBusy(false);
+        return;
       }
 
       await finishSignIn();
@@ -132,10 +168,12 @@ export function AuthPanel({ onSuccess }: Props) {
                 <input value={email} onChange={(event) => setEmail(event.target.value)} className="family-input mt-2" />
               </label>
 
-              <label className="block text-sm font-medium text-stone-700">
-                Password
-                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="family-input mt-2" />
-              </label>
+              {mode !== "forgot" && mode !== "verify" ? (
+                <label className="block text-sm font-medium text-stone-700">
+                  Password
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="family-input mt-2" />
+                </label>
+              ) : null}
 
               {mode === "create" ? (
                 <label className="block text-sm font-medium text-stone-700">
@@ -159,6 +197,7 @@ export function AuthPanel({ onSuccess }: Props) {
                 <p className="text-sm leading-7 text-[var(--muted)]">Joining {inviteHouseholdName}.</p>
               ) : null}
 
+              {notice ? <p className="text-sm leading-7 text-emerald-700">{notice}</p> : null}
               {error ? <p className="text-sm leading-7 text-rose-700">{error}</p> : null}
 
               <button type="submit" disabled={busy} className="family-btn family-btn-primary min-w-[12rem]">
@@ -168,8 +207,29 @@ export function AuthPanel({ onSuccess }: Props) {
                     ? "Sign in"
                     : mode === "create"
                       ? "Create account"
-                      : "Join family"}
+                      : mode === "join"
+                        ? "Join family"
+                        : mode === "forgot"
+                          ? "Send reset link"
+                          : "Send verification email"}
               </button>
+
+              {mode === "signin" ? (
+                <div className="flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+                  <button type="button" onClick={() => setModeOverride("forgot")} className="underline-offset-4 hover:underline">
+                    Forgot password?
+                  </button>
+                  <button type="button" onClick={() => setModeOverride("verify")} className="underline-offset-4 hover:underline">
+                    Send verification email
+                  </button>
+                </div>
+              ) : null}
+
+              {(mode === "forgot" || mode === "verify") ? (
+                <button type="button" onClick={() => setModeOverride("signin")} className="text-sm text-[var(--muted)] underline-offset-4 hover:underline">
+                  Back to sign in
+                </button>
+              ) : null}
             </form>
           </div>
         </section>

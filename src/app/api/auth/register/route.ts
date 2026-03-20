@@ -1,3 +1,4 @@
+import { sendVerificationEmail } from "@/lib/account-security";
 import { createRouteContext, errorResponse, jsonWithRequestId, logRouteWarning } from "@/lib/observability";
 import { consumeRateLimit, getRequestClientId } from "@/lib/rate-limit";
 import { registerUser } from "@/lib/workspace";
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       return errorResponse(context, 400, "Invite code is required to join a household.");
     }
 
-    await registerUser({
+    const createdUser = await registerUser({
       name: requireTrimmedString(body.name, "Name", 80),
       email: validateEmail(body.email),
       password: validatePassword(body.password),
@@ -61,7 +62,13 @@ export async function POST(request: Request) {
       inviteCode: body.mode === "join" ? validateInviteCode(body.inviteCode) : undefined,
     });
 
-    return jsonWithRequestId(context, { ok: true });
+    const verificationSent = createdUser.verificationRequired ? await sendVerificationEmail(createdUser) : false;
+
+    return jsonWithRequestId(context, {
+      ok: true,
+      verificationRequired: createdUser.verificationRequired,
+      verificationSent,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Registration failed.";
     logRouteWarning(context, "Registration rejected.", {
