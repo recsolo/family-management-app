@@ -300,19 +300,19 @@ export function MemberProfilePage({
           </div>
           <div className="family-profile-stat-grid">
             <div className="family-side-stat">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Points ready</p>
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Points</p>
               <p className="mt-3 font-serif text-5xl text-white">{profile.pointsBalance}</p>
             </div>
             <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Goals done</p>
+              <p className="family-kicker family-eyebrow">Goals</p>
               <p className="mt-3 font-serif text-4xl">{profile.goals.filter((goal) => goal.status === "done").length}</p>
             </div>
             <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Lifetime points</p>
+              <p className="family-kicker family-eyebrow">All-time points</p>
               <p className="mt-3 font-serif text-4xl">{profile.lifetimePoints}</p>
             </div>
             <div className="family-sidebar-note">
-              <p className="family-kicker family-eyebrow">Events saved</p>
+              <p className="family-kicker family-eyebrow">Events</p>
               <p className="mt-3 font-serif text-4xl">{profile.calendarEvents.length}</p>
             </div>
           </div>
@@ -322,15 +322,15 @@ export function MemberProfilePage({
       <div className="grid gap-5 2xl:grid-cols-[1.08fr_0.92fr]">
         <div className="space-y-5">
           <DisclosurePanel
-            kicker="Profile story"
-            title="Make the page feel personal."
-            summary="Open this only when you want to change the headline or about section."
+            kicker="Profile"
+            title="About"
+            summary="Edit the profile text."
             badge={canEdit ? "Editable" : "View only"}
             className="family-panel rounded-[28px] p-5 md:p-6"
           >
             <form className="grid gap-4" onSubmit={saveBasics}>
               <label className="block text-sm font-medium text-stone-700">
-                Big headline
+                Headline
                 <input value={headline} onChange={(event) => setHeadline(event.target.value)} disabled={!canEdit} className="family-input mt-2" />
               </label>
               <label className="block text-sm font-medium text-stone-700">
@@ -338,15 +338,15 @@ export function MemberProfilePage({
                 <textarea value={about} onChange={(event) => setAbout(event.target.value)} disabled={!canEdit} rows={4} className="family-textarea mt-2" />
               </label>
               <button type="submit" disabled={!canEdit} className="family-btn family-btn-primary">
-                Save profile story
+                Save profile
               </button>
             </form>
           </DisclosurePanel>
 
           <DisclosurePanel
             kicker="Goals"
-            title="Big goals and shared wins."
-            summary="Keep goals ready without leaving the whole builder open all the time."
+            title="Goals"
+            summary="Track goals here."
             badge={`${profile.goals.filter((goal) => goal.status === "active").length} active`}
             defaultOpen
             className="family-panel rounded-[28px] p-5 md:p-6"
@@ -365,11 +365,11 @@ export function MemberProfilePage({
                   setGoalPoints("15");
                 }}
               >
-                <input value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} placeholder="New goal" className="family-input" />
+                <input value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} placeholder="Goal" className="family-input" />
                 <input value={goalCategory} onChange={(event) => setGoalCategory(event.target.value)} placeholder="Category" className="family-input" />
                 <input type="number" min="1" value={goalPoints} onChange={(event) => setGoalPoints(event.target.value)} placeholder="Points" className="family-input" />
                 <input type="date" value={goalDate} onChange={(event) => setGoalDate(event.target.value)} className="family-input" />
-                <textarea value={goalDetail} onChange={(event) => setGoalDetail(event.target.value)} rows={3} placeholder="Why this goal matters" className="family-textarea family-profile-form-grid__wide" />
+                <textarea value={goalDetail} onChange={(event) => setGoalDetail(event.target.value)} rows={3} placeholder="Details" className="family-textarea family-profile-form-grid__wide" />
                 <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">Add goal</button>
               </form>
             ) : null}
@@ -381,7 +381,7 @@ export function MemberProfilePage({
                       <div>
                         <p className="family-kicker family-eyebrow">{goal.category}</p>
                         <h3 className="mt-2 font-serif text-2xl">{goal.title}</h3>
-                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{goal.detail || "A clear goal is waiting on the board."}</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{goal.detail || "No details yet."}</p>
                       </div>
                       <span className={`family-badge ${goal.status === "done" ? "family-badge-accent" : "family-badge-gold"}`}>{goal.status === "done" ? "Done" : `${goal.points} pts`}</span>
                     </div>
@@ -394,15 +394,15 @@ export function MemberProfilePage({
                   </div>
                 ))
               ) : (
-                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Add the first goal so points and accomplishments can start growing.</div>
+                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">No goals yet.</div>
               )}
             </div>
           </DisclosurePanel>
 
           <DisclosurePanel
             kicker="Calendar"
-            title="Today and what comes next."
-            summary="Open the planner when you want to add or review events."
+            title="Calendar"
+            summary="Events and schedule."
             badge={`${profile.calendarEvents.length} events`}
             className="family-panel rounded-[28px] p-5 md:p-6"
           >
@@ -419,10 +419,10 @@ export function MemberProfilePage({
                   setEventDetail("");
                 }}
               >
-                <input value={eventTitle} onChange={(event) => setEventTitle(event.target.value)} placeholder="New event" className="family-input" />
+                <input value={eventTitle} onChange={(event) => setEventTitle(event.target.value)} placeholder="Event" className="family-input" />
                 <input type="date" value={eventDate} onChange={(event) => setEventDate(event.target.value)} className="family-input" />
                 <input type="time" value={eventTime} onChange={(event) => setEventTime(event.target.value)} className="family-input" />
-                <input value={eventDetail} onChange={(event) => setEventDetail(event.target.value)} placeholder="Event details" className="family-input family-profile-form-grid__wide" />
+                <input value={eventDetail} onChange={(event) => setEventDetail(event.target.value)} placeholder="Details" className="family-input family-profile-form-grid__wide" />
                 <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">Add event</button>
               </form>
             ) : null}
@@ -441,11 +441,11 @@ export function MemberProfilePage({
                     <div key={event.id} className="family-profile-feed-card">
                       <p className="family-kicker family-eyebrow">{formatDateLabel(event.date)}</p>
                       <h3 className="mt-2 font-serif text-2xl">{event.title}</h3>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{event.time ? `${event.time} / ` : ""}{event.detail || "No extra details yet."}</p>
+                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{event.time ? `${event.time} / ` : ""}{event.detail || "No details yet."}</p>
                     </div>
                   ))
                 ) : (
-                  <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Add events so this page becomes a real day planner.</div>
+                  <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">No events yet.</div>
                 )}
               </div>
             </div>
@@ -455,15 +455,14 @@ export function MemberProfilePage({
         <div className="space-y-5">
           {canMessageMember ? (
             <article className="family-panel rounded-[28px] p-6">
-              <p className="family-kicker family-eyebrow">Private chat</p>
-              <h2 className="mt-3 font-serif text-4xl leading-tight">Message {member.name} without the clutter.</h2>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Your own messages can be edited or deleted after you send them.</p>
+              <p className="family-kicker family-eyebrow">Chat</p>
+              <h2 className="mt-3 font-serif text-4xl leading-tight">Message {member.name}</h2>
               <div className="mt-5">
                 <EditableMessageThread
                   messages={directMessages}
                   currentUserId={currentUserId}
-                  emptyMessage="Start the first message so this profile becomes a real one-on-one space."
-                  composePlaceholder={`Send ${member.name} a quick note...`}
+                  emptyMessage="No messages yet."
+                  composePlaceholder={`Message ${member.name}...`}
                   sendLabel="Send message"
                   onSendMessage={onSendMessage}
                   onEditMessage={onEditMessage}
@@ -473,10 +472,13 @@ export function MemberProfilePage({
             </article>
           ) : null}
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Today&apos;s weather</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">{displayedWeather?.weather.summary ?? "Pick a weather spot"}</h2>
-            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{displayedWeather?.location.label ?? "Add a city so the page can show today’s weather."}</p>
+          <DisclosurePanel
+            kicker="Weather"
+            title={displayedWeather?.weather.summary ?? "Weather"}
+            summary={displayedWeather?.location.label ?? "Set a city."}
+            badge={profile.weatherLocation ? "Saved" : "No city"}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             <form
               className="mt-5 space-y-4"
               onSubmit={(event) => {
@@ -493,11 +495,15 @@ export function MemberProfilePage({
               <div className="family-sidebar-note"><p className="family-kicker family-eyebrow">High / low</p><p className="mt-3 font-serif text-3xl">{displayedWeather?.weather.highF != null && displayedWeather?.weather.lowF != null ? `${Math.round(displayedWeather.weather.highF)}° / ${Math.round(displayedWeather.weather.lowF)}°` : "--"}</p></div>
               <div className="family-sidebar-note"><p className="family-kicker family-eyebrow">Status</p><p className="mt-3 text-sm leading-7 text-[var(--muted)]">{weatherLoading ? "Checking weather..." : displayedWeatherError ?? (displayedWeather?.weather.windMph != null ? `${Math.round(displayedWeather.weather.windMph)} mph wind` : "Weather is ready when a location is saved.")}</p></div>
             </div>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Fitness tracker</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Track today&apos;s progress.</h2>
+          <DisclosurePanel
+            kicker="Fitness"
+            title="Today's tracker"
+            summary="Steps, water, sleep, and movement."
+            badge={todayFitness ? "Saved today" : "Not saved"}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             <form className="family-profile-form-grid mt-5" onSubmit={saveFitness}>
               <input type="number" min="0" value={steps} onChange={(event) => setSteps(event.target.value)} disabled={!canEdit} placeholder="Steps" className="family-input" />
               <input type="number" min="0" value={minutes} onChange={(event) => setMinutes(event.target.value)} disabled={!canEdit} placeholder="Active minutes" className="family-input" />
@@ -509,11 +515,15 @@ export function MemberProfilePage({
                 {todayFitness ? <button type="button" onClick={onShareFitness} disabled={!canEdit} className="family-btn family-btn-secondary">Share fitness win</button> : null}
               </div>
             </form>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Rewards</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Trade points for rewards.</h2>
+          <DisclosurePanel
+            kicker="Rewards"
+            title="Rewards"
+            summary="Spend points here."
+            badge={`${profile.rewards.length} saved`}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             {canEdit ? (
               <form
                 className="family-profile-form-grid mt-5"
@@ -526,33 +536,41 @@ export function MemberProfilePage({
                   setRewardCost("25");
                 }}
               >
-                <input value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} placeholder="Reward name" className="family-input" />
+                <input value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} placeholder="Reward" className="family-input" />
                 <input type="number" min="1" value={rewardCost} onChange={(event) => setRewardCost(event.target.value)} placeholder="Cost" className="family-input" />
-                <input value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} placeholder="Reward details" className="family-input family-profile-form-grid__wide" />
+                <input value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} placeholder="Details" className="family-input family-profile-form-grid__wide" />
                 <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">Add reward</button>
               </form>
             ) : null}
             <div className="mt-5 grid gap-3">
-              {profile.rewards.map((reward) => (
-                <div key={reward.id} className="family-profile-reward-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="family-kicker family-eyebrow">{reward.cost} points</p>
-                      <h3 className="mt-2 font-serif text-2xl">{reward.title}</h3>
-                      <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reward.detail || "A fun reward waiting to be claimed."}</p>
+              {profile.rewards.length > 0 ? (
+                profile.rewards.map((reward) => (
+                  <div key={reward.id} className="family-profile-reward-card">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="family-kicker family-eyebrow">{reward.cost} points</p>
+                        <h3 className="mt-2 font-serif text-2xl">{reward.title}</h3>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reward.detail || "No details yet."}</p>
+                      </div>
+                      <button type="button" onClick={() => onRedeemReward(reward.id)} disabled={!canEdit || profile.pointsBalance < reward.cost} className="family-btn family-btn-secondary">
+                        {profile.pointsBalance >= reward.cost ? "Redeem" : "Need points"}
+                      </button>
                     </div>
-                    <button type="button" onClick={() => onRedeemReward(reward.id)} disabled={!canEdit || profile.pointsBalance < reward.cost} className="family-btn family-btn-secondary">
-                      {profile.pointsBalance >= reward.cost ? "Redeem" : "Need points"}
-                    </button>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">No rewards yet.</div>
+              )}
             </div>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Pictures and keepsakes</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Save photos and favorite items.</h2>
+          <DisclosurePanel
+            kicker="Uploads"
+            title="Photos and keepsakes"
+            summary="Pictures and saved items."
+            badge={`${profile.uploads.length} saved`}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             {canEdit ? (
               <div className="mt-5 grid gap-4">
                 <input type="file" accept="image/*" onChange={(event) => void handleAvatarUpload(event)} className="family-input cursor-pointer file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-white" />
@@ -581,14 +599,18 @@ export function MemberProfilePage({
                   </div>
                 ))
               ) : (
-                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)] sm:col-span-2">Add a photo or a favorite item so this page feels like home.</div>
+                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)] sm:col-span-2">No uploads yet.</div>
               )}
             </div>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Shared with family</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Wins everyone can celebrate.</h2>
+          <DisclosurePanel
+            kicker="Shared wins"
+            title="Shared wins"
+            summary="Things shared with the family."
+            badge={`${familyFeed.length} shown`}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             <div className="mt-5 space-y-3">
               {familyFeed.length > 0 ? (
                 familyFeed.map((item) => (
@@ -604,10 +626,10 @@ export function MemberProfilePage({
                   </div>
                 ))
               ) : (
-                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Complete a goal or share a fitness win to start the family celebration feed.</div>
+                <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">No shared wins yet.</div>
               )}
             </div>
-          </article>
+          </DisclosurePanel>
         </div>
       </div>
     </div>
