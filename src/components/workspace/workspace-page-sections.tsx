@@ -284,7 +284,7 @@ function HelpPage({
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">Help</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Learn the app here.</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Need help?</h3>
           </div>
           <div className="family-route-chip">Help</div>
         </div>
@@ -293,35 +293,35 @@ function HelpPage({
       <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-5">
           <InsightCard
-            kicker="Quick guide"
-            title="Where the main things live."
-            body="Use this page when you need a fast answer."
+            kicker="Guide"
+            title="Main pages"
+            body="Tap a page name to learn what it does."
             className="family-panel"
           >
             <div className="mt-5 grid gap-3">
               <div className="family-list-card">
                 <h4 className="font-serif text-2xl">Today</h4>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Main page with family check, inbox, loop, and quests.</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Today's check, inbox, and quests.</p>
               </div>
               <div className="family-list-card">
                 <h4 className="font-serif text-2xl">Profiles</h4>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Each family member gets goals, fitness, rewards, calendar, weather, and keepsakes.</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Goals, fitness, rewards, calendar, weather, and uploads.</p>
               </div>
               <div className="family-list-card">
                 <h4 className="font-serif text-2xl">Family Room</h4>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Invite people, manage members, and open profiles.</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Members, invites, and profiles.</p>
               </div>
               <div className="family-list-card">
                 <h4 className="font-serif text-2xl">Partner Space</h4>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Private chat, date night plans, private rewards, and shared milestones.</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Private chat, dates, rewards, and milestones.</p>
               </div>
             </div>
           </InsightCard>
 
           <DisclosurePanel
-            kicker="Popular how-tos"
-            title="Tap a question and let the AI answer."
-            summary="These prompts are just quick starts."
+            kicker="Questions"
+            title="Ask AI"
+            summary="Tap one to start."
             badge={`${helpPrompts.length} prompts`}
             defaultOpen
             className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
@@ -341,9 +341,9 @@ function HelpPage({
           </DisclosurePanel>
 
           <InsightCard
-            kicker="Live household context"
-            title={`${state.memberProfiles.length} profiles and ${state.notifications.length} notifications are ready.`}
-            body="The helper AI can answer using this family's real app data."
+            kicker="Ready"
+            title={`${state.memberProfiles.length} profiles and ${state.notifications.length} alerts`}
+            body="AI answers using your family data."
             className="family-card family-card-dark"
           />
         </div>
@@ -395,17 +395,17 @@ function DashboardPage({
     {
       label: "Open chores",
       value: `${openTodayChores.length}`,
-      note: openTodayChores[0] ? `${openTodayChores[0].title} is next.` : "No open chores are waiting right now.",
+      note: openTodayChores[0] ? `${openTodayChores[0].title} is next.` : "No chores waiting.",
     },
     {
       label: "Today's events",
       value: `${todaysEvents.length}`,
-      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "No calendar events are due today yet.",
+      note: todaysEvents[0] ? `${todaysEvents[0].memberName}: ${todaysEvents[0].title}` : "No events today.",
     },
     {
       label: "In the loop",
       value: `${focusReminders.length}`,
-      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} are active today.`,
+      note: `${focusReminders.length} reminder${focusReminders.length === 1 ? "" : "s"} today.`,
     },
   ];
 
@@ -414,8 +414,8 @@ function DashboardPage({
       <article className="family-route-shell family-route-shell--dashboard family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Today&apos;s family check</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">See the day fast.</h3>
+            <p className="family-kicker family-eyebrow">Today</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Today</h3>
           </div>
           <div className="family-route-chip">Today</div>
         </div>
@@ -428,7 +428,7 @@ function DashboardPage({
         <DisclosurePanel
           kicker="Family Inbox"
           title={unreadNotificationCount > 0 ? `${unreadNotificationCount} new` : "All clear"}
-          summary="Open the latest alerts."
+          summary="Latest alerts."
           badge={`${latestNotifications.length} shown`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -454,15 +454,15 @@ function DashboardPage({
                 </button>
               ))
             ) : (
-              <EmptyState>No alerts are waiting right now.</EmptyState>
+              <EmptyState>No alerts right now.</EmptyState>
             )}
           </div>
         </DisclosurePanel>
 
         <DisclosurePanel
           kicker="Family in the loop"
-          title="What the family needs today."
-          summary="Open today's appointments, reminders, and chores."
+          title="Today"
+          summary="Events, reminders, and chores."
           badge={`${todaysEvents.length + focusReminders.length + openTodayChores.length} items`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -514,7 +514,7 @@ function DashboardPage({
               </button>
             ))}
             {todaysEvents.length === 0 && focusReminders.length === 0 && openTodayChores.length === 0 ? (
-              <EmptyState>Nothing urgent is waiting today.</EmptyState>
+              <EmptyState>Nothing urgent today.</EmptyState>
             ) : null}
           </div>
         </DisclosurePanel>
@@ -524,7 +524,7 @@ function DashboardPage({
         <DisclosurePanel
           kicker="Quest board"
           title={`${familyQuestBoard.sharedPoints} shared points`}
-          summary="Open the active quests and the latest unlock."
+          summary="Active quests and rewards."
           badge={`${familyQuestBoard.quests.length} quests`}
           defaultOpen
           className="family-panel rounded-[28px] p-5 md:p-6"
@@ -559,7 +559,7 @@ function DashboardPage({
         <DisclosurePanel
           kicker="Today's family check"
           title={`${completedChores}/${todayChores.length} chores done`}
-          summary="Open the day board."
+          summary="Today's totals."
           badge={`${memberList.length} members`}
           defaultOpen
           className="family-panel family-route-board family-route-board--dashboard family-animate-rise rounded-[32px] p-5 md:p-6"
@@ -587,7 +587,7 @@ function DashboardPage({
               Open inbox
             </button>
             <button type="button" onClick={() => goToTab("family")} className="family-btn family-btn-soft">
-              Open family room
+              Open Family Room
             </button>
           </div>
         </DisclosurePanel>

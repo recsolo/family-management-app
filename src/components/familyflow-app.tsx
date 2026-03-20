@@ -2307,8 +2307,8 @@ export function FamilyFlowApp({
           <WorkspaceTopBar
             householdName={householdName}
             userName={userName}
-            activeTitle="Just you and FamilyFlow"
-            activeDetail="A clean chat room with the menu tucked into the top right."
+            activeTitle="AI chat"
+            activeDetail=""
             navigation={navigation}
             activeTab={activeTab}
             notifications={currentUserNotifications}

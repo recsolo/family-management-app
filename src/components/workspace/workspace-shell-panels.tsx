@@ -117,7 +117,7 @@ export function WorkspaceTopBar({
   return (
     <header className="family-topbar family-animate-rise">
       <div className="family-topbar__brand">
-        <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
+        <p className="family-kicker family-eyebrow">FamilyFlow</p>
         <h1 className="mt-2 font-serif text-3xl leading-tight">{activeTitle}</h1>
         {activeDetail ? <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{activeDetail}</p> : null}
       </div>
@@ -164,8 +164,8 @@ export function WorkspaceTopBar({
             <div id="family-command-menu" className="family-command-popout" role="dialog" aria-label="Page navigation">
               <div className="family-command-popout__header">
                 <div>
-                  <p className="family-kicker family-eyebrow">Command menu</p>
-                  <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Jump to a page</h2>
+                  <p className="family-kicker family-eyebrow">Menu</p>
+                  <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Pages</h2>
                 </div>
                 <button type="button" onClick={() => setMenuOpen(false)} className="family-btn family-btn-secondary">
                   Close
@@ -192,7 +192,7 @@ export function WorkspaceTopBar({
                         <span className="family-command-link__title mt-2 block font-serif leading-tight">{item.label}</span>
                       </span>
                       <span className={`family-badge ${isActive ? "family-badge-accent" : "family-badge-warm"}`}>
-                        {isActive ? "Open" : item.badge ?? "Go"}
+                        {isActive ? "Here" : item.badge ?? "Open"}
                       </span>
                     </button>
                   );
@@ -202,7 +202,7 @@ export function WorkspaceTopBar({
               <div className="family-command-popout__footer mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
                 <div>
                   <p className="family-kicker family-eyebrow">Account</p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Signed in as {userName}.</p>
+                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{userName}</p>
                 </div>
                 <button
                   type="button"

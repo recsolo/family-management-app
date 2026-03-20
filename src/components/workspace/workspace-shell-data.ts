@@ -98,88 +98,78 @@ type BuildWorkspaceShellDataArgs = {
 };
 
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
-  { value: "dashboard", label: "Today", detail: "Today at a glance" },
-  { value: "games", label: "Game Room", detail: "Play together" },
-  { value: "help", label: "Help", detail: "How-to and answers" },
-  { value: "inbox", label: "Family Inbox", detail: "Alerts and updates" },
-  { value: "ops", label: "Family Ops", detail: "Chores and reminders" },
-  { value: "meals", label: "Meal Planner", detail: "Pantry and recipes" },
-  { value: "budget", label: "Budget Lab", detail: "Money plan" },
-  { value: "family", label: "Family Room", detail: "Members and access" },
-  { value: "partner", label: "Partner Space", detail: "Private connection page" },
-  { value: "ai", label: "AI Studio", detail: "Assistant" },
+  { value: "dashboard", label: "Today", detail: "Home" },
+  { value: "games", label: "Game Room", detail: "Play" },
+  { value: "help", label: "Help", detail: "Guide" },
+  { value: "inbox", label: "Family Inbox", detail: "Alerts" },
+  { value: "ops", label: "Family Ops", detail: "Tasks" },
+  { value: "meals", label: "Meal Planner", detail: "Meals" },
+  { value: "budget", label: "Budget Lab", detail: "Money" },
+  { value: "family", label: "Family Room", detail: "Family" },
+  { value: "partner", label: "Partner Space", detail: "Private" },
+  { value: "ai", label: "Ask AI", detail: "Questions" },
 ];
 
 export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {
   dashboard: {
-    eyebrow: "Ready for today?",
-    headline: "See what your family needs next.",
-    description:
-      "Meals, money, reminders, and progress all show up in one easy spot.",
-    spotlight: "Start here when you want a quick check.",
+    eyebrow: "Today",
+    headline: "Today",
+    description: "What matters today.",
+    spotlight: "Home",
   },
   games: {
-    eyebrow: "Family game night",
-    headline: "Play something fun together without leaving the app.",
-    description:
-      "Game Room mixes a quick all-ages arcade challenge with a pass-and-play UNO table for the whole family.",
-    spotlight: "Open this page when you want a break, a laugh, or a quick family challenge.",
+    eyebrow: "Games",
+    headline: "Game Room",
+    description: "Play games.",
+    spotlight: "Games",
   },
   help: {
-    eyebrow: "Need help?",
-    headline: "Learn the app and ask FamilyFlow questions.",
-    description:
-      "Help keeps the how-to guidance in one place, so the rest of the app can stay cleaner and more focused.",
-    spotlight: "Open this page when you want a how-to, a walkthrough, or a quick answer.",
+    eyebrow: "Help",
+    headline: "Help",
+    description: "How to use the app.",
+    spotlight: "Help",
   },
   inbox: {
-    eyebrow: "Stay in the loop",
-    headline: "See new alerts, messages, and shared wins.",
-    description:
-      "Family Inbox keeps recent household updates in one clear feed so no one misses the important stuff.",
-    spotlight: "Open this page when you want the latest updates fast.",
+    eyebrow: "Inbox",
+    headline: "Family Inbox",
+    description: "Alerts and updates.",
+    spotlight: "Inbox",
   },
   ops: {
-    eyebrow: "Let's get things done",
-    headline: "Finish chores and keep reminders easy to see.",
-    description:
-      "Add chores, assign jobs, and keep family reminders in one place.",
-    spotlight: "Open this page when it is time to work together.",
+    eyebrow: "Tasks",
+    headline: "Family Ops",
+    description: "Chores and reminders.",
+    spotlight: "Tasks",
   },
   meals: {
-    eyebrow: "What's for dinner?",
-    headline: "Pick meals from what is already at home.",
-    description:
-      "Use the pantry, recipe matches, and AI help to make dinner easier.",
-    spotlight: "Open this page when you want meal ideas fast.",
+    eyebrow: "Meals",
+    headline: "Meal Planner",
+    description: "Dinner and pantry.",
+    spotlight: "Meals",
   },
   budget: {
-    eyebrow: "Money made simple",
-    headline: "See a clear plan for your family money.",
-    description:
-      "Budget Lab turns your numbers into a simple monthly plan and AI help.",
-    spotlight: "Open this page to check or change the budget.",
+    eyebrow: "Budget",
+    headline: "Budget Lab",
+    description: "Money plan.",
+    spotlight: "Budget",
   },
   family: {
-    eyebrow: "Family setup",
-    headline: "Invite family and keep everyone organized.",
-    description:
-      "Members, invite links, the family name, and routines all live here.",
-    spotlight: "Come here to invite family or update settings.",
+    eyebrow: "Family",
+    headline: "Family Room",
+    description: "Members and settings.",
+    spotlight: "Family",
   },
   partner: {
-    eyebrow: "Private grown-up space",
-    headline: "Stay close, chat privately, and plan time together.",
-    description:
-      "Use Partner Space for private messages, date ideas, and rewards that stay between the chosen pair.",
-    spotlight: "Open this page for connection, planning, and private rewards.",
+    eyebrow: "Partner",
+    headline: "Partner Space",
+    description: "Private chat and plans.",
+    spotlight: "Partner",
   },
   ai: {
-    eyebrow: "Need help?",
-    headline: "Ask FamilyFlow to help with meals, chores, and plans.",
-    description:
-      "AI Studio uses your real family data, so the answers feel useful and specific.",
-    spotlight: "Open this page when you want ideas or a quick plan.",
+    eyebrow: "AI",
+    headline: "Ask AI",
+    description: "Ask a question.",
+    spotlight: "AI",
   },
 };
 

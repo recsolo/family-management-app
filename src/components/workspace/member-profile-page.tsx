@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 
 import { createId, getTodayKey, type DirectMessage, type FamilyAchievement, type FitnessLog, type MemberProfile, type ProfileUpload } from "@/lib/familyflow";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
+import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
 
 type WeatherSnapshot = {
@@ -256,7 +257,7 @@ export function MemberProfilePage({
 
   function saveBasics(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSaveBasics(headline.trim() || `${member.name} is ready to shine`, about.trim());
+    onSaveBasics(headline.trim() || `${member.name}`, about.trim());
   }
 
   function saveFitness(event: FormEvent<HTMLFormElement>) {
@@ -291,10 +292,10 @@ export function MemberProfilePage({
               )}
             </div>
             <div>
-              <p className="family-kicker family-eyebrow">Member profile</p>
+              <p className="family-kicker family-eyebrow">Profile</p>
               <h1 className="mt-3 font-serif text-5xl leading-[0.95]">{member.name}</h1>
               <p className="mt-4 text-lg leading-8 text-[var(--muted)]">{profile.headline}</p>
-              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{profile.about || "Track progress, stack points, and share wins with the family."}</p>
+              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{profile.about || "Goals, points, calendar, and uploads."}</p>
             </div>
           </div>
           <div className="family-profile-stat-grid">
@@ -320,10 +321,14 @@ export function MemberProfilePage({
 
       <div className="grid gap-5 2xl:grid-cols-[1.08fr_0.92fr]">
         <div className="space-y-5">
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Profile story</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Make the page feel personal.</h2>
-            <form className="mt-5 grid gap-4" onSubmit={saveBasics}>
+          <DisclosurePanel
+            kicker="Profile story"
+            title="Make the page feel personal."
+            summary="Open this only when you want to change the headline or about section."
+            badge={canEdit ? "Editable" : "View only"}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
+            <form className="grid gap-4" onSubmit={saveBasics}>
               <label className="block text-sm font-medium text-stone-700">
                 Big headline
                 <input value={headline} onChange={(event) => setHeadline(event.target.value)} disabled={!canEdit} className="family-input mt-2" />
@@ -336,19 +341,19 @@ export function MemberProfilePage({
                 Save profile story
               </button>
             </form>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="family-kicker family-eyebrow">Goals</p>
-                <h2 className="mt-3 font-serif text-4xl leading-tight">Big goals and shared wins.</h2>
-              </div>
-              <span className="family-badge family-badge-gold">{profile.goals.filter((goal) => goal.status === "active").length} active</span>
-            </div>
+          <DisclosurePanel
+            kicker="Goals"
+            title="Big goals and shared wins."
+            summary="Keep goals ready without leaving the whole builder open all the time."
+            badge={`${profile.goals.filter((goal) => goal.status === "active").length} active`}
+            defaultOpen
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             {canEdit ? (
               <form
-                className="family-profile-form-grid mt-5"
+                className="family-profile-form-grid"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (!goalTitle.trim()) return;
@@ -392,14 +397,18 @@ export function MemberProfilePage({
                 <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">Add the first goal so points and accomplishments can start growing.</div>
               )}
             </div>
-          </article>
+          </DisclosurePanel>
 
-          <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Calendar</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">Today and what comes next.</h2>
+          <DisclosurePanel
+            kicker="Calendar"
+            title="Today and what comes next."
+            summary="Open the planner when you want to add or review events."
+            badge={`${profile.calendarEvents.length} events`}
+            className="family-panel rounded-[28px] p-5 md:p-6"
+          >
             {canEdit ? (
               <form
-                className="family-profile-form-grid mt-5"
+                className="family-profile-form-grid"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (!eventTitle.trim()) return;
@@ -440,7 +449,7 @@ export function MemberProfilePage({
                 )}
               </div>
             </div>
-          </article>
+          </DisclosurePanel>
         </div>
 
         <div className="space-y-5">

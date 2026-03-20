@@ -925,8 +925,8 @@ export function GameRoomPage({
       <article className="family-route-shell family-route-shell--games family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Game Room</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Launch bigger game nights from one place.</h3>
+            <p className="family-kicker family-eyebrow">Games</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Pick a game.</h3>
           </div>
           <div className="family-route-chip">Game night</div>
         </div>
@@ -935,10 +935,10 @@ export function GameRoomPage({
         </p>
         <div className="mt-6 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="family-list-card">
-            <p className="family-kicker family-eyebrow">FamilyFlow Play</p>
+            <p className="family-kicker family-eyebrow">Full screen</p>
             <h4 className="mt-3 font-serif text-3xl">{liveExternalArcade.label} is ready.</h4>
             <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-              Open a dedicated full-screen game tab now, then send the score back into FamilyFlow points, quests, and celebrations.
+              Open the game in a new tab.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
@@ -947,22 +947,22 @@ export function GameRoomPage({
                 disabled={launchingGameKey !== null}
                 className="family-btn family-btn-primary"
               >
-                {launchingGameKey === "star-sprint" ? "Opening..." : "Open Star Sprint full screen"}
+                {launchingGameKey === "star-sprint" ? "Opening..." : "Open Star Sprint"}
               </button>
               <button type="button" onClick={() => setActiveView("arcade")} className="family-btn family-btn-soft">
-                Keep arcade inside FamilyFlow
+                Play here
               </button>
             </div>
           </div>
           <div className="family-list-card">
-            <p className="family-kicker family-eyebrow">UNO migration</p>
-            <h4 className="mt-3 font-serif text-3xl">UNO stays here for now.</h4>
+            <p className="family-kicker family-eyebrow">UNO</p>
+            <h4 className="mt-3 font-serif text-3xl">UNO is still here.</h4>
             <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-              The full-screen external UNO table is the next step. For now, the pass-and-play version stays inside FamilyFlow.
+              Use the in-app table for now.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button type="button" onClick={() => setActiveView("uno")} className="family-btn family-btn-secondary">
-                Open UNO here
+                Play UNO here
               </button>
             </div>
           </div>

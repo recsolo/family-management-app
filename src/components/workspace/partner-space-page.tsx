@@ -171,9 +171,9 @@ function getDaysUntil(dateValue: string) {
 }
 
 const QUICK_PARTNER_MESSAGES = [
-  "Thinking about you today.",
-  "What would feel fun for us this week?",
-  "Thank you for showing up for our family.",
+  "Thinking about you.",
+  "Want to plan something this week?",
+  "Thanks for today.",
 ];
 
 const DATE_VIBES = [
@@ -573,11 +573,8 @@ export function PartnerSpacePage({
       <article className="family-panel family-surface-ink family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Partner Space</p>
+            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Partner</p>
             <h2 className="mt-4 font-serif text-5xl leading-[0.95] text-white">{partnerLabel}</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-8 text-stone-200">
-              This private page is for the chosen pair to chat, plan dates, save rewards, and keep little moments close.
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {partnerPointCards.map(({ member, profile }) => (
@@ -592,12 +589,12 @@ export function PartnerSpacePage({
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Connection streak</p>
               <p className="mt-3 font-serif text-3xl text-white">{connectionStreak} days</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">Private notes or messages keep the streak going.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-200">Messages or notes keep this going.</p>
             </div>
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next date</p>
               <p className="mt-3 font-serif text-3xl text-white">{nextDate ? nextDate.title : "Nothing booked"}</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">{nextDate ? formatDateValue(nextDate.when) : "Save one easy plan so it stops living in someday."}</p>
+              <p className="mt-2 text-sm leading-6 text-stone-200">{nextDate ? formatDateValue(nextDate.when) : "No plan yet."}</p>
             </div>
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next anniversary</p>
@@ -611,7 +608,7 @@ export function PartnerSpacePage({
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Bucket list</p>
               <p className="mt-3 font-serif text-3xl text-white">{doneBucketCount}/{bucketList.length}</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">Dreams finished versus still waiting for their turn.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-200">Done vs. not done yet.</p>
             </div>
           </div>
         ) : null}
@@ -620,8 +617,8 @@ export function PartnerSpacePage({
       {canConfigurePartnerSpace ? (
         <DisclosurePanel
           kicker="Choose the pair"
-          title="Decide who uses this private page."
-          summary="Keep the partner picker tucked away after the pair is set."
+          title="Choose the pair"
+          summary="Pick the two people for this page."
           badge={partnerSpace ? "Configured" : "Setup"}
           className="family-panel rounded-[28px] p-5 md:p-6"
         >
@@ -645,18 +642,18 @@ export function PartnerSpacePage({
             </button>
           </form>
           <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-            Only the selected pair should use the private messages, date-night plans, and private rewards on this page.
+            Only the selected pair can use this page.
           </p>
         </DisclosurePanel>
       ) : null}
 
       {!partnerSpace ? (
         <article className="family-empty rounded-[28px] p-6 text-sm leading-7 text-[var(--muted)]">
-          Set the partner pair first, then this page turns into a private space for messages, date nights, and rewards.
+          Pick the pair first.
         </article>
       ) : !canSeePrivateContent ? (
         <article className="family-empty rounded-[28px] p-6 text-sm leading-7 text-[var(--muted)]">
-          This page is private to the chosen pair. You can still see who is selected above, but the private chat and date tools stay hidden unless you are one of the two people in the pair.
+          This page is only for the selected pair.
         </article>
       ) : (
         <>
@@ -683,8 +680,8 @@ export function PartnerSpacePage({
             <div className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Private chat</p>
-                <h3 className="mt-3 font-serif text-4xl leading-tight">Talk without losing the thread.</h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Your own private notes can be edited or deleted after sending.</p>
+                <h3 className="mt-3 font-serif text-4xl leading-tight">Chat</h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Edit or delete your own messages.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {QUICK_PARTNER_MESSAGES.map((message) => (
                     <button key={message} type="button" onClick={() => onSendMessage(message)} className="family-btn family-btn-soft">
@@ -696,9 +693,9 @@ export function PartnerSpacePage({
                   <EditableMessageThread
                     messages={partnerSpace.messages}
                     currentUserId={currentUserId}
-                    emptyMessage="Start the first private message so this page feels like your shared corner of the app."
-                    composePlaceholder="Write a sweet note, a quick check-in, or tonight's plan..."
-                    sendLabel="Send private message"
+                    emptyMessage="Start the chat."
+                    composePlaceholder="Write a message..."
+                    sendLabel="Send message"
                     onSendMessage={onSendMessage}
                     onEditMessage={onEditMessage}
                     onDeleteMessage={onDeleteMessage}

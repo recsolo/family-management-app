@@ -73,22 +73,22 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
       <div className="mx-auto max-w-5xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
         <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="family-card family-card-dark family-grid-lines rounded-[32px] p-8 text-stone-50">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Workspace recovery</p>
+            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Family setup</p>
             <h1 className="mt-4 max-w-lg font-serif text-5xl leading-tight">
-              You are signed in. Let&apos;s get you back to your family.
+              You&apos;re signed in.
             </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-stone-200">{error}</p>
+            <p className="mt-5 max-w-lg text-base leading-7 text-stone-200">Choose a family to open.</p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
                 <p className="family-kicker text-[rgba(241,214,136,0.76)]">Create</p>
-                <h2 className="mt-3 font-serif text-3xl">New family space</h2>
-                <p className="mt-3 text-sm leading-6 text-stone-200">Start a new family space and become the owner.</p>
+                <h2 className="mt-3 font-serif text-3xl">New family</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Start a new family.</p>
               </div>
               <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
                 <p className="family-kicker text-[rgba(241,214,136,0.76)]">Join</p>
-                <h2 className="mt-3 font-serif text-3xl">Existing family space</h2>
-                <p className="mt-3 text-sm leading-6 text-stone-200">Use an invite code to join your family again.</p>
+                <h2 className="mt-3 font-serif text-3xl">Join family</h2>
+                <p className="mt-3 text-sm leading-6 text-stone-200">Use your invite code.</p>
               </div>
             </div>
           </section>
@@ -112,13 +112,10 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
             </div>
 
             <div className="mt-7">
-              <p className="family-kicker family-eyebrow">{mode === "create" ? "Fresh setup" : "Reconnect with code"}</p>
+              <p className="family-kicker family-eyebrow">{mode === "create" ? "Create" : "Join"}</p>
               <h2 className="mt-3 font-serif text-4xl leading-tight">
-                {mode === "create" ? "Create a family space for this account." : "Enter your family invite code."}
+                {mode === "create" ? "Create a family." : "Enter your invite code."}
               </h2>
-              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-                This keeps your current account and reconnects it to the right family space.
-              </p>
             </div>
 
             <div className="mt-7 space-y-4">

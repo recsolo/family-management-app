@@ -74,10 +74,10 @@ export function WorkspaceShell({ activeTab, view = "default", memberProfileId, r
         <div className="family-stage__glow family-stage__glow--three" />
         <div className="mx-auto max-w-3xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
           <div className="family-panel rounded-[32px] p-8 md:p-10">
-            <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
-            <h1 className="mt-4 font-serif text-5xl leading-tight">Loading your household workspace...</h1>
+            <p className="family-kicker family-eyebrow">FamilyFlow</p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">Loading...</h1>
             <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
-              Pulling in your shared meals, budget, routines, reminders, and household context.
+              Getting your family ready.
             </p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function WorkspaceShell({ activeTab, view = "default", memberProfileId, r
         <div className="mx-auto max-w-3xl rounded-[36px] border border-rose-200/70 bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
           <div className="family-panel rounded-[32px] border border-rose-200/80 p-8 md:p-10">
             <p className="family-kicker text-rose-700">Workspace error</p>
-            <h1 className="mt-4 font-serif text-5xl leading-tight">We couldn&apos;t load the household workspace.</h1>
+            <h1 className="mt-4 font-serif text-5xl leading-tight">We couldn&apos;t open your family.</h1>
             <p className="mt-4 text-sm leading-7 text-stone-700">{error ?? "Unknown error."}</p>
           </div>
         </div>
