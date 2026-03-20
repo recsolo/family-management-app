@@ -41,12 +41,7 @@ export function AssistantChatPanel({
       <div className="family-chat-shell__header">
         <div>
           <p className="family-kicker family-eyebrow">{isFocus ? "Chat-only view" : "Chat"}</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight md:text-5xl">{isFocus ? "Just you and FamilyFlow." : "Talk to FamilyFlow."}</h3>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)]">
-            {isFocus
-              ? "This page is only for chatting. Ask about meals, chores, money, or anything your family needs help planning."
-              : "Ask for weekly planning help, dinner ideas, calmer routines, or anything else the family needs."}
-          </p>
+          <h3 className="mt-4 font-serif text-4xl leading-tight md:text-5xl">{isFocus ? "AI chat" : "Ask AI"}</h3>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -66,7 +61,7 @@ export function AssistantChatPanel({
       <div className="family-chat-topband">
         <div className="family-chat-state">
           <span className={`family-chat-state-dot ${aiTask === "assistant" ? "family-chat-state-dot-live" : ""}`} aria-hidden="true" />
-          <span>{aiTask === "assistant" ? "FamilyFlow is writing back..." : "Ready to help right now"}</span>
+          <span>{aiTask === "assistant" ? "AI is replying..." : "Ready"}</span>
         </div>
         <div className="family-chat-seeds">
           {assistantSuggestions.slice(0, isFocus ? 5 : 3).map((suggestion) => (
@@ -95,7 +90,7 @@ export function AssistantChatPanel({
           ))
         ) : (
           <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
-            Start with a weekly plan, a dinner question, or a school-night reset.
+            Ask a question to start.
           </div>
         )}
 
@@ -126,14 +121,14 @@ export function AssistantChatPanel({
           value={chatInput}
           onChange={(event) => onChatInputChange(event.target.value)}
           rows={isFocus ? 5 : 4}
-          placeholder="Ask for a weekly plan, meal help, school-night reset, or reminder strategy."
+          placeholder="Ask a question..."
           className="family-textarea"
         />
 
         <div className="family-chat-compose">
-          <p className="text-sm leading-7 text-[var(--muted)]">FamilyFlow can use your pantry, chores, reminders, routines, and budget to give smarter answers.</p>
+          <p className="text-sm leading-7 text-[var(--muted)]">AI can use your family info to answer better.</p>
           <button type="submit" disabled={aiTask !== null} className="family-btn family-btn-primary">
-            {aiTask === "assistant" ? "Thinking..." : "Send to assistant"}
+            {aiTask === "assistant" ? "Thinking..." : "Send"}
           </button>
         </div>
       </form>

@@ -2327,3 +2327,228 @@ textarea:focus-visible {
     flex-direction: column;
   }
 }
+
+@media (max-width: 900px) {
+  .family-panel,
+  .family-card,
+  .family-route-shell {
+    border-radius: 1.6rem;
+  }
+
+  .family-route-shell__header {
+    gap: 0.85rem;
+  }
+
+  .family-route-shell h3,
+  .family-chat-shell__header h3 {
+    line-height: 1.02;
+  }
+
+  .family-profile-avatar {
+    width: 7.2rem;
+    height: 7.2rem;
+    border-radius: 1.55rem;
+    font-size: 2rem;
+  }
+
+  .family-profile-hero__identity {
+    gap: 1rem;
+  }
+
+  .family-profile-calendar-cell {
+    min-height: 3.6rem;
+    border-radius: 1rem;
+  }
+
+  .family-profile-upload-card__image,
+  .family-profile-upload-card__file {
+    height: 9.5rem;
+  }
+
+  .family-chat-shell__header h3 {
+    font-size: clamp(2rem, 5vw, 2.75rem);
+  }
+
+  .family-chat-compose-shell .family-textarea {
+    min-height: 6.3rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .family-panel,
+  .family-card,
+  .family-route-shell,
+  .family-chat-shell {
+    border-radius: 1.35rem;
+  }
+
+  .family-panel::after,
+  .family-card::after,
+  .family-route-shell::after,
+  .family-topbar::after,
+  .family-command-popout::after,
+  .family-notification-popout::after {
+    display: none;
+  }
+
+  .family-btn {
+    width: 100%;
+    min-height: 2.85rem;
+    padding: 0.82rem 1rem;
+    font-size: 0.86rem;
+  }
+
+  .family-input,
+  .family-select,
+  .family-textarea {
+    border-radius: 1rem;
+    padding: 0.82rem 0.92rem;
+    font-size: 0.95rem;
+  }
+
+  .family-route-shell {
+    border-radius: 1.5rem;
+  }
+
+  .family-route-shell::before {
+    width: 0.35rem;
+  }
+
+  .family-route-shell__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .family-route-shell h3 {
+    font-size: clamp(2rem, 9vw, 2.7rem);
+  }
+
+  .family-route-chip {
+    align-self: flex-start;
+    padding: 0.58rem 0.8rem;
+    font-size: 0.62rem;
+  }
+
+  .family-topbar__brand {
+    max-width: 100%;
+  }
+
+  .family-topbar__brand h1 {
+    font-size: clamp(1.8rem, 7vw, 2.4rem);
+  }
+
+  .family-topbar__actions {
+    gap: 0.55rem;
+  }
+
+  .family-notification-button,
+  .family-menu-button {
+    width: auto;
+    min-height: 0;
+    padding: 0.82rem;
+  }
+
+  .family-command-popout {
+    width: min(16rem, calc(100vw - 1.2rem));
+    padding: 0.72rem;
+    border-radius: 18px;
+  }
+
+  .family-command-popout__title {
+    font-size: 1.12rem;
+  }
+
+  .family-command-link {
+    padding: 0.66rem 0.7rem;
+  }
+
+  .family-command-link__title {
+    font-size: 0.95rem;
+  }
+
+  .family-command-popout .family-btn,
+  .family-notification-popout__header .family-btn {
+    width: auto;
+    min-height: 0;
+  }
+
+  .family-profile-avatar {
+    width: 5.8rem;
+    height: 5.8rem;
+    border-radius: 1.3rem;
+    font-size: 1.55rem;
+  }
+
+  .family-profile-calendar-grid {
+    gap: 0.35rem;
+  }
+
+  .family-profile-calendar-cell {
+    min-height: 2.9rem;
+    border-radius: 0.85rem;
+    font-size: 0.85rem;
+  }
+
+  .family-profile-calendar-dot {
+    bottom: 0.45rem;
+    width: 0.42rem;
+    height: 0.42rem;
+  }
+
+  .family-profile-upload-card__image,
+  .family-profile-upload-card__file {
+    height: 8rem;
+  }
+
+  .family-chat-shell {
+    border-radius: 1.45rem;
+  }
+
+  .family-chat-stream {
+    min-height: 46vh;
+    border-radius: 1.15rem;
+    padding: 0.78rem;
+  }
+
+  .family-chat-stream-focus {
+    min-height: 52vh;
+  }
+
+  .family-chat-compose-shell .family-textarea {
+    min-height: 5.5rem;
+    border-radius: 1.15rem;
+  }
+
+  .family-chat-bubble {
+    border-radius: 1.1rem;
+    padding: 0.8rem 0.88rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .family-topbar {
+    padding: 0.8rem;
+  }
+
+  .family-route-shell,
+  .family-panel,
+  .family-card,
+  .family-chat-shell {
+    border-radius: 1.2rem;
+  }
+
+  .family-route-shell h3,
+  .family-chat-shell__header h3 {
+    font-size: clamp(1.7rem, 9.2vw, 2.25rem);
+  }
+
+  .family-command-popout,
+  .family-notification-popout {
+    width: calc(100vw - 1rem);
+    right: 0;
+  }
+
+  .family-chat-seed {
+    flex-basis: 88%;
+  }
+}
