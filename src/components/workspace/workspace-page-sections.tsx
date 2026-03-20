@@ -612,21 +612,21 @@ function InboxPage({
       <article className="family-route-shell family-route-shell--family family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Family inbox</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Catch every update in one feed.</h3>
+            <p className="family-kicker family-eyebrow">Inbox</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Family Inbox</h3>
           </div>
           <div className="family-route-chip">Inbox</div>
         </div>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
           <RouteMetricStrip
             items={[
-              { label: "Unread alerts", value: `${unreadNotificationCount}`, note: unreadNotificationCount > 0 ? "These should stand out first." : "Nothing urgent is waiting." },
-              { label: "Saved alerts", value: `${currentUserNotifications.length}`, note: "Recent family events stay in the feed." },
-              { label: "Latest alert", value: newestAlert ? newestAlert.kind.replace("-", " ") : "Quiet", note: newestAlert ? newestAlert.title : "The feed will fill as the family uses the app." },
+              { label: "New", value: `${unreadNotificationCount}`, note: unreadNotificationCount > 0 ? "Check these first." : "Nothing new." },
+              { label: "All alerts", value: `${currentUserNotifications.length}`, note: "Recent updates." },
+              { label: "Latest", value: newestAlert ? newestAlert.kind.replace("-", " ") : "Quiet", note: newestAlert ? newestAlert.title : "No alerts yet." },
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Quick action</p>
+            <p className="family-kicker family-eyebrow">Actions</p>
             <button type="button" onClick={markAllNotificationsRead} className="family-btn family-btn-primary mt-4">
               Mark all read
             </button>
@@ -638,8 +638,8 @@ function InboxPage({
         <article className="family-panel family-route-board family-route-board--family family-animate-rise rounded-[28px] p-6 md:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="family-kicker family-eyebrow">Needs your eye</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Unread first.</h3>
+              <p className="family-kicker family-eyebrow">New</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Unread first</h3>
             </div>
             <span className="family-badge family-badge-accent">{unreadNotificationCount} unread</span>
           </div>
@@ -654,7 +654,7 @@ function InboxPage({
                     </div>
                     <span className="family-badge family-badge-accent">New</span>
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{notification.detail}</p>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{notification.detail}</p>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                     {formatNotificationTime(notification.createdAt)}
                   </p>
@@ -669,37 +669,37 @@ function InboxPage({
                 </div>
               ))
             ) : (
-              <EmptyState>No unread alerts right now. The inbox is fully caught up.</EmptyState>
+              <EmptyState>No unread alerts.</EmptyState>
             )}
           </div>
         </article>
 
         <DisclosurePanel
-          kicker="Recent history"
-          title="Everything else you already saw."
-          summary="Keep old alerts tucked away until you want to revisit them."
+          kicker="Older"
+          title="Seen alerts"
+          summary="Open older alerts when you need them."
           badge={`${olderAlerts.length} seen`}
           className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
         >
           <div className="space-y-4">
             {olderAlerts.length > 0 ? (
-              olderAlerts.slice(0, 12).map((notification) => (
+              olderAlerts.slice(0, 8).map((notification) => (
                 <button key={notification.id} type="button" onClick={() => openNotification(notification)} className="family-inbox-card w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="family-kicker family-eyebrow">{notification.kind.replace("-", " ")}</p>
-                      <h4 className="mt-3 font-serif text-2xl">{notification.title}</h4>
+                      <h4 className="mt-3 font-serif text-xl">{notification.title}</h4>
                     </div>
                     <span className="family-badge family-badge-warm">Seen</span>
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{notification.detail}</p>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{notification.detail}</p>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                     {formatNotificationTime(notification.createdAt)}
                   </p>
                 </button>
               ))
             ) : (
-              <EmptyState>Once you start clearing alerts, the recent history feed will show them here.</EmptyState>
+              <EmptyState>No older alerts.</EmptyState>
             )}
           </div>
         </DisclosurePanel>

@@ -231,8 +231,8 @@ export function WorkspaceTopBar({
           <div id="family-notification-menu" className="family-notification-popout" role="dialog" aria-label="Recent alerts">
             <div className="family-notification-popout__header">
               <div>
-                <p className="family-kicker family-eyebrow">Family Inbox</p>
-                <h2 className="mt-2 family-command-popout__title font-serif leading-tight">Recent alerts</h2>
+                <p className="family-kicker family-eyebrow">Inbox</p>
+                <h2 className="mt-2 family-command-popout__title font-serif leading-tight">New alerts</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={onMarkAllNotificationsRead} className="family-btn family-btn-soft">
@@ -265,7 +265,7 @@ export function WorkspaceTopBar({
                         {notification.readAt ? "Seen" : "New"}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{notification.detail}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{notification.detail}</p>
                     <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                       {formatNotificationTime(notification.createdAt)}
                     </p>
@@ -273,17 +273,15 @@ export function WorkspaceTopBar({
                 ))
               ) : (
                 <div className="family-notification-empty">
-                  No alerts yet. New messages, reminders, and shared wins will show up here.
+                  No alerts yet.
                 </div>
               )}
             </div>
 
             <div className="family-command-popout__footer mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-soft)] bg-white/75 p-4">
               <div>
-                <p className="family-kicker family-eyebrow">Open the full inbox</p>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                  See the complete feed and clear individual items on the inbox page.
-                </p>
+                <p className="family-kicker family-eyebrow">More</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Open the full inbox.</p>
               </div>
               <button
                 type="button"
