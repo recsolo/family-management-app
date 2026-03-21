@@ -1469,30 +1469,26 @@ function FamilyPage({
       <article className="family-route-shell family-route-shell--family family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Family setup</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Invite family and keep things organized.</h3>
+            <p className="family-kicker family-eyebrow">Family</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Manage your family.</h3>
           </div>
           <div className="family-route-chip">Family Room</div>
         </div>
-        <div className="mt-6 grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
+        <div className="mt-6">
           <RouteMetricStrip
             items={[
-              { label: "Connected members", value: `${memberList.length}`, note: `${ownerCount} owner and ${adminCount} admin currently manage access.` },
-              { label: "Invite path", value: inviteCode, note: canManageHousehold ? "Owners and admins can rotate the code." : "Invite control is limited to admins and owners." },
-              { label: "Routines", value: `${state.routines.length}`, note: state.routines[0] ? state.routines[0].name : "No routine yet." },
+              { label: "Members", value: `${memberList.length}`, note: `${ownerCount} owner and ${adminCount} admin.` },
+              { label: "Invite code", value: inviteCode, note: canManageHousehold ? "Admins can change it." : "Ask an admin to change it." },
+              { label: "Routines", value: `${state.routines.length}`, note: state.routines[0] ? state.routines[0].name : "None yet." },
             ]}
           />
-          <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Who can manage what</p>
-            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">Owners manage roles</p>
-          </div>
         </div>
       </article>
 
       <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
         <article className="family-panel family-route-board family-route-board--family family-animate-rise rounded-[28px] p-6 md:p-7">
           <p className="family-kicker family-eyebrow">Family members</p>
-          <h3 className="mt-4 font-serif text-4xl leading-tight">Who is in your family space.</h3>
+          <h3 className="mt-4 font-serif text-4xl leading-tight">Members</h3>
           <div className="mt-5 space-y-3">
             {memberList.map((member) => {
               const isCurrentUser = member.id === currentUserId;
@@ -1562,8 +1558,8 @@ function FamilyPage({
         <div className="grid gap-5">
           <DisclosurePanel
             kicker="Invite family"
-            title="Share your family link."
-            summary="Keep the invite tools tucked away until you need to copy or send them."
+            title="Invite family"
+            summary="Open this when you need the invite tools."
             badge="Invite tools"
             defaultOpen
             className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
@@ -1585,10 +1581,6 @@ function FamilyPage({
             <div className="mt-5 rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
               <p className="family-kicker family-eyebrow">Invite code</p>
               <p className="mt-4 text-center font-serif text-4xl tracking-[0.3em] text-stone-900">{inviteCode}</p>
-              <div className="mt-5 rounded-[20px] border border-[var(--line-soft)] bg-white/80 p-4">
-                <p className="family-kicker family-eyebrow">Family invite link</p>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Tap Copy link or Share to send the family invite.</p>
-              </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button type="button" onClick={() => void handleCopyInviteLink()} className="family-btn family-btn-primary">
                   Copy link
@@ -1608,7 +1600,7 @@ function FamilyPage({
           </DisclosurePanel>
 
           <InsightCard
-            kicker="Family routine"
+            kicker="Routines"
             title={state.routines[0] ? state.routines[0].name : "No routine yet"}
             body={state.routines[0] ? `${state.routines[0].timeWindow}. ${state.routines[0].items.join(", ")}.` : "Add a routine below."}
             className="family-card family-card-gold"
@@ -1617,9 +1609,9 @@ function FamilyPage({
       </div>
 
       <DisclosurePanel
-        kicker="Family routine"
-        title="Build a family routine."
-        summary="Open this section when you want to add or review routines instead of keeping the whole builder on screen."
+        kicker="Routines"
+        title="Routines"
+        summary="Open this when you want to add or review routines."
         badge={`${state.routines.length} saved`}
         className="family-panel family-surface-accent family-animate-rise rounded-[28px] p-5 md:p-6"
       >
@@ -1647,7 +1639,7 @@ function FamilyPage({
           <div className="family-route-column">
             <div>
               <p className="family-kicker family-eyebrow">Saved routines</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Family routines you can reuse.</h3>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Saved routines</h3>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {state.routines.length > 0 ? (
@@ -1659,7 +1651,7 @@ function FamilyPage({
                   </div>
                 ))
               ) : (
-                <EmptyState className="md:col-span-2">Add your first routine to give the household a consistent repeatable rhythm.</EmptyState>
+                <EmptyState className="md:col-span-2">Add your first routine.</EmptyState>
               )}
             </div>
           </div>
