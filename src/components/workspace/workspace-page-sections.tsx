@@ -1020,152 +1020,144 @@ function MealsPage({
       <article className="family-route-shell family-route-shell--meals family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Meal time</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Meal Planner</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">Pick dinner from your pantry, then let AI build the plan.</p>
+            <p className="family-kicker family-eyebrow">Dinner</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-[var(--foreground)]">Pick tonight&apos;s meal.</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">See the best match first, then open the other tools only when you need them.</p>
           </div>
-          <div className="family-route-chip">Meal Planner</div>
+          <div className="family-route-chip">Dinner</div>
         </div>
-        <div className="mt-6 grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
-          <DisclosurePanel
-            kicker="Pantry"
-            title="Add food"
-            summary="Update the pantry when you need to."
-            badge={`${state.pantry.length} items`}
-            defaultOpen
-            className="family-panel family-surface-warm family-meals-form-card rounded-[28px] p-5 md:p-6"
-          >
-            <form className="space-y-4" onSubmit={addPantryItems}>
-              <label className="block text-sm font-medium text-stone-700">
-                Pantry items
-                <input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" />
-              </label>
-              <button type="submit" className="family-btn family-btn-primary">
-                Save pantry items
-              </button>
-            </form>
-            <div className="family-pantry-shelf mt-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="family-kicker family-eyebrow">Pantry shelf</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">What your meal plan can use right now.</p>
+        <div className="mt-6 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+          <div className="family-route-notice family-route-notice--dark family-meals-match-card">
+            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best match</p>
+            <h4 className="mt-4 font-serif text-3xl text-white">{tonightRecipe ? tonightRecipe.name : "No dinner pick yet"}</h4>
+            <p className="mt-3 text-sm leading-6 text-stone-200">
+              {tonightRecipe
+                ? tonightMissingCount > 0
+                  ? `${tonightRecipe.matches}/${tonightRecipe.ingredients.length} ready. Still need ${tonightMissingCount} more item${tonightMissingCount === 1 ? "" : "s"}.`
+                  : "Everything is ready for tonight."
+                : "Add pantry items to get a dinner pick."}
+            </p>
+            {tonightRecipe ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[18px] bg-white/8 px-4 py-3">
+                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Ready</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{tonightRecipe.matches}</p>
                 </div>
-                <span className="family-badge family-badge-gold">{state.pantry.length} items</span>
-              </div>
-              {state.pantry.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {state.pantry.map((item) => (
-                    <span key={item} className="family-pantry-chip">
-                      {item}
-                    </span>
-                  ))}
+                <div className="rounded-[18px] bg-white/8 px-4 py-3">
+                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Buy</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{tonightMissingCount}</p>
                 </div>
-              ) : (
-                <EmptyState className="mt-4">Add a few staples to get started.</EmptyState>
-              )}
-            </div>
-          </DisclosurePanel>
-
-          <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="family-route-notice family-route-notice--dark family-meals-match-card">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Dinner pick</p>
-              <h4 className="mt-4 font-serif text-3xl text-white">{tonightRecipe ? tonightRecipe.name : "No dinner pick yet"}</h4>
-              <p className="mt-3 text-sm leading-6 text-stone-200">
-                {tonightRecipe
-                  ? `${tonightRecipe.matches}/${tonightRecipe.ingredients.length} ingredients are ready. ${tonightRecipe.missing.length > 0 ? `Still needed: ${tonightRecipe.missing.join(", ")}.` : "Nothing extra needed."}`
-                  : "Add pantry items to pick a dinner match."}
-              </p>
-              {tonightRecipe ? (
-                <>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                      <p className="family-kicker text-[rgba(241,214,136,0.76)]">Ready now</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">{tonightRecipe.matches}</p>
-                    </div>
-                    <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                      <p className="family-kicker text-[rgba(241,214,136,0.76)]">Need to buy</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">{tonightMissingCount}</p>
-                    </div>
-                    <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                      <p className="family-kicker text-[rgba(241,214,136,0.76)]">Style</p>
-                      <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-stone-100">
-                        {tonightRecipe.tags[0] ?? "Dinner"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {tonightRecipe.ingredients.map((ingredient) => (
-                      <span key={ingredient} className="family-badge bg-white/10 text-stone-100">
-                        {ingredient}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              ) : null}
-            </div>
-            <div className="family-route-notice family-route-notice--gold family-meals-ai-card">
-              <p className="family-kicker family-eyebrow">AI help</p>
-              <h4 className="mt-4 font-serif text-3xl leading-tight">Build the plan</h4>
-              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Get dinner order, prep notes, and a short shopping list.</p>
-              <button type="button" onClick={generateMealPlan} disabled={aiTask !== null} className="family-btn family-btn-secondary mt-5">
-                {aiTask === "meal-plan" ? "Generating..." : "Generate meal plan"}
-              </button>
-              {tonightRecipe ? (
-                <div className="mt-5 rounded-[20px] border border-[rgba(184,135,31,0.18)] bg-white/80 p-4">
-                  <p className="family-kicker family-eyebrow">Tonight</p>
-                  <p className="mt-2 font-serif text-2xl text-stone-900">{tonightRecipe.name}</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    {tonightMissingCount > 0 ? `Buy ${tonightMissingCount} more item${tonightMissingCount === 1 ? "" : "s"} or let AI build around it.` : "You can cook this now."}
+                <div className="rounded-[18px] bg-white/8 px-4 py-3">
+                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Type</p>
+                  <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-stone-100">
+                    {tonightRecipe.tags[0] ?? "Dinner"}
                   </p>
                 </div>
-              ) : null}
+              </div>
+            ) : null}
+            {tonightRecipe?.missing.length ? (
+              <div className="mt-4 rounded-[18px] bg-white/8 px-4 py-3">
+                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Need to buy</p>
+                <p className="mt-2 text-sm leading-6 text-stone-100">{tonightRecipe.missing.join(", ")}</p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-4">
+            <div className="family-route-notice family-route-notice--gold family-meals-ai-card">
+              <p className="family-kicker family-eyebrow">AI plan</p>
+              <h4 className="mt-4 font-serif text-3xl leading-tight">Build tonight&apos;s plan</h4>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Get prep notes and a short shopping list.</p>
+              <button type="button" onClick={generateMealPlan} disabled={aiTask !== null} className="family-btn family-btn-secondary mt-5">
+                {aiTask === "meal-plan" ? "Generating..." : "Build dinner plan"}
+              </button>
+            </div>
+            <div className="family-sidebar-note">
+              <p className="family-kicker family-eyebrow">Pantry</p>
+              <p className="mt-3 font-serif text-3xl">{state.pantry.length} items</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {state.pantry.length > 0 ? "Open Pantry to add or change what you have." : "Open Pantry and add a few basics."}
+              </p>
             </div>
           </div>
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
-        <article className="family-panel family-route-board family-route-board--meals family-animate-rise rounded-[30px] p-6 md:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="family-kicker family-eyebrow">Dinner ideas</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">More ideas</h3>
-              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">The top pantry matches right now.</p>
-            </div>
-            <span className="family-badge family-badge-gold">{state.pantry.length} pantry items</span>
+      <div className="grid gap-5">
+        <DisclosurePanel
+          kicker="Pantry"
+          title="Pantry"
+          summary="Add or update what you have."
+          badge={`${state.pantry.length} items`}
+          className="family-panel family-surface-warm family-meals-form-card rounded-[28px] p-5 md:p-6"
+        >
+          <form className="space-y-4" onSubmit={addPantryItems}>
+            <label className="block text-sm font-medium text-stone-700">
+              Pantry items
+              <input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" />
+            </label>
+            <button type="submit" className="family-btn family-btn-primary">
+              Save pantry
+            </button>
+          </form>
+          <div className="family-pantry-shelf mt-6">
+            {state.pantry.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {state.pantry.map((item) => (
+                  <span key={item} className="family-pantry-chip">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <EmptyState>Add a few basics to get started.</EmptyState>
+            )}
           </div>
-          <div className="mt-6 grid gap-4">
-            {topRecipeMatches.map((recipe, index) => (
-              <article key={recipe.name} className={`family-recipe-card ${index === 0 ? "family-recipe-card-top" : ""}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h4 className="font-serif text-2xl">{recipe.name}</h4>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{recipe.description}</p>
-                  </div>
-                  <span className={`family-badge ${recipe.matches > 0 ? "family-badge-accent" : "family-badge-warm"}`}>{recipe.matches}/{recipe.ingredients.length} ready</span>
-                </div>
-                <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                  {recipe.missing.length > 0 ? `Still needed: ${recipe.missing.join(", ")}.` : "You already have everything needed for this recipe."}
-                </p>
-                <div className="family-recipe-meter mt-4">
-                  <div className="family-recipe-meter__fill" style={{ width: `${(recipe.matches / recipe.ingredients.length) * 100}%` }} />
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {recipe.tags.map((tag) => (
-                    <span key={tag} className="family-badge family-badge-warm">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        </article>
+        </DisclosurePanel>
 
-        <article className="family-panel family-route-board family-route-board--meals-accent family-animate-rise rounded-[30px] p-6 md:p-7 family-meal-plan-shell">
-          <p className="family-kicker family-eyebrow">AI meal plan</p>
+        <DisclosurePanel
+          kicker="More ideas"
+          title="Dinner ideas"
+          summary="Open more recipe matches."
+          badge={`${topRecipeMatches.length} ideas`}
+          className="family-panel family-route-board family-route-board--meals family-animate-rise rounded-[30px] p-5 md:p-6"
+        >
+          <div className="grid gap-4">
+            {topRecipeMatches.length > 0 ? (
+              topRecipeMatches.map((recipe, index) => (
+                <article key={recipe.name} className={`family-recipe-card ${index === 0 ? "family-recipe-card-top" : ""}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="font-serif text-2xl">{recipe.name}</h4>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{recipe.description}</p>
+                    </div>
+                    <span className={`family-badge ${recipe.matches > 0 ? "family-badge-accent" : "family-badge-warm"}`}>
+                      {recipe.matches}/{recipe.ingredients.length} ready
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                    {recipe.missing.length > 0 ? `Need: ${recipe.missing.join(", ")}.` : "Ready to cook."}
+                  </p>
+                  <div className="family-recipe-meter mt-4">
+                    <div className="family-recipe-meter__fill" style={{ width: `${(recipe.matches / recipe.ingredients.length) * 100}%` }} />
+                  </div>
+                </article>
+              ))
+            ) : (
+              <EmptyState>Add pantry items to see dinner ideas.</EmptyState>
+            )}
+          </div>
+        </DisclosurePanel>
+
+        <DisclosurePanel
+          kicker="AI dinner plan"
+          title="Dinner plan"
+          summary="Open the full plan when you want prep notes and the shopping list."
+          badge={state.latestMealPlan ? "Ready" : "Not built"}
+          className="family-panel family-route-board family-route-board--meals-accent family-animate-rise rounded-[30px] p-5 md:p-6 family-meal-plan-shell"
+        >
           {state.latestMealPlan ? (
-            <div className="mt-4 space-y-6">
+            <div className="space-y-6">
               <div>
                 <h3 className="font-serif text-4xl leading-tight">{state.latestMealPlan.headline}</h3>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{state.latestMealPlan.summary}</p>
@@ -1178,7 +1170,7 @@ function MealsPage({
                         <p className="family-kicker family-eyebrow">{meal.day}</p>
                         <h4 className="mt-3 font-serif text-2xl">{meal.recipe}</h4>
                       </div>
-                      <span className="family-badge family-badge-gold">{meal.missingIngredients.length > 0 ? "Needs a few extras" : "Ready to cook"}</span>
+                      <span className="family-badge family-badge-gold">{meal.missingIngredients.length > 0 ? "Needs extras" : "Ready"}</span>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{meal.whyItFits}</p>
                     <div className="family-meal-day__grid mt-4">
@@ -1187,11 +1179,11 @@ function MealsPage({
                         <p className="mt-2 text-sm leading-7 text-stone-700">{meal.usesIngredients.join(", ")}</p>
                       </div>
                       <div>
-                        <p className="family-kicker family-eyebrow">Missing</p>
-                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{meal.missingIngredients.length > 0 ? meal.missingIngredients.join(", ") : "Nothing extra needed"}</p>
+                        <p className="family-kicker family-eyebrow">Need</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--muted)]">{meal.missingIngredients.length > 0 ? meal.missingIngredients.join(", ") : "Nothing extra"}</p>
                       </div>
                     </div>
-                    <p className="mt-4 text-sm leading-6 text-[var(--muted)]">Prep note: {meal.prepNote}</p>
+                    <p className="mt-4 text-sm leading-6 text-[var(--muted)]">Prep: {meal.prepNote}</p>
                   </div>
                 ))}
               </div>
@@ -1207,9 +1199,9 @@ function MealsPage({
               </div>
             </div>
           ) : (
-            <EmptyState className="mt-4">Generate a plan to turn your pantry into dinner ideas.</EmptyState>
+            <EmptyState>Build a dinner plan when you want prep notes and a shopping list.</EmptyState>
           )}
-        </article>
+        </DisclosurePanel>
       </div>
     </div>
   );
