@@ -570,11 +570,11 @@ export function PartnerSpacePage({
 
   return (
     <section className="space-y-5">
-      <article className="family-panel family-surface-ink family-animate-rise rounded-[34px] p-6 md:p-8">
+      <article className="family-panel family-surface-ink family-animate-rise rounded-[30px] p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="family-kicker text-[rgba(241,214,136,0.76)]">Partner</p>
-            <h2 className="mt-4 font-serif text-5xl leading-[0.95] text-white">{partnerLabel}</h2>
+            <h2 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Partner Space</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {partnerPointCards.map(({ member, profile }) => (
@@ -585,11 +585,10 @@ export function PartnerSpacePage({
           </div>
         </div>
         {partnerSpace ? (
-          <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Connection streak</p>
               <p className="mt-3 font-serif text-3xl text-white">{connectionStreak} days</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">Messages or notes keep this going.</p>
             </div>
             <div className="family-dark-note">
               <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next date</p>
@@ -597,18 +596,15 @@ export function PartnerSpacePage({
               <p className="mt-2 text-sm leading-6 text-stone-200">{nextDate ? formatDateValue(nextDate.when) : "No plan yet."}</p>
             </div>
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next anniversary</p>
-              <p className="mt-3 font-serif text-3xl text-white">{nextAnniversary ? nextAnniversary.entry.title : "Add one"}</p>
+              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Milestones</p>
+              <p className="mt-3 font-serif text-3xl text-white">{nextAnniversary ? nextAnniversary.entry.title : `${doneBucketCount}/${bucketList.length}`}</p>
               <p className="mt-2 text-sm leading-6 text-stone-200">
                 {nextAnniversary
-                  ? `${nextAnniversary.daysUntil === 0 ? "Today" : `${nextAnniversary.daysUntil} day${nextAnniversary.daysUntil === 1 ? "" : "s"}`} until ${formatDateValue(nextAnniversary.entry.date)}.`
-                  : "Track anniversaries and sweet memories with countdowns."}
+                  ? nextAnniversary.daysUntil === 0
+                    ? "Today"
+                    : `${nextAnniversary.daysUntil} day${nextAnniversary.daysUntil === 1 ? "" : "s"} left`
+                  : "Bucket list progress"}
               </p>
-            </div>
-            <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Bucket list</p>
-              <p className="mt-3 font-serif text-3xl text-white">{doneBucketCount}/{bucketList.length}</p>
-              <p className="mt-2 text-sm leading-6 text-stone-200">Done vs. not done yet.</p>
             </div>
           </div>
         ) : null}
@@ -641,9 +637,6 @@ export function PartnerSpacePage({
               Save partner pair
             </button>
           </form>
-          <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-            Only the selected pair can use this page.
-          </p>
         </DisclosurePanel>
       ) : null}
 
@@ -659,11 +652,11 @@ export function PartnerSpacePage({
         <>
           <div className="family-partner-tabs">
             {[
-              { value: "chat", label: "Private chat" },
+              { value: "chat", label: "Chat" },
               { value: "date-night", label: "Date night" },
-              { value: "private-rewards", label: "Private rewards" },
+              { value: "private-rewards", label: "Rewards" },
               { value: "milestones", label: "Milestones" },
-              { value: "closer", label: "Closer" },
+              { value: "closer", label: "Notes" },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -681,7 +674,6 @@ export function PartnerSpacePage({
               <article className="family-panel rounded-[28px] p-6">
                 <p className="family-kicker family-eyebrow">Private chat</p>
                 <h3 className="mt-3 font-serif text-4xl leading-tight">Chat</h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Edit or delete your own messages.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {QUICK_PARTNER_MESSAGES.map((message) => (
                     <button key={message} type="button" onClick={() => onSendMessage(message)} className="family-btn family-btn-soft">
@@ -710,8 +702,8 @@ export function PartnerSpacePage({
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
               <DisclosurePanel
                 kicker="Date night planner"
-                title="Save ideas before life gets busy."
-                summary="Open this builder only when you want to add a fresh date idea."
+                title="Date plans"
+                summary="Open this when you want to add a date."
                 badge={`${partnerSpace.datePlans.length} saved`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
@@ -1001,8 +993,8 @@ export function PartnerSpacePage({
             <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
               <DisclosurePanel
                 kicker="Anniversaries"
-                title="Track your dates and the memories tied to them."
-                summary="Save anniversaries here so the page can keep the countdown visible."
+                title="Anniversaries"
+                summary="Open this when you want to add or update a date."
                 badge={`${anniversaries.length} saved`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
@@ -1058,8 +1050,8 @@ export function PartnerSpacePage({
 
               <DisclosurePanel
                 kicker="Bucket list"
-                title="Keep a list of things you still want to do together."
-                summary="Save dreams, date ideas, trips, and little promises with progress and memory notes."
+                title="Bucket list"
+                summary="Open this when you want to add or update a plan."
                 badge={`${doneBucketCount}/${bucketList.length} done`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
@@ -1121,8 +1113,8 @@ export function PartnerSpacePage({
             <div className="grid gap-5 xl:grid-cols-[0.96fr_1.04fr]">
               <DisclosurePanel
                 kicker="Closer together"
-                title="Save little notes that matter."
-                summary="Open this space when you want to add a fresh note or look at simple closeness ideas."
+                title="Notes"
+                summary="Open this when you want to add a note."
                 badge={`${partnerSpace.connectionNotes.length} notes`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
