@@ -1672,22 +1672,22 @@ function AiStudioPage({
 }: PageProps) {
   return (
     <div className="space-y-5">
-      <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[34px] p-6 md:p-8">
+      <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[30px] p-5 md:p-6">
         <div className="family-route-shell__header">
           <div>
             <p className="family-kicker family-eyebrow">AI</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask AI</h3>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Ask a question.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">AI</div>
         </div>
-        <div className="mt-6">
+        <div className="mt-5">
           <button type="button" onClick={openAiChatFocus} className="family-btn family-btn-primary">
-            Open chat-only view
+            Open chat only
           </button>
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_0.82fr]">
+      <div className="grid gap-5 xl:grid-cols-[1fr_0.75fr]">
         <AssistantChatPanel
           history={state.assistantHistory}
           chatInput={chatInput}
@@ -1700,9 +1700,10 @@ function AiStudioPage({
 
         <DisclosurePanel
           kicker="Prompts"
-          title="Quick starts"
-          summary="Tap a prompt to start."
+          title="Prompts"
+          summary="Tap one to start."
           badge={`${assistantSuggestions.length} prompts`}
+          defaultOpen
           className="family-panel family-surface-warm rounded-[28px] p-5 md:p-6"
         >
           <div className="grid gap-3">
