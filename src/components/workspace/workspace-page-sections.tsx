@@ -1221,8 +1221,8 @@ function BudgetPage({
       <article className="family-route-shell family-route-shell--budget family-animate-rise rounded-[34px] p-6 md:p-8">
         <div className="family-route-shell__header">
           <div>
-            <p className="family-kicker family-eyebrow">Money plan</p>
-            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">See a simple plan for your money.</h3>
+            <p className="family-kicker family-eyebrow">Money</p>
+            <h3 className="mt-4 font-serif text-5xl leading-[0.95] text-white">See your money plan.</h3>
           </div>
           <div className="family-route-chip family-route-chip--dark">Budget Lab</div>
         </div>
@@ -1230,31 +1230,51 @@ function BudgetPage({
           <RouteMetricStrip
             tone="dark"
             items={[
-              { label: "Income", value: `$${state.budget.income.toLocaleString()}`, note: "Monthly take-home baseline." },
-              { label: "Savings reserve", value: `${savingsPercent}%`, note: `$${savingsAmount.toLocaleString()} currently protected.` },
-              { label: "Planning mode", value: state.budget.style, note: `Primary goal is ${state.budget.goal}.` },
+              { label: "Income", value: `$${state.budget.income.toLocaleString()}`, note: "Monthly take-home." },
+              { label: "Savings", value: `${savingsPercent}%`, note: `$${savingsAmount.toLocaleString()} set aside.` },
+              { label: "Mode", value: state.budget.style, note: `Goal: ${state.budget.goal}.` },
             ]}
           />
           <div className="family-route-notice family-route-notice--gold">
-            <p className="family-kicker family-eyebrow">Coach ready</p>
+            <p className="family-kicker family-eyebrow">AI help</p>
+            <h4 className="mt-4 font-serif text-3xl leading-tight">Get a quick money check.</h4>
             <button type="button" onClick={generateBudgetCoach} disabled={aiTask !== null} className="family-btn family-btn-primary mt-5">
-              {aiTask === "budget-coach" ? "Generating..." : "Get AI budget coaching"}
+              {aiTask === "budget-coach" ? "Generating..." : "Check my plan"}
             </button>
           </div>
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid gap-5">
+        <article className="family-panel family-route-board family-route-board--budget family-animate-rise rounded-[28px] p-5 md:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="family-kicker family-eyebrow">Suggested plan</p>
+              <h3 className="mt-4 font-serif text-4xl leading-tight">Monthly split</h3>
+            </div>
+            <span className="family-badge family-badge-gold">{budgetPlan.length} categories</span>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {budgetPlan.map((row) => (
+              <div key={row.label} className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
+                <p className="family-kicker family-eyebrow">{row.label}</p>
+                <p className="mt-3 text-4xl font-semibold text-stone-900">{row.percent}%</p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">${row.amount.toLocaleString()} per month</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
         <DisclosurePanel
-          kicker="Budget settings"
-          title="Set the family money plan."
-          summary="Open the settings only when you want to change the numbers."
-          badge="Money inputs"
+          kicker="Change numbers"
+          title="Edit budget"
+          summary="Open this only when you want to change the plan."
+          badge="Settings"
           className="family-panel rounded-[28px] p-5 md:p-6"
         >
           <div className="space-y-4">
             <label className="block text-sm font-medium text-stone-700">
-              Monthly take-home income
+              Income
               <input
                 type="number"
                 min="0"
@@ -1276,7 +1296,7 @@ function BudgetPage({
               />
             </label>
             <label className="block text-sm font-medium text-stone-700">
-              Primary goal
+              Goal
               <select value={state.budget.goal} onChange={(event) => updateBudget("goal", event.target.value as BudgetGoal)} className="family-select mt-2">
                 <option value="stability">Monthly stability</option>
                 <option value="savings">Increase savings</option>
@@ -1284,7 +1304,7 @@ function BudgetPage({
               </select>
             </label>
             <label className="block text-sm font-medium text-stone-700">
-              Planning style
+              Style
               <select value={state.budget.style} onChange={(event) => updateBudget("style", event.target.value as BudgetStyle)} className="family-select mt-2">
                 <option value="balanced">Balanced</option>
                 <option value="lean">Lean</option>
@@ -1294,72 +1314,51 @@ function BudgetPage({
           </div>
         </DisclosurePanel>
 
-        <article className="family-panel family-route-board family-route-board--budget family-animate-rise rounded-[28px] p-6 md:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="family-kicker family-eyebrow">Suggested plan</p>
-              <h3 className="mt-4 font-serif text-4xl leading-tight">Your monthly split.</h3>
-            </div>
-            <span className="family-badge family-badge-gold">{budgetPlan.length} categories</span>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {budgetPlan.map((row) => (
-              <div key={row.label} className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
-                <p className="family-kicker family-eyebrow">{row.label}</p>
-                <p className="mt-3 text-4xl font-semibold text-stone-900">{row.percent}%</p>
-                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">${row.amount.toLocaleString()} per month</p>
-              </div>
-            ))}
-          </div>
-        </article>
-      </div>
-
-      <DisclosurePanel
-        kicker="AI budget help"
-        title="Budget help for your family."
-        summary="Open the coaching notes when you want AI guidance instead of raw numbers."
-        badge={state.latestBudgetCoach ? "Coach ready" : "No report"}
-        className="family-panel family-animate-rise rounded-[28px] p-5 md:p-6"
-      >
-        {state.latestBudgetCoach ? (
-          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <DisclosurePanel
+          kicker="AI budget help"
+          title="AI notes"
+          summary="Open the coach notes only when you want extra guidance."
+          badge={state.latestBudgetCoach ? "Ready" : "No report"}
+          className="family-panel family-animate-rise rounded-[28px] p-5 md:p-6"
+        >
+          {state.latestBudgetCoach ? (
             <div className="space-y-5">
-              <div>
-                <h3 className="font-serif text-4xl leading-tight">Budget help for your family.</h3>
+              <div className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
+                <p className="family-kicker family-eyebrow">Summary</p>
                 <p className="mt-3 text-sm leading-7 text-[var(--muted)]">{state.latestBudgetCoach.summary}</p>
               </div>
-              <div className="family-card family-card-dark rounded-[24px] p-5">
-                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Wins</p>
-                <ul className="mt-4 space-y-2 text-sm leading-7 text-stone-100">
-                  {state.latestBudgetCoach.wins.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+              <div className="grid gap-5 lg:grid-cols-3">
+                <div className="family-card family-card-dark rounded-[24px] p-5">
+                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Wins</p>
+                  <ul className="mt-4 space-y-2 text-sm leading-7 text-stone-100">
+                    {state.latestBudgetCoach.wins.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="family-card family-card-gold rounded-[24px] p-5">
+                  <p className="family-kicker family-eyebrow">Watch</p>
+                  <ul className="mt-4 space-y-2 text-sm leading-7 text-[var(--foreground)]">
+                    {state.latestBudgetCoach.watchouts.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
+                  <p className="family-kicker family-eyebrow">Next</p>
+                  <ul className="mt-4 space-y-2 text-sm leading-7 text-[var(--muted)]">
+                    {state.latestBudgetCoach.nextSteps.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
-            <div className="space-y-5">
-              <div className="family-card family-card-gold rounded-[24px] p-5">
-                <p className="family-kicker family-eyebrow">Watchouts</p>
-                <ul className="mt-4 space-y-2 text-sm leading-7 text-[var(--foreground)]">
-                  {state.latestBudgetCoach.watchouts.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-[24px] border border-[var(--line-soft)] bg-white/72 p-5">
-                <p className="family-kicker family-eyebrow">Next steps</p>
-                <ul className="mt-4 space-y-2 text-sm leading-7 text-[var(--muted)]">
-                  {state.latestBudgetCoach.nextSteps.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <EmptyState>Generate budget coaching and the assistant will review the current household plan and suggest next actions.</EmptyState>
-        )}
-      </DisclosurePanel>
+          ) : (
+            <EmptyState>Run the AI check when you want help with the plan.</EmptyState>
+          )}
+        </DisclosurePanel>
+      </div>
     </div>
   );
 }
