@@ -9,13 +9,11 @@ type VerifyState = "loading" | "success" | "error";
 function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const [state, setState] = useState<VerifyState>("loading");
-  const [message, setMessage] = useState("Checking your link...");
+  const [state, setState] = useState<VerifyState>(() => (token ? "loading" : "error"));
+  const [message, setMessage] = useState(() => (token ? "Checking your link..." : "This email link is missing a token."));
 
   useEffect(() => {
     if (!token) {
-      setState("error");
-      setMessage("This email link is missing a token.");
       return;
     }
 
@@ -52,11 +50,16 @@ function VerifyEmailPageContent() {
             <h1 className="mt-4 font-serif text-5xl leading-[0.95]">
               {state === "loading" ? "Verifying..." : state === "success" ? "Email ready" : "Link problem"}
             </h1>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">{message}</p>
-            <div className="mt-8">
+            <p className="mt-4 text-sm leading-6 text-[var(--muted)]">{message}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/" className="family-btn family-btn-primary">
-                Back to sign in
+                Sign in
               </Link>
+              {state === "error" ? (
+                <Link href="/?mode=verify" className="family-btn family-btn-soft">
+                  Send a new email
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>

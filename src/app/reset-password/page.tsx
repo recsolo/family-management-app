@@ -12,6 +12,7 @@ function ResetPasswordPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const missingToken = !token;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,9 +63,13 @@ function ResetPasswordPageContent() {
           <div className="rounded-[32px] border border-[rgba(228,192,92,0.22)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
             <p className="family-kicker family-eyebrow">FamilyFlow</p>
             <h1 className="mt-4 font-serif text-5xl leading-[0.95]">Reset password</h1>
-            <p className="mt-4 text-sm leading-7 text-[var(--muted)]">Choose a new password for this account.</p>
+            <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+              {missingToken ? "This page needs a reset link from your email." : "Choose a new password for this account."}
+            </p>
 
             <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+              {missingToken ? null : (
+                <>
               <label className="block text-sm font-medium text-stone-700">
                 New password
                 <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="family-input mt-2" />
@@ -79,16 +84,20 @@ function ResetPasswordPageContent() {
                   className="family-input mt-2"
                 />
               </label>
+                </>
+              )}
 
-              {error ? <p className="text-sm leading-7 text-rose-700">{error}</p> : null}
-              {success ? <p className="text-sm leading-7 text-emerald-700">{success}</p> : null}
+              {error ? <p className="rounded-[18px] border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm leading-6 text-rose-700">{error}</p> : null}
+              {success ? <p className="rounded-[18px] border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm leading-6 text-emerald-800">{success}</p> : null}
 
               <div className="flex flex-wrap gap-3">
-                <button type="submit" disabled={busy} className="family-btn family-btn-primary">
-                  {busy ? "Saving..." : "Save new password"}
-                </button>
-                <Link href="/" className="family-btn family-btn-soft">
-                  Back to sign in
+                {!missingToken ? (
+                  <button type="submit" disabled={busy} className="family-btn family-btn-primary">
+                    {busy ? "Saving..." : "Save new password"}
+                  </button>
+                ) : null}
+                <Link href="/" className={`family-btn ${success ? "family-btn-primary" : "family-btn-soft"}`}>
+                  {success ? "Sign in" : "Back to sign in"}
                 </Link>
               </div>
             </form>

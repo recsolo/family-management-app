@@ -10,6 +10,29 @@ type Props = {
 
 type Mode = "signin" | "create" | "join" | "forgot" | "verify";
 
+const MODE_COPY: Record<Mode, { title: string; detail: string }> = {
+  signin: {
+    title: "Sign in",
+    detail: "Open your family space.",
+  },
+  create: {
+    title: "Create account",
+    detail: "Start a new family space.",
+  },
+  join: {
+    title: "Join family",
+    detail: "Use an invite code to join.",
+  },
+  forgot: {
+    title: "Reset password",
+    detail: "We will email you a reset link.",
+  },
+  verify: {
+    title: "Verify email",
+    detail: "We will send a new verification email.",
+  },
+};
+
 export function AuthPanel({ onSuccess }: Props) {
   const searchParams = useSearchParams();
   const queryMode = searchParams.get("mode");
@@ -34,6 +57,7 @@ export function AuthPanel({ onSuccess }: Props) {
 
   const mode = modeOverride ?? defaultMode;
   const inviteCode = inviteCodeInput ?? queryInviteCode;
+  const modeCopy = MODE_COPY[mode];
 
   async function finishSignIn() {
     const result = await signIn("credentials", {
@@ -133,10 +157,8 @@ export function AuthPanel({ onSuccess }: Props) {
         <section className="family-panel family-animate-rise rounded-[40px] p-5 md:p-6">
           <div className="rounded-[32px] border border-[rgba(228,192,92,0.22)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
             <p className="family-kicker family-eyebrow">FamilyFlow</p>
-            <h1 className="mt-4 font-serif text-5xl leading-[0.95]">Your family, all in one place.</h1>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
-              Plans, chores, chats, goals, and games in one app.
-            </p>
+            <h1 className="mt-4 font-serif text-5xl leading-[0.95]">{modeCopy.title}</h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--muted)]">{modeCopy.detail}</p>
 
             <div className="mt-6 flex flex-wrap gap-3">
               {[
@@ -194,11 +216,15 @@ export function AuthPanel({ onSuccess }: Props) {
               ) : null}
 
               {mode === "join" && inviteHouseholdName ? (
-                <p className="text-sm leading-7 text-[var(--muted)]">Joining {inviteHouseholdName}.</p>
+                <p className="rounded-[18px] border border-[var(--line-soft)] bg-white/72 px-4 py-3 text-sm leading-6 text-[var(--muted)]">
+                  Joining {inviteHouseholdName}.
+                </p>
               ) : null}
 
-              {notice ? <p className="text-sm leading-7 text-emerald-700">{notice}</p> : null}
-              {error ? <p className="text-sm leading-7 text-rose-700">{error}</p> : null}
+              {notice ? (
+                <p className="rounded-[18px] border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm leading-6 text-emerald-800">{notice}</p>
+              ) : null}
+              {error ? <p className="rounded-[18px] border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm leading-6 text-rose-700">{error}</p> : null}
 
               <button type="submit" disabled={busy} className="family-btn family-btn-primary min-w-[12rem]">
                 {busy
