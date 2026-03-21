@@ -1,5 +1,3 @@
-import nodemailer from "nodemailer";
-
 import { getMailConfig } from "@/lib/env";
 
 type AppEmailInput = {
@@ -27,23 +25,35 @@ export async function sendAppEmail({ to, subject, html, text }: AppEmailInput) {
     return false;
   }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: config.smtpUser,
-      pass: config.smtpAppPassword,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
 
-  const info = await transporter.sendMail({
-    from: config.fromEmail,
-    to,
-    subject,
-    html,
-    text: text || htmlToText(html),
-  });
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: config.fromEmail,
+        to: [to],
+        subject,
+        html,
+        text: text || htmlToText(html),
+      }),
+      signal: controller.signal,
+    });
 
-  return Boolean(info.messageId);
+    if (!response.ok) {
+      return false;
+    }
+
+    const payload = (await response.json().catch(() => null)) as { id?: string } | null;
+    return Boolean(payload?.id);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function sendReminderEmail(input: AppEmailInput) {

@@ -13,6 +13,8 @@ const nextAuthUrl = process.env.NEXTAUTH_URL?.trim() || "";
 const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim() || "";
 const nextAuthSecret = process.env.NEXTAUTH_SECRET?.trim() || "";
 const appKey = process.env.OPENAI_API_KEY?.trim() || "";
+const resendApiKey = process.env.RESEND_API_KEY?.trim() || "";
+const reminderFromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || "";
 
 if (!databaseUrl) {
   failures.push("DATABASE_URL is missing.");
@@ -44,6 +46,14 @@ if (!appKey) {
   warnings.push("OPENAI_API_KEY is not set. Core household features still work, but AI features will be disabled.");
 } else {
   checks.push("OPENAI_API_KEY: present");
+}
+
+if (!resendApiKey && !reminderFromEmail) {
+  warnings.push("RESEND_API_KEY and REMINDER_FROM_EMAIL are not set. Email verification, password reset, and reminder emails will stay off.");
+} else if (!resendApiKey || !reminderFromEmail) {
+  failures.push("RESEND_API_KEY and REMINDER_FROM_EMAIL must both be set to enable outgoing email.");
+} else {
+  checks.push("Email delivery: Resend configured");
 }
 
 console.log("FamilyFlow deployment env check");

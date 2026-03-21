@@ -76,15 +76,13 @@ export function getAuthRuntimeConfig() {
 }
 
 export function getMailConfig() {
-  const smtpUser = process.env.GMAIL_SMTP_USER?.trim() || "";
-  const smtpAppPassword = process.env.GMAIL_SMTP_APP_PASSWORD?.trim() || "";
-  const fromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || smtpUser;
+  const resendApiKey = process.env.RESEND_API_KEY?.trim() || "";
+  const fromEmail = process.env.REMINDER_FROM_EMAIL?.trim() || "";
 
   return {
-    smtpUser,
-    smtpAppPassword,
+    resendApiKey,
     fromEmail,
-    configured: Boolean(smtpUser && smtpAppPassword && fromEmail),
+    configured: Boolean(resendApiKey && fromEmail),
   };
 }
 

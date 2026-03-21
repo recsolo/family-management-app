@@ -33,7 +33,7 @@ FamilyFlow AI is a staged Next.js web app for family planning. Stage 5A added ro
 2. Set `NEXTAUTH_URL` to the final public app URL.
 3. Set `NEXTAUTH_SECRET` to a long random value of at least 32 characters. The deployed app now requires this explicitly.
 4. Set `OPENAI_API_KEY` if AI features should be enabled in production.
-5. Set `GMAIL_SMTP_USER`, `GMAIL_SMTP_APP_PASSWORD`, and `REMINDER_FROM_EMAIL` if reminder emails, password reset, and email verification should be enabled.
+5. Set `RESEND_API_KEY` and `REMINDER_FROM_EMAIL` if reminder emails, password reset, and email verification should be enabled.
 6. Set `REMINDER_DISPATCH_SECRET` if you want a cron job or external scheduler to trigger reminder emails outside the app.
 7. Run `npm run check:env`.
 8. Run `npm run db:generate`.
@@ -47,7 +47,7 @@ FamilyFlow AI is a staged Next.js web app for family planning. Stage 5A added ro
 4. Set `NEXTAUTH_SECRET` to a long random value.
 5. Set `NEXTAUTH_URL` to your Railway public URL, or rely on `RAILWAY_PUBLIC_DOMAIN`.
 6. Set `OPENAI_API_KEY` if you want AI features enabled.
-7. Set `GMAIL_SMTP_USER`, `GMAIL_SMTP_APP_PASSWORD`, and `REMINDER_FROM_EMAIL` if you want reminder emails, password reset, and email verification enabled.
+7. Set `RESEND_API_KEY` and `REMINDER_FROM_EMAIL` if you want reminder emails, password reset, and email verification enabled.
 8. Set `REMINDER_DISPATCH_SECRET` if you want Railway cron or another scheduler to call [dispatch-pending route](C:\Users\recso\Documents\New%20project\familyflow-ai\src\app\api\reminders\dispatch-pending\route.ts).
 9. Railway will use [railway.json](C:\Users\recso\Documents\New%20project\familyflow-ai\railway.json), build with `npm run build`, run `npm run db:migrate`, start with `npm run start`, and health check [health route](C:\Users\recso\Documents\New%20project\familyflow-ai\src\app\api\health\route.ts) at `/api/health`.
 
@@ -83,7 +83,8 @@ FamilyFlow AI is a staged Next.js web app for family planning. Stage 5A added ro
 
 - Production persistence now expects PostgreSQL through `DATABASE_URL`.
 - AI actions still work only when `OPENAI_API_KEY` is set.
-- Email verification and password reset turn on automatically when the mail env vars are configured. If mail is not configured, new accounts stay usable for local/dev sign-in.
+- Email verification and password reset turn on automatically when `RESEND_API_KEY` and `REMINDER_FROM_EMAIL` are configured. If mail is not configured, new accounts stay usable for local/dev sign-in.
+- Resend requires the `from` address to match a verified sending domain. See [Resend's domain mismatch guidance](https://resend.com/docs/knowledge-base/403-error-domain-mismatch).
 - `next.config.ts` now applies baseline security headers for all routes.
 - `railway.json` configures Railway build, start, restart, and healthcheck settings.
 - The SQLite-based deployment path has been replaced for production usage; Railway should now use PostgreSQL.
