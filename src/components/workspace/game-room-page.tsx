@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
 import { createId, type AppState, type ArcadeRun, type GameRoomState, type UnoCard, type UnoGame, type UnoPlayableColor } from "@/lib/familyflow";
 import { getExternalGameDefinition, type ExternalGameKey } from "@/lib/game-catalog";
 import type { HouseholdMember } from "@/lib/workspace";
@@ -927,16 +928,10 @@ export function GameRoomPage({
           </div>
           <div className="family-route-chip">Game night</div>
         </div>
-        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-          Open the new full-screen play space for Star Sprint, or keep using the in-app games while UNO gets its own separate table next.
-        </p>
-        <div className="mt-6 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="mt-6 grid gap-3 lg:grid-cols-2">
           <div className="family-list-card">
             <p className="family-kicker family-eyebrow">Full screen</p>
             <h4 className="mt-3 font-serif text-3xl">{liveExternalArcade.label} is ready.</h4>
-            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-              Open the game in a new tab.
-            </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
@@ -954,9 +949,6 @@ export function GameRoomPage({
           <div className="family-list-card">
             <p className="family-kicker family-eyebrow">UNO</p>
             <h4 className="mt-3 font-serif text-3xl">UNO is still here.</h4>
-            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-              Use the in-app table for now.
-            </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button type="button" onClick={() => setActiveView("uno")} className="family-btn family-btn-secondary">
                 Play UNO here
@@ -987,15 +979,10 @@ export function GameRoomPage({
         <section className="family-panel family-route-board family-route-board--games family-animate-rise rounded-[30px] p-5 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="family-kicker family-eyebrow">{activeView === "arcade" ? "Arcade game" : "Card table"}</p>
+              <p className="family-kicker family-eyebrow">{activeView === "arcade" ? "Arcade" : "UNO"}</p>
               <h3 className="mt-3 font-serif text-4xl leading-tight">
-                {activeView === "arcade" ? "Family Star Sprint" : "Pass-and-play UNO"}
+                {activeView === "arcade" ? "Family Star Sprint" : "UNO Table"}
               </h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                {activeView === "arcade"
-                  ? "Move left and right, catch glowing stars, and dodge storm clouds. Every run is short so everyone gets a turn."
-                  : "Pick the players, deal the cards, and pass the device to the current player each turn."}
-              </p>
             </div>
             <span className={`family-badge ${activeView === "arcade" ? "family-badge-gold" : "family-badge-accent"}`}>
               {activeView === "arcade" ? arcadeSnapshot.mode : activeUnoGame?.status ?? "ready"}
@@ -1013,13 +1000,13 @@ export function GameRoomPage({
 
           {activeView === "arcade" ? (
             <div className="mt-5 space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,0.9fr)_auto_auto_auto] md:items-end">
                 <label className="text-sm font-medium text-stone-700">
                   Player
                   <select
                     value={currentArcadeMemberId}
                     onChange={(event) => onSelectArcadeMember(event.target.value)}
-                    className="family-select ml-2 inline-flex w-auto min-w-[10rem]"
+                    className="family-select mt-2"
                   >
                     {memberList.map((member) => (
                       <option key={member.id} value={member.id}>
@@ -1029,40 +1016,75 @@ export function GameRoomPage({
                   </select>
                 </label>
                 <button type="button" onClick={startArcadeRound} className="family-btn family-btn-primary">
-                  {arcadeSnapshot.mode === "playing" ? "Restart run" : "Start run"}
+                  {arcadeSnapshot.mode === "playing" ? "Restart" : "Start"}
                 </button>
                 <button type="button" onClick={() => nudgeArcade(-1)} className="family-btn family-btn-soft">
-                  Move left
+                  Left
                 </button>
                 <button type="button" onClick={() => nudgeArcade(1)} className="family-btn family-btn-soft">
-                  Move right
+                  Right
                 </button>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="family-list-card">
-                  <p className="family-kicker family-eyebrow">How to play</p>
-                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Use arrow keys or the move buttons. Catch stars, avoid clouds, and chase the family high score.</p>
+                  <p className="family-kicker family-eyebrow">Score</p>
+                  <p className="mt-3 font-serif text-3xl">{arcadeSnapshot.score}</p>
                 </div>
                 <div className="family-list-card">
-                  <p className="family-kicker family-eyebrow">Live score</p>
-                  <p className="mt-3 font-serif text-3xl">{arcadeSnapshot.score}</p>
+                  <p className="family-kicker family-eyebrow">Stars</p>
+                  <p className="mt-3 font-serif text-3xl">{arcadeSnapshot.starsCaught}</p>
                   <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Stars {arcadeSnapshot.starsCaught} · Dodged {arcadeSnapshot.cloudsDodged}</p>
                 </div>
                 <div className="family-list-card">
-                  <p className="family-kicker family-eyebrow">Best run</p>
+                  <p className="family-kicker family-eyebrow">Best</p>
                   <p className="mt-3 font-serif text-3xl">{topArcadeRun ? topArcadeRun.score : "Open"}</p>
                   <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
                     {topArcadeRun ? `${topArcadeRun.memberName} is leading the room.` : "No one has played yet."}
                   </p>
                 </div>
               </div>
+
+              <DisclosurePanel
+                kicker="More"
+                title="Game details"
+                summary="Open this when you want the controls and leaderboard."
+                badge={arcadeLeaderboard.length > 0 ? `${arcadeLeaderboard.length} scores` : "No scores"}
+                className="family-list-card"
+              >
+                <div className="space-y-4">
+                  <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
+                    Use arrow keys or the left and right buttons. Catch stars and avoid clouds.
+                  </div>
+                  <div className="space-y-3">
+                    {arcadeLeaderboard.length > 0 ? (
+                      arcadeLeaderboard.map((run, index) => (
+                        <div key={run.id} className="family-game-leaderboard-row">
+                          <div>
+                            <p className="font-semibold text-stone-900">
+                              #{index + 1} {run.memberName}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--muted)]">
+                              {run.starsCaught} stars / {run.cloudsDodged} dodges
+                            </p>
+                          </div>
+                          <span className="family-badge family-badge-accent">{run.score}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
+                        No scores yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DisclosurePanel>
             </div>
           ) : (
             <div className="mt-5 space-y-4">
               <div className="grid gap-3 md:grid-cols-[1.04fr_0.96fr]">
                 <div className="family-list-card">
-                  <p className="family-kicker family-eyebrow">Players at the table</p>
+                  <p className="family-kicker family-eyebrow">Players</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                       {memberList.map((member) => {
                         const selected = effectiveSelectedPlayerIds.includes(member.id);
@@ -1078,10 +1100,9 @@ export function GameRoomPage({
                       );
                     })}
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-[var(--muted)]">Pick 2 to 6 family members, then start a fresh round.</p>
                 </div>
                 <div className="family-list-card">
-                  <p className="family-kicker family-eyebrow">Table actions</p>
+                  <p className="family-kicker family-eyebrow">Actions</p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
@@ -1092,7 +1113,7 @@ export function GameRoomPage({
                       Start UNO
                     </button>
                     <button type="button" onClick={() => onSaveUnoGame(null)} className="family-btn family-btn-secondary">
-                      Clear table
+                      Clear
                     </button>
                     {activeUnoGame?.status === "playing" ? (
                       <button type="button" onClick={handleDrawUnoCard} className="family-btn family-btn-soft">
@@ -1100,9 +1121,6 @@ export function GameRoomPage({
                       </button>
                     ) : null}
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-                    {activeUnoGame ? activeUnoGame.lastAction : "No round has started yet."}
-                  </p>
                 </div>
               </div>
 
@@ -1130,7 +1148,7 @@ export function GameRoomPage({
                       <div>
                         <p className="family-kicker family-eyebrow">Current hand</p>
                         <h4 className="mt-3 font-serif text-3xl leading-tight">
-                          {currentUnoPlayer ? `${currentUnoPlayer.name}, your move.` : "Deal the cards to start."}
+                          {currentUnoPlayer ? currentUnoPlayer.name : "Ready"}
                         </h4>
                       </div>
                       <span className="family-badge family-badge-gold">
@@ -1142,7 +1160,7 @@ export function GameRoomPage({
 
                     {wildSelection ? (
                       <div className="family-uno-wild-picker mt-5">
-                        <p className="text-sm font-semibold text-stone-800">Choose a color for the wild card.</p>
+                        <p className="text-sm font-semibold text-stone-800">Pick a color.</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {UNO_COLORS.map((color) => (
                             <button
@@ -1182,7 +1200,7 @@ export function GameRoomPage({
                         })
                       ) : (
                         <div className="family-empty rounded-[24px] p-5 text-sm leading-7 text-[var(--muted)]">
-                          Deal the first round or wait for the next hand to appear.
+                          Start a round to see the hand.
                         </div>
                       )}
                     </div>
@@ -1195,14 +1213,14 @@ export function GameRoomPage({
 
         <aside className="space-y-5">
           <article className="family-card family-card-gold rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">Game picker</p>
+            <p className="family-kicker family-eyebrow">Now playing</p>
             <h3 className="mt-4 font-serif text-4xl leading-tight">
               {activeView === "arcade" ? "Arcade" : "UNO"}
             </h3>
           </article>
 
           <article className="family-panel rounded-[28px] p-6">
-            <p className="family-kicker family-eyebrow">{activeView === "arcade" ? "Leaderboard" : "Table guide"}</p>
+            <p className="family-kicker family-eyebrow">{activeView === "arcade" ? "Scores" : "Round notes"}</p>
             <div className="mt-4 space-y-3">
               {activeView === "arcade" ? (
                 arcadeLeaderboard.length > 0 ? (
