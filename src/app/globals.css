@@ -1,6 +1,18 @@
 @import "tailwindcss";
 
 :root {
+  /* 8-point spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
   --background: #faf8f2;
   --foreground: #101010;
   --muted: #5d564b;
@@ -143,7 +155,8 @@ a {
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 246, 236, 0.94)),
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0));
   box-shadow: var(--shadow-float);
-  backdrop-filter: blur(18px);
+  /* Only top-level panels need backdrop blur; nested cards skip it */
+  backdrop-filter: blur(12px);
   transform-style: preserve-3d;
   transition:
     transform 220ms ease,
@@ -151,12 +164,21 @@ a {
     border-color 220ms ease;
 }
 
+/* Nested cards inside a panel don't need blur — the panel already blurs */
+.family-panel .family-card,
+.family-panel .family-card-soft,
+.family-panel .family-card-dark,
+.family-panel .family-card-accent,
+.family-panel .family-card-gold {
+  backdrop-filter: none;
+}
+
 .family-panel-soft,
 .family-card-soft {
   border: 1px solid rgba(228, 192, 92, 0.2);
   background: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(247, 239, 221, 0.94));
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
 }
 
 .family-panel-dark,
@@ -183,14 +205,8 @@ a {
   background: linear-gradient(180deg, rgba(250, 241, 210, 0.98), rgba(255, 252, 244, 0.96));
 }
 
-.family-panel::before,
-.family-card::before,
-.family-panel-soft::before,
-.family-card-soft::before,
-.family-panel-dark::before,
-.family-card-dark::before,
-.family-card-accent::before,
-.family-card-gold::before {
+/* Shared glassmorphic pseudo-elements for all surface variants */
+:is(.family-panel, .family-card, .family-panel-soft, .family-card-soft, .family-panel-dark, .family-card-dark, .family-card-accent, .family-card-gold)::before {
   content: "";
   position: absolute;
   inset: 1px 1px auto;
@@ -202,14 +218,7 @@ a {
   z-index: -1;
 }
 
-.family-panel::after,
-.family-card::after,
-.family-panel-soft::after,
-.family-card-soft::after,
-.family-panel-dark::after,
-.family-card-dark::after,
-.family-card-accent::after,
-.family-card-gold::after {
+:is(.family-panel, .family-card, .family-panel-soft, .family-card-soft, .family-panel-dark, .family-card-dark, .family-card-accent, .family-card-gold)::after {
   content: "";
   position: absolute;
   inset: auto 6% -18px;
@@ -230,19 +239,12 @@ a {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .family-panel:hover,
-  .family-panel-soft:hover,
-  .family-panel-dark:hover,
-  .family-card:hover,
-  .family-card-soft:hover,
-  .family-card-dark:hover {
+  :is(.family-panel, .family-panel-soft, .family-panel-dark, .family-card, .family-card-soft, .family-card-dark):hover {
     transform: translateY(-6px) rotateX(1.1deg);
     box-shadow: var(--shadow-plinth);
   }
 
-  .family-panel-dark:hover,
-  .family-card-dark:hover,
-  .family-card-accent:hover {
+  :is(.family-panel-dark, .family-card-dark, .family-card-accent):hover {
     box-shadow: var(--shadow-plinth-dark);
   }
 }
@@ -1257,39 +1259,17 @@ a {
   }
 }
 
-.family-route-board--dashboard {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 241, 224, 0.94));
-}
-
-.family-route-board--ops {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 246, 236, 0.94));
-}
-
-.family-route-board--meals {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 244, 232, 0.94));
+/* Route board backgrounds - subtle warm gradient variants */
+:is(.family-route-board--dashboard, .family-route-board--ops, .family-route-board--meals, .family-route-board--family, .family-route-board--ai) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 244, 232, 0.94));
 }
 
 .family-route-board--meals-accent {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 239, 221, 0.94));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 239, 221, 0.94));
 }
 
 .family-route-board--budget {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(249, 244, 232, 0.92));
-}
-
-.family-route-board--family {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 246, 236, 0.95));
-}
-
-.family-route-board--ai {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 241, 224, 0.94));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(249, 244, 232, 0.92));
 }
 
 .family-meals-form-card,
@@ -2043,8 +2023,7 @@ textarea:focus-visible {
   transform-style: preserve-3d;
 }
 
-.family-command-popout::before,
-.family-notification-popout::before {
+:is(.family-command-popout, .family-notification-popout)::before {
   content: "";
   position: absolute;
   inset: 1px;
@@ -2053,8 +2032,7 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
-.family-command-popout::after,
-.family-notification-popout::after {
+:is(.family-command-popout, .family-notification-popout)::after {
   content: "";
   position: absolute;
   inset: auto 8% -18px;
@@ -2079,6 +2057,31 @@ textarea:focus-visible {
 
 .family-command-popout__nav {
   gap: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.family-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.family-nav-group__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  padding: 0 0.2rem;
+  margin-bottom: 0.1rem;
+}
+
+.family-nav-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .family-command-link {
@@ -2382,12 +2385,7 @@ textarea:focus-visible {
     border-radius: 1.35rem;
   }
 
-  .family-panel::after,
-  .family-card::after,
-  .family-route-shell::after,
-  .family-topbar::after,
-  .family-command-popout::after,
-  .family-notification-popout::after {
+  :is(.family-panel, .family-card, .family-route-shell, .family-topbar, .family-command-popout, .family-notification-popout)::after {
     display: none;
   }
 
@@ -2550,5 +2548,86 @@ textarea:focus-visible {
 
   .family-chat-seed {
     flex-basis: 88%;
+  }
+}
+
+/* ─── Slide-over sheet ──────────────────────────────────────────────────── */
+
+.family-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  border: 0;
+  background: rgba(15, 15, 15, 0.36);
+  backdrop-filter: blur(2px);
+  cursor: default;
+}
+
+.family-sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(30rem, 100vw);
+  border-left: 1px solid var(--line-soft);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 244, 232, 0.96)),
+    linear-gradient(135deg, rgba(241, 214, 136, 0.12), rgba(255, 255, 255, 0));
+  box-shadow: var(--shadow-plinth-dark);
+  backdrop-filter: blur(22px);
+  overflow: hidden;
+  animation: sheet-enter 0.22s cubic-bezier(0.32, 0, 0.12, 1);
+}
+
+@keyframes sheet-enter {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.family-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.family-sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+@media (max-width: 640px) {
+  .family-sheet {
+    width: 100vw;
+    border-left: none;
+    border-top: 1px solid var(--line-soft);
+    top: auto;
+    height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    animation: sheet-enter-mobile 0.24s cubic-bezier(0.32, 0, 0.12, 1);
+  }
+
+  @keyframes sheet-enter-mobile {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 }

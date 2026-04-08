@@ -42,6 +42,12 @@ import {
   type UnoGame,
   syncStateWithMembers,
 } from "@/lib/familyflow";
+import {
+  createNotifications,
+  appendNotifications,
+  getNotificationRecipientsForAudience,
+  getReminderRecipientIds,
+} from "@/lib/notifications";
 import { getMemberProfilePath, getWorkspacePath, WORKSPACE_AI_CHAT_PATH, type ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
 
@@ -97,6 +103,93 @@ const QUEST_MEDAL_RULES = [
   matches: (board: AppState["familyQuestBoard"]) => boolean;
 }>;
 
+function FocusChatView({
+  householdName,
+  userName,
+  navigation,
+  activeTab,
+  currentUserNotifications,
+  unreadNotificationCount,
+  goToTab,
+  openNotification,
+  markAllNotificationsRead,
+  aiError,
+  saveError,
+  history,
+  onSubmitPrompt,
+  aiTask,
+  assistantSuggestions,
+}: {
+  householdName: string;
+  userName: string;
+  navigation: ReturnType<typeof buildWorkspaceShellData>["navigation"];
+  activeTab: ActiveTab;
+  currentUserNotifications: AppNotification[];
+  unreadNotificationCount: number;
+  goToTab: (tab: ActiveTab) => void;
+  openNotification: (notification: AppNotification) => void;
+  markAllNotificationsRead: () => void;
+  aiError: string | null;
+  saveError: string | null;
+  history: ChatMessage[];
+  onSubmitPrompt: (prompt: string) => void;
+  aiTask: AiTask;
+  assistantSuggestions: string[];
+}) {
+  const [chatInput, setChatInput] = useState("");
+
+  return (
+    <main className="family-stage family-chat-focus-page overflow-hidden text-[var(--foreground)]">
+      <div className="family-stage__glow family-stage__glow--one" />
+      <div className="family-stage__glow family-stage__glow--two" />
+      <div className="family-stage__glow family-stage__glow--three" />
+
+      <div className="mx-auto max-w-[1220px] px-4 py-6 sm:px-6 lg:px-8">
+        <WorkspaceTopBar
+          householdName={householdName}
+          userName={userName}
+          activeTitle="AI chat"
+          activeDetail=""
+          navigation={navigation}
+          activeTab={activeTab}
+          notifications={currentUserNotifications}
+          unreadNotificationCount={unreadNotificationCount}
+          onNavigate={goToTab}
+          onOpenNotification={(notification) => {
+            void openNotification(notification);
+          }}
+          onMarkAllNotificationsRead={() => {
+            void markAllNotificationsRead();
+          }}
+          onSignOut={() => {
+            void signOut({ callbackUrl: "/" });
+          }}
+        />
+
+        {(aiError || saveError) && (
+          <div className="family-card mb-5 rounded-[30px] border border-rose-200 bg-rose-50/95 p-4 text-sm leading-7 text-rose-900">
+            {aiError ?? saveError}
+          </div>
+        )}
+
+        <AssistantChatPanel
+          history={history}
+          chatInput={chatInput}
+          onChatInputChange={(value) => setChatInput(value)}
+          onSubmitPrompt={(prompt) => {
+            onSubmitPrompt(prompt);
+            setChatInput("");
+          }}
+          aiTask={aiTask}
+          assistantSuggestions={assistantSuggestions}
+          mode="focus"
+          onBackToStudio={() => goToTab("ai")}
+        />
+      </div>
+    </main>
+  );
+}
+
 export function FamilyFlowApp({
   activeTab,
   currentUserId,
@@ -110,32 +203,12 @@ export function FamilyFlowApp({
   memberProfileId,
 }: Props) {
   const router = useRouter();
-  const initialMemberNames = Array.from(new Set(members.map((member) => member.name.trim()).filter(Boolean)));
   const [state, setState] = useState<AppState>(syncStateWithMembers(initialState, members));
   const stateRef = useRef(state);
   const [householdName, setHouseholdName] = useState(initialHouseholdName);
   const [householdNameInput, setHouseholdNameInput] = useState(initialHouseholdName);
   const [inviteCode, setInviteCode] = useState(initialInviteCode);
   const [memberList, setMemberList] = useState(members);
-  const [ingredientInput, setIngredientInput] = useState("");
-  const [choreTitle, setChoreTitle] = useState("");
-  const [choreAssignee, setChoreAssignee] = useState(initialMemberNames[0] ?? userName);
-  const [choreCadence, setChoreCadence] = useState<ChoreCadence>("daily");
-  const [choreDueTime, setChoreDueTime] = useState("18:00");
-  const [chorePoints, setChorePoints] = useState("10");
-  const [choreDays, setChoreDays] = useState<number[]>([1, 3, 5]);
-  const [reminderTitle, setReminderTitle] = useState("");
-  const [reminderWhen, setReminderWhen] = useState("");
-  const [reminderCadence, setReminderCadence] = useState<"once" | "daily" | "weekdays" | "weekly">("once");
-  const [reminderScheduledFor, setReminderScheduledFor] = useState("");
-  const [reminderAudience, setReminderAudience] = useState("Family");
-  const [reminderInApp, setReminderInApp] = useState(true);
-  const [reminderBrowser, setReminderBrowser] = useState(false);
-  const [reminderEmail, setReminderEmail] = useState(false);
-  const [routineName, setRoutineName] = useState("");
-  const [routineTimeWindow, setRoutineTimeWindow] = useState("");
-  const [routineItems, setRoutineItems] = useState("");
-  const [chatInput, setChatInput] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [aiTask, setAiTask] = useState<AiTask>(null);
@@ -151,6 +224,8 @@ export function FamilyFlowApp({
   const reminderBrowserSyncRef = useRef(false);
   const reminderInboxSyncRef = useRef(false);
   const reminderEmailSyncRef = useRef(false);
+
+  const notificationDefaults = useMemo(() => ({ currentUserId, userName }), [currentUserId, userName]);
 
   function getQuestDayKey(value: string) {
     return value.slice(0, 10);
@@ -296,6 +371,7 @@ export function FamilyFlowApp({
             actorName: userName,
             createdAt: quest.completedAt ?? new Date().toISOString(),
           },
+          notificationDefaults,
         ),
       ),
       ...newMedals.flatMap((medal) =>
@@ -310,6 +386,7 @@ export function FamilyFlowApp({
             actorName: userName,
             createdAt: medal.earnedAt,
           },
+          notificationDefaults,
         ),
       ),
     ];
@@ -371,18 +448,6 @@ export function FamilyFlowApp({
   );
 
   useEffect(() => {
-    if (!memberNames.includes(choreAssignee)) {
-      setChoreAssignee(memberNames[0] ?? userName);
-    }
-  }, [choreAssignee, memberNames, userName]);
-
-  useEffect(() => {
-    if (reminderAudience !== "Family" && !memberNames.includes(reminderAudience)) {
-      setReminderAudience("Family");
-    }
-  }, [memberNames, reminderAudience]);
-
-  useEffect(() => {
     setLocalState((current) => syncStateWithMembers(current, memberList));
   }, [memberList]);
 
@@ -418,7 +483,7 @@ export function FamilyFlowApp({
             actorId: null,
             actorName: "FamilyFlow",
             createdAt: deliveredAt,
-          }),
+          }, notificationDefaults),
         );
 
       const nextState: AppState = {
@@ -632,6 +697,7 @@ export function FamilyFlowApp({
           actorName: userName,
           createdAt: redeemedAt,
         },
+        notificationDefaults,
       );
 
       return appendNotifications(nextState, notifications);
@@ -691,73 +757,8 @@ export function FamilyFlowApp({
     );
   }
 
-  function createNotifications(
-    recipientUserIds: string[],
-    config: {
-      kind: AppNotification["kind"];
-      title: string;
-      detail: string;
-      link: string;
-      actorId?: string | null;
-      actorName?: string;
-      createdAt?: string;
-    },
-  ) {
-    const createdAt = config.createdAt ?? new Date().toISOString();
-
-    return Array.from(new Set(recipientUserIds))
-      .filter(Boolean)
-      .map((recipientUserId) => ({
-        id: createId("notification"),
-        recipientUserId,
-        actorId: config.actorId ?? currentUserId,
-        actorName: config.actorName ?? userName,
-        kind: config.kind,
-        title: config.title,
-        detail: config.detail,
-        link: config.link,
-        createdAt,
-        readAt: null,
-      })) satisfies AppNotification[];
-  }
-
-  function appendNotifications(current: AppState, notifications: AppNotification[]) {
-    if (notifications.length === 0) {
-      return current;
-    }
-
-    return {
-      ...current,
-      notifications: [...notifications, ...current.notifications]
-        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        .slice(0, 200),
-    };
-  }
-
-  function getNotificationRecipientsForAudience(audience: string) {
-    if (audience === "Family") {
-      return memberList.filter((member) => member.id !== currentUserId).map((member) => member.id);
-    }
-
-    return memberList
-      .filter((member) => member.name.trim().toLowerCase() === audience.trim().toLowerCase() && member.id !== currentUserId)
-      .map((member) => member.id);
-  }
-
-  function getReminderRecipientIds(audience: string) {
-    if (audience === "Family") {
-      return memberList.map((member) => member.id);
-    }
-
-    return memberList
-      .filter((member) => member.name.trim().toLowerCase() === audience.trim().toLowerCase())
-      .map((member) => member.id);
-  }
-
-  function toggleChoreDay(day: number) {
-    setChoreDays((current) =>
-      current.includes(day) ? current.filter((entry) => entry !== day) : [...current, day].sort((left, right) => left - right),
-    );
+  function getPartnerRecipientIds(memberIds: string[]) {
+    return memberIds.filter((memberId) => memberId !== currentUserId);
   }
 
   async function enableBrowserAlerts() {
@@ -772,12 +773,7 @@ export function FamilyFlowApp({
       return;
     }
 
-    setReminderBrowser(true);
     setSaveError(null);
-  }
-
-  function getPartnerRecipientIds(memberIds: string[]) {
-    return memberIds.filter((memberId) => memberId !== currentUserId);
   }
 
   async function markNotificationRead(notificationId: string) {
@@ -833,6 +829,7 @@ export function FamilyFlowApp({
         link: getMemberProfilePath(currentUserId),
         createdAt: message.createdAt,
       },
+      notificationDefaults,
     );
 
     await updateState((current) => {
@@ -961,7 +958,7 @@ export function FamilyFlowApp({
       detail: trimmed,
       link: getWorkspacePath("partner"),
       createdAt: message.createdAt,
-    });
+    }, notificationDefaults);
 
     await updateState((current) => {
       const nextState: AppState = {
@@ -1132,7 +1129,7 @@ export function FamilyFlowApp({
         detail: reward.detail || `${reward.cost} points turned into something fun for the two of you.`,
         link: getWorkspacePath("partner"),
         createdAt: redeemedAt,
-      });
+      }, notificationDefaults);
 
       const nextState: AppState = {
         ...current,
@@ -1341,7 +1338,7 @@ export function FamilyFlowApp({
       detail: `${plan.title}${plan.when ? ` for ${plan.when}` : ""}`,
       link: getWorkspacePath("partner"),
       createdAt,
-    });
+    }, notificationDefaults);
 
     await updateState((current) => {
       const nextState: AppState = {
@@ -1435,7 +1432,7 @@ export function FamilyFlowApp({
       detail: note.title || "A little love note",
       link: getWorkspacePath("partner"),
       createdAt,
-    });
+    }, notificationDefaults);
 
     await updateState((current) => {
       const nextState: AppState = {
@@ -1573,7 +1570,6 @@ export function FamilyFlowApp({
     const nextHistory = [...state.assistantHistory, userMessage];
     setAiTask("assistant");
     setAiError(null);
-    setChatInput("");
     setLocalState((current) => ({ ...current, assistantHistory: nextHistory }));
 
     try {
@@ -1707,9 +1703,8 @@ export function FamilyFlowApp({
     await persistState(syncStateWithMembers(stateRef.current, nextMembers));
   }
 
-  async function addPantryItems(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const additions = ingredientInput.split(",").map(normalizeIngredient).filter(Boolean);
+  async function addPantryItems(ingredients: string) {
+    const additions = ingredients.split(",").map(normalizeIngredient).filter(Boolean);
     if (!additions.length) {
       return;
     }
@@ -1718,7 +1713,6 @@ export function FamilyFlowApp({
       ...current,
       pantry: Array.from(new Set([...current.pantry, ...additions])),
     }));
-    setIngredientInput("");
   }
 
   async function updateBudget<K extends keyof AppState["budget"]>(key: K, value: AppState["budget"][K]) {
@@ -1728,22 +1722,28 @@ export function FamilyFlowApp({
     }));
   }
 
-  async function addChore(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!choreTitle.trim()) {
+  async function addChore(data: {
+    title: string;
+    assignee: string;
+    cadence: ChoreCadence;
+    dueTime: string;
+    points: number;
+    customDays: number[];
+  }) {
+    if (!data.title.trim()) {
       return;
     }
 
-    const trimmedTitle = choreTitle.trim();
-    const normalizedCadence = choreCadence;
+    const trimmedTitle = data.title.trim();
+    const normalizedCadence = data.cadence;
     const normalizedCustomDays =
       normalizedCadence === "custom"
-        ? choreDays
+        ? data.customDays
         : normalizedCadence === "weekly"
-          ? [choreDays[0] ?? 1]
+          ? [data.customDays[0] ?? 1]
           : [];
-    const normalizedPoints = Math.max(1, Number(chorePoints) || 10);
-    const assigneeMember = memberList.find((member) => member.name.trim().toLowerCase() === choreAssignee.trim().toLowerCase());
+    const normalizedPoints = Math.max(1, data.points || 10);
+    const assigneeMember = memberList.find((member) => member.name.trim().toLowerCase() === data.assignee.trim().toLowerCase());
     const notifications = createNotifications(
       assigneeMember && assigneeMember.id !== currentUserId ? [assigneeMember.id] : [],
       {
@@ -1752,6 +1752,7 @@ export function FamilyFlowApp({
         detail: `${trimmedTitle} · ${normalizedPoints} pts`,
         link: getWorkspacePath("ops"),
       },
+      notificationDefaults,
     );
 
     await updateState((current) => {
@@ -1762,10 +1763,10 @@ export function FamilyFlowApp({
           {
             id: createId("chore"),
             title: trimmedTitle,
-            assignee: choreAssignee,
+            assignee: data.assignee,
             cadence: normalizedCadence,
             customDays: normalizedCustomDays,
-            dueTime: choreDueTime || "18:00",
+            dueTime: data.dueTime || "18:00",
             points: normalizedPoints,
             done: false,
             completedOn: null,
@@ -1777,11 +1778,6 @@ export function FamilyFlowApp({
 
       return appendNotifications(nextState, notifications);
     });
-    setChoreTitle("");
-    setChoreCadence("daily");
-    setChoreDueTime("18:00");
-    setChorePoints("10");
-    setChoreDays([1, 3, 5]);
   }
 
   async function toggleChore(id: string) {
@@ -1805,7 +1801,7 @@ export function FamilyFlowApp({
               link: getMemberProfilePath(assigneeMember.id),
               actorId: currentUserId,
               actorName: userName,
-            })
+            }, notificationDefaults)
           : [];
 
       const nextState: AppState = {
@@ -1838,32 +1834,42 @@ export function FamilyFlowApp({
     });
   }
 
-  async function addReminder(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!reminderTitle.trim() || !reminderScheduledFor.trim()) {
+  async function addReminder(data: {
+    title: string;
+    when: string;
+    cadence: "once" | "daily" | "weekdays" | "weekly";
+    scheduledFor: string;
+    audience: string;
+    delivery: { inApp: boolean; browser: boolean; email: boolean };
+  }) {
+    if (!data.title.trim() || !data.scheduledFor.trim()) {
       return;
     }
 
-    const trimmedTitle = reminderTitle.trim();
-    const scheduledForDate = new Date(reminderScheduledFor);
-    const trimmedWhen = Number.isNaN(scheduledForDate.getTime()) ? reminderWhen.trim() : formatReminderWhen({
+    const trimmedTitle = data.title.trim();
+    const scheduledForDate = new Date(data.scheduledFor);
+    const trimmedWhen = Number.isNaN(scheduledForDate.getTime()) ? data.when.trim() : formatReminderWhen({
       id: "preview",
       title: trimmedTitle,
-      when: reminderWhen.trim(),
-      audience: reminderAudience,
-      cadence: reminderCadence,
+      when: data.when.trim(),
+      audience: data.audience,
+      cadence: data.cadence,
       scheduledFor: scheduledForDate.toISOString(),
-      delivery: { inApp: reminderInApp, browser: reminderBrowser, email: reminderEmail },
+      delivery: data.delivery,
       lastDeliveredAt: null,
       lastBrowserDeliveredAt: null,
       lastEmailDeliveredAt: null,
     });
-    const notifications = createNotifications(getNotificationRecipientsForAudience(reminderAudience), {
-      kind: "reminder",
-      title: `${userName} added a reminder`,
-      detail: `${trimmedTitle} / ${trimmedWhen}`,
-      link: getWorkspacePath("ops"),
-    });
+    const notifications = createNotifications(
+      getNotificationRecipientsForAudience(data.audience, memberList, currentUserId),
+      {
+        kind: "reminder",
+        title: `${userName} added a reminder`,
+        detail: `${trimmedTitle} / ${trimmedWhen}`,
+        link: getWorkspacePath("ops"),
+      },
+      notificationDefaults,
+    );
 
     await updateState((current) => {
       const nextState: AppState = {
@@ -1873,14 +1879,10 @@ export function FamilyFlowApp({
             id: createId("reminder"),
             title: trimmedTitle,
             when: trimmedWhen,
-            audience: reminderAudience,
-            cadence: reminderCadence,
+            audience: data.audience,
+            cadence: data.cadence,
             scheduledFor: Number.isNaN(scheduledForDate.getTime()) ? null : scheduledForDate.toISOString(),
-            delivery: {
-              inApp: reminderInApp,
-              browser: reminderBrowser,
-              email: reminderEmail,
-            },
+            delivery: data.delivery,
             lastDeliveredAt: null,
             lastBrowserDeliveredAt: null,
             lastEmailDeliveredAt: null,
@@ -1891,14 +1893,6 @@ export function FamilyFlowApp({
 
       return appendNotifications(nextState, notifications);
     });
-    setReminderTitle("");
-    setReminderWhen("");
-    setReminderCadence("once");
-    setReminderScheduledFor("");
-    setReminderAudience("Family");
-    setReminderInApp(true);
-    setReminderBrowser(false);
-    setReminderEmail(false);
   }
 
   async function removeReminder(id: string) {
@@ -1908,13 +1902,8 @@ export function FamilyFlowApp({
     }));
   }
 
-  async function addRoutine(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const items = routineItems
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (!routineName.trim() || !routineTimeWindow.trim() || !items.length) {
+  async function addRoutine(data: { name: string; timeWindow: string; items: string[] }) {
+    if (!data.name.trim() || !data.timeWindow.trim() || !data.items.length) {
       return;
     }
 
@@ -1924,15 +1913,12 @@ export function FamilyFlowApp({
         ...current.routines,
         {
           id: createId("routine"),
-          name: routineName.trim(),
-          timeWindow: routineTimeWindow.trim(),
-          items,
+          name: data.name.trim(),
+          timeWindow: data.timeWindow.trim(),
+          items: data.items,
         },
       ],
     }));
-    setRoutineName("");
-    setRoutineTimeWindow("");
-    setRoutineItems("");
   }
 
   async function saveProfileBasics(memberId: string, headline: string, about: string) {
@@ -1976,6 +1962,7 @@ export function FamilyFlowApp({
         actorId: memberId,
         actorName: member.name,
       },
+      notificationDefaults,
     );
 
     await addFamilyAchievement(
@@ -2033,7 +2020,7 @@ export function FamilyFlowApp({
       actorId: memberId,
       actorName: member.name,
       createdAt: completedAt,
-    });
+    }, notificationDefaults);
 
     await updateState((current) => {
       const nextState: AppState = {
@@ -2080,6 +2067,7 @@ export function FamilyFlowApp({
         actorId: memberId,
         actorName: member.name,
       },
+      notificationDefaults,
     );
     await addFamilyAchievement(memberId, `${member.name} finished ${goal.title}`, goal.detail || "A new goal was completed.", goal.points, "goal", notifications);
   }
@@ -2125,7 +2113,7 @@ export function FamilyFlowApp({
       actorId: memberId,
       actorName: member.name,
       createdAt: redeemedAt,
-    });
+    }, notificationDefaults);
 
     await updateState((current) => {
       const targetProfile = current.memberProfiles.find((profile) => profile.memberId === memberId);
@@ -2166,6 +2154,7 @@ export function FamilyFlowApp({
         actorName: member.name,
         createdAt: redeemedAt,
       },
+      notificationDefaults,
     );
     await addFamilyAchievement(memberId, `${member.name} unlocked ${reward.title}`, reward.detail || "A reward was redeemed.", 0, "reward", familyNotifications);
   }
@@ -2216,6 +2205,8 @@ export function FamilyFlowApp({
       uploads: profile.uploads.filter((entry) => entry.id !== uploadId),
     }));
   }
+
+  // --- Computed values ---
 
   const openChores = choreStatusSummary.due + choreStatusSummary.overdue;
   const savingsPercent = savingsRow?.percent ?? 0;
@@ -2274,6 +2265,65 @@ export function FamilyFlowApp({
   const topBarTitle = view === "member-profile" && activeMember ? `${activeMember.name} profile` : activeNav.label;
   const topBarDetail = "";
 
+  // --- Grouped props for WorkspacePageSections ---
+
+  const computed = {
+    recipeMatches,
+    bestRecipe,
+    budgetPlan,
+    savingsPercent,
+    savingsAmount,
+    completedChores,
+    openChores,
+    familyQuestBoard: state.familyQuestBoard,
+    currentUserNotifications,
+    unreadNotificationCount,
+    ownerCount,
+    adminCount,
+  };
+
+  const actions = {
+    addChore: (data: Parameters<typeof addChore>[0]) => { void addChore(data); },
+    addReminder: (data: Parameters<typeof addReminder>[0]) => { void addReminder(data); },
+    addRoutine: (data: Parameters<typeof addRoutine>[0]) => { void addRoutine(data); },
+    addPantryItems: (ingredients: string) => { void addPantryItems(ingredients); },
+    toggleChore: (id: string) => { void toggleChore(id); },
+    removeReminder: (id: string) => { void removeReminder(id); },
+    updateBudget: (key: keyof AppState["budget"], value: AppState["budget"][keyof AppState["budget"]]) => { void updateBudget(key, value); },
+    handleAssistantPrompt,
+    generateMealPlan: () => { void generateMealPlan(); },
+    generateBudgetCoach: () => { void generateBudgetCoach(); },
+    goToTab,
+    openAiChatFocus,
+    openMemberProfile,
+    openNotification: (notification: AppNotification) => { void openNotification(notification); },
+    markNotificationRead: (notificationId: string) => { void markNotificationRead(notificationId); },
+    markAllNotificationsRead: () => { void markAllNotificationsRead(); },
+    redeemFamilySharedReward: (rewardId: string) => { void redeemFamilySharedReward(rewardId); },
+    addFamilyQuest: (quest: Parameters<typeof addFamilyQuest>[0]) => { void addFamilyQuest(quest); },
+    rotateInviteCode: () => { void rotateInviteCode(); },
+    saveHouseholdDetails: (event: React.FormEvent<HTMLFormElement>) => { void saveHouseholdDetails(event); },
+    updateMember: (memberId: string, nextRole: Exclude<HouseholdRole, "owner">) => { void updateMember(memberId, nextRole); },
+    removeMember: (memberId: string) => { void removeMember(memberId); },
+    enableBrowserAlerts: () => { void enableBrowserAlerts(); },
+  };
+
+  const uiState = {
+    aiTask,
+    rotatingInvite,
+    savingHouseholdName,
+    memberActionId,
+    assistantSuggestions,
+    householdNameInput,
+    setHouseholdNameInput,
+    inviteCode,
+    canManageHousehold,
+    canManageRoles,
+    canRemoveMembers,
+  };
+
+  // --- Render ---
+
   if (view === "member-profile" && (!activeMember || !activeProfile)) {
     return (
       <main className="family-stage overflow-hidden text-[var(--foreground)]">
@@ -2298,51 +2348,27 @@ export function FamilyFlowApp({
 
   if (view === "focus-chat") {
     return (
-      <main className="family-stage family-chat-focus-page overflow-hidden text-[var(--foreground)]">
-        <div className="family-stage__glow family-stage__glow--one" />
-        <div className="family-stage__glow family-stage__glow--two" />
-        <div className="family-stage__glow family-stage__glow--three" />
-
-        <div className="mx-auto max-w-[1220px] px-4 py-6 sm:px-6 lg:px-8">
-          <WorkspaceTopBar
-            householdName={householdName}
-            userName={userName}
-            activeTitle="AI chat"
-            activeDetail=""
-            navigation={navigation}
-            activeTab={activeTab}
-            notifications={currentUserNotifications}
-            unreadNotificationCount={unreadNotificationCount}
-            onNavigate={goToTab}
-            onOpenNotification={(notification) => {
-              void openNotification(notification);
-            }}
-            onMarkAllNotificationsRead={() => {
-              void markAllNotificationsRead();
-            }}
-            onSignOut={() => {
-              void signOut({ callbackUrl: "/" });
-            }}
-          />
-
-          {(aiError || saveError) && (
-            <div className="family-card mb-5 rounded-[30px] border border-rose-200 bg-rose-50/95 p-4 text-sm leading-7 text-rose-900">
-              {aiError ?? saveError}
-            </div>
-          )}
-
-          <AssistantChatPanel
-            history={state.assistantHistory}
-            chatInput={chatInput}
-            onChatInputChange={(value) => setChatInput(value)}
-            onSubmitPrompt={handleAssistantPrompt}
-            aiTask={aiTask}
-            assistantSuggestions={assistantSuggestions}
-            mode="focus"
-            onBackToStudio={() => goToTab("ai")}
-          />
-        </div>
-      </main>
+      <FocusChatView
+        householdName={householdName}
+        userName={userName}
+        navigation={navigation}
+        activeTab={activeTab}
+        currentUserNotifications={currentUserNotifications}
+        unreadNotificationCount={unreadNotificationCount}
+        goToTab={goToTab}
+        openNotification={(notification) => {
+          void openNotification(notification);
+        }}
+        markAllNotificationsRead={() => {
+          void markAllNotificationsRead();
+        }}
+        aiError={aiError}
+        saveError={saveError}
+        history={state.assistantHistory}
+        onSubmitPrompt={handleAssistantPrompt}
+        aiTask={aiTask}
+        assistantSuggestions={assistantSuggestions}
+      />
     );
   }
 
@@ -2451,128 +2477,9 @@ export function FamilyFlowApp({
                     memberList={memberList}
                     memberNames={memberNames}
                     role={role}
-                    householdNameInput={householdNameInput}
-                    setHouseholdNameInput={setHouseholdNameInput}
-                    inviteCode={inviteCode}
-                    canManageHousehold={canManageHousehold}
-                    canManageRoles={canManageRoles}
-                    canRemoveMembers={canRemoveMembers}
-                    ingredientInput={ingredientInput}
-                    setIngredientInput={setIngredientInput}
-                    choreTitle={choreTitle}
-                    setChoreTitle={setChoreTitle}
-                    choreAssignee={choreAssignee}
-                    setChoreAssignee={setChoreAssignee}
-                    choreCadence={choreCadence}
-                    setChoreCadence={setChoreCadence}
-                    choreDueTime={choreDueTime}
-                    setChoreDueTime={setChoreDueTime}
-                    chorePoints={chorePoints}
-                    setChorePoints={setChorePoints}
-                    choreDays={choreDays}
-                    toggleChoreDay={toggleChoreDay}
-                    reminderTitle={reminderTitle}
-                    setReminderTitle={setReminderTitle}
-                    reminderWhen={reminderWhen}
-                    setReminderWhen={setReminderWhen}
-                    reminderCadence={reminderCadence}
-                    setReminderCadence={setReminderCadence}
-                    reminderScheduledFor={reminderScheduledFor}
-                    setReminderScheduledFor={setReminderScheduledFor}
-                    reminderAudience={reminderAudience}
-                    setReminderAudience={setReminderAudience}
-                    reminderInApp={reminderInApp}
-                    setReminderInApp={setReminderInApp}
-                    reminderBrowser={reminderBrowser}
-                    setReminderBrowser={setReminderBrowser}
-                    reminderEmail={reminderEmail}
-                    setReminderEmail={setReminderEmail}
-                    routineName={routineName}
-                    setRoutineName={setRoutineName}
-                    routineTimeWindow={routineTimeWindow}
-                    setRoutineTimeWindow={setRoutineTimeWindow}
-                    routineItems={routineItems}
-                    setRoutineItems={setRoutineItems}
-                    chatInput={chatInput}
-                    setChatInput={setChatInput}
-                    aiTask={aiTask}
-                    rotatingInvite={rotatingInvite}
-                    savingHouseholdName={savingHouseholdName}
-                    memberActionId={memberActionId}
-                    assistantSuggestions={assistantSuggestions}
-                    currentUserNotifications={currentUserNotifications}
-                    unreadNotificationCount={unreadNotificationCount}
-                    recipeMatches={recipeMatches}
-                    bestRecipe={bestRecipe}
-                    familyQuestBoard={state.familyQuestBoard}
-                    budgetPlan={budgetPlan}
-                    savingsPercent={savingsPercent}
-                    savingsAmount={savingsAmount}
-                    completedChores={completedChores}
-                    openChores={openChores}
-                    ownerCount={ownerCount}
-                    adminCount={adminCount}
-                    goToTab={goToTab}
-                    openAiChatFocus={openAiChatFocus}
-                    openMemberProfile={openMemberProfile}
-                    openNotification={(notification) => {
-                      void openNotification(notification);
-                    }}
-                    markNotificationRead={(notificationId) => {
-                      void markNotificationRead(notificationId);
-                    }}
-                    markAllNotificationsRead={() => {
-                      void markAllNotificationsRead();
-                    }}
-                    redeemFamilySharedReward={(rewardId) => {
-                      void redeemFamilySharedReward(rewardId);
-                    }}
-                    addFamilyQuest={(quest) => {
-                      void addFamilyQuest(quest);
-                    }}
-                    handleAssistantPrompt={handleAssistantPrompt}
-                    generateMealPlan={() => {
-                      void generateMealPlan();
-                    }}
-                    generateBudgetCoach={() => {
-                      void generateBudgetCoach();
-                    }}
-                    rotateInviteCode={() => {
-                      void rotateInviteCode();
-                    }}
-                    saveHouseholdDetails={(event) => {
-                      void saveHouseholdDetails(event);
-                    }}
-                    updateMember={(memberId, nextRole) => {
-                      void updateMember(memberId, nextRole);
-                    }}
-                    removeMember={(memberId) => {
-                      void removeMember(memberId);
-                    }}
-                    addPantryItems={(event) => {
-                      void addPantryItems(event);
-                    }}
-                    updateBudget={(key, value) => {
-                      void updateBudget(key, value);
-                    }}
-                    addChore={(event) => {
-                      void addChore(event);
-                    }}
-                    toggleChore={(id) => {
-                      void toggleChore(id);
-                    }}
-                    addReminder={(event) => {
-                      void addReminder(event);
-                    }}
-                    removeReminder={(id) => {
-                      void removeReminder(id);
-                    }}
-                    addRoutine={(event) => {
-                      void addRoutine(event);
-                    }}
-                    enableBrowserAlerts={() => {
-                      void enableBrowserAlerts();
-                    }}
+                    computed={computed}
+                    actions={actions}
+                    uiState={uiState}
                   />
                 </section>
               ) : null}

@@ -4,6 +4,8 @@ import { useState, type Dispatch, type FormEvent, type ReactNode, type SetStateA
 
 import { AssistantChatPanel } from "@/components/workspace/assistant-chat-panel";
 import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
+import { SlideOverSheet } from "@/components/ui/slide-over-sheet";
+import { useFormEditor } from "@/hooks/useFormEditor";
 import {
   formatReminderWhen,
   getChoreCadenceLabel,
@@ -21,10 +23,9 @@ import {
   type ChoreCadence,
   type Recipe,
 } from "@/lib/familyflow";
+import { formatTimestamp } from "@/lib/format";
 import type { ActiveTab } from "@/lib/workspace-tabs";
 import type { HouseholdMember, HouseholdRole } from "@/lib/workspace";
-
-type AiTask = "assistant" | "meal-plan" | "budget-coach" | null;
 
 type RecipeMatch = Recipe & {
   matches: number;
@@ -50,101 +51,59 @@ type WorkspacePageSectionsProps = {
   memberList: HouseholdMember[];
   memberNames: string[];
   role: HouseholdRole;
-  householdNameInput: string;
-  setHouseholdNameInput: Dispatch<SetStateAction<string>>;
-  inviteCode: string;
-  canManageHousehold: boolean;
-  canManageRoles: boolean;
-  canRemoveMembers: boolean;
-  ingredientInput: string;
-  setIngredientInput: Dispatch<SetStateAction<string>>;
-  choreTitle: string;
-  setChoreTitle: Dispatch<SetStateAction<string>>;
-  choreAssignee: string;
-  setChoreAssignee: Dispatch<SetStateAction<string>>;
-  choreCadence: ChoreCadence;
-  setChoreCadence: Dispatch<SetStateAction<ChoreCadence>>;
-  choreDueTime: string;
-  setChoreDueTime: Dispatch<SetStateAction<string>>;
-  chorePoints: string;
-  setChorePoints: Dispatch<SetStateAction<string>>;
-  choreDays: number[];
-  toggleChoreDay: (day: number) => void;
-  reminderTitle: string;
-  setReminderTitle: Dispatch<SetStateAction<string>>;
-  reminderWhen: string;
-  setReminderWhen: Dispatch<SetStateAction<string>>;
-  reminderCadence: "once" | "daily" | "weekdays" | "weekly";
-  setReminderCadence: Dispatch<SetStateAction<"once" | "daily" | "weekdays" | "weekly">>;
-  reminderScheduledFor: string;
-  setReminderScheduledFor: Dispatch<SetStateAction<string>>;
-  reminderAudience: string;
-  setReminderAudience: Dispatch<SetStateAction<string>>;
-  reminderInApp: boolean;
-  setReminderInApp: Dispatch<SetStateAction<boolean>>;
-  reminderBrowser: boolean;
-  setReminderBrowser: Dispatch<SetStateAction<boolean>>;
-  reminderEmail: boolean;
-  setReminderEmail: Dispatch<SetStateAction<boolean>>;
-  routineName: string;
-  setRoutineName: Dispatch<SetStateAction<string>>;
-  routineTimeWindow: string;
-  setRoutineTimeWindow: Dispatch<SetStateAction<string>>;
-  routineItems: string;
-  setRoutineItems: Dispatch<SetStateAction<string>>;
-  chatInput: string;
-  setChatInput: Dispatch<SetStateAction<string>>;
-  aiTask: AiTask;
-  rotatingInvite: boolean;
-  savingHouseholdName: boolean;
-  memberActionId: string | null;
-  assistantSuggestions: string[];
-  currentUserNotifications: AppNotification[];
-  unreadNotificationCount: number;
-  recipeMatches: RecipeMatch[];
-  bestRecipe?: RecipeMatch;
-  familyQuestBoard: AppState["familyQuestBoard"];
-  budgetPlan: BudgetPlanRow[];
-  savingsPercent: number;
-  savingsAmount: number;
-  completedChores: number;
-  openChores: number;
-  ownerCount: number;
-  adminCount: number;
-  goToTab: (tab: ActiveTab) => void;
-  openAiChatFocus: () => void;
-  openMemberProfile: (memberId: string) => void;
-  openNotification: (notification: AppNotification) => void;
-  markNotificationRead: (notificationId: string) => void;
-  markAllNotificationsRead: () => void;
-  redeemFamilySharedReward: (rewardId: string) => void;
-  addFamilyQuest: (quest: {
-    title: string;
-    detail: string;
-    cadence: FamilyQuestCadence;
-    metric: FamilyQuestMetric;
-    target: number;
-    rewardPoints: number;
-    rewardTitle: string;
-  }) => void;
-  handleAssistantPrompt: (prompt: string) => void;
-  generateMealPlan: () => void;
-  generateBudgetCoach: () => void;
-  rotateInviteCode: () => void;
-  saveHouseholdDetails: (event: FormEvent<HTMLFormElement>) => void;
-  updateMember: (memberId: string, nextRole: Exclude<HouseholdRole, "owner">) => void;
-  removeMember: (memberId: string) => void;
-  addPantryItems: (event: FormEvent<HTMLFormElement>) => void;
-  updateBudget: (key: keyof AppState["budget"], value: AppState["budget"][keyof AppState["budget"]]) => void;
-  addChore: (event: FormEvent<HTMLFormElement>) => void;
-  toggleChore: (id: string) => void;
-  addReminder: (event: FormEvent<HTMLFormElement>) => void;
-  removeReminder: (id: string) => void;
-  addRoutine: (event: FormEvent<HTMLFormElement>) => void;
-  enableBrowserAlerts: () => void;
+  computed: {
+    recipeMatches: RecipeMatch[];
+    bestRecipe?: RecipeMatch;
+    budgetPlan: BudgetPlanRow[];
+    savingsPercent: number;
+    savingsAmount: number;
+    completedChores: number;
+    openChores: number;
+    familyQuestBoard: AppState["familyQuestBoard"];
+    currentUserNotifications: AppNotification[];
+    unreadNotificationCount: number;
+    ownerCount: number;
+    adminCount: number;
+  };
+  actions: {
+    addChore: (data: { title: string; assignee: string; cadence: ChoreCadence; dueTime: string; points: number; customDays: number[] }) => void;
+    addReminder: (data: { title: string; when: string; cadence: "once" | "daily" | "weekdays" | "weekly"; scheduledFor: string; audience: string; delivery: { inApp: boolean; browser: boolean; email: boolean } }) => void;
+    addRoutine: (data: { name: string; timeWindow: string; items: string[] }) => void;
+    addPantryItems: (ingredients: string) => void;
+    toggleChore: (id: string) => void;
+    removeReminder: (id: string) => void;
+    updateBudget: (key: keyof AppState["budget"], value: AppState["budget"][keyof AppState["budget"]]) => void;
+    handleAssistantPrompt: (prompt: string) => void;
+    generateMealPlan: () => void;
+    generateBudgetCoach: () => void;
+    goToTab: (tab: ActiveTab) => void;
+    openAiChatFocus: () => void;
+    openMemberProfile: (memberId: string) => void;
+    openNotification: (notification: AppNotification) => void;
+    markNotificationRead: (notificationId: string) => void;
+    markAllNotificationsRead: () => void;
+    redeemFamilySharedReward: (rewardId: string) => void;
+    addFamilyQuest: (quest: { title: string; detail: string; cadence: FamilyQuestCadence; metric: FamilyQuestMetric; target: number; rewardPoints: number; rewardTitle: string }) => void;
+    rotateInviteCode: () => void;
+    saveHouseholdDetails: (event: FormEvent<HTMLFormElement>) => void;
+    updateMember: (memberId: string, nextRole: Exclude<HouseholdRole, "owner">) => void;
+    removeMember: (memberId: string) => void;
+    enableBrowserAlerts: () => void;
+  };
+  uiState: {
+    aiTask: "assistant" | "meal-plan" | "budget-coach" | null;
+    rotatingInvite: boolean;
+    savingHouseholdName: boolean;
+    memberActionId: string | null;
+    assistantSuggestions: string[];
+    householdNameInput: string;
+    setHouseholdNameInput: Dispatch<SetStateAction<string>>;
+    inviteCode: string;
+    canManageHousehold: boolean;
+    canManageRoles: boolean;
+    canRemoveMembers: boolean;
+  };
 };
-
-type PageProps = Omit<WorkspacePageSectionsProps, "activeTab">;
 
 type InsightCardProps = {
   kicker: string;
@@ -227,20 +186,6 @@ function QuestMedalShelf({ board }: { board: AppState["familyQuestBoard"] }) {
   );
 }
 
-function formatNotificationTime(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
 export function WorkspacePageSections(props: WorkspacePageSectionsProps) {
   switch (props.activeTab) {
     case "help":
@@ -263,14 +208,13 @@ export function WorkspacePageSections(props: WorkspacePageSectionsProps) {
   }
 }
 
-function HelpPage({
-  state,
-  chatInput,
-  setChatInput,
-  handleAssistantPrompt,
-  aiTask,
-  openAiChatFocus,
-}: PageProps) {
+function HelpPage(props: WorkspacePageSectionsProps) {
+  const { state } = props;
+  const { handleAssistantPrompt, openAiChatFocus } = props.actions;
+  const { aiTask } = props.uiState;
+
+  const [chatInput, setChatInput] = useState("");
+
   const helpPrompts = [
     "How do I invite someone into my family?",
     "How do points, rewards, and quests work?",
@@ -362,16 +306,11 @@ function HelpPage({
   );
 }
 
-function DashboardPage({
-  state,
-  memberList,
-  completedChores,
-  currentUserNotifications,
-  unreadNotificationCount,
-  familyQuestBoard,
-  goToTab,
-  toggleChore,
-}: PageProps) {
+function DashboardPage(props: WorkspacePageSectionsProps) {
+  const { state, memberList } = props;
+  const { completedChores, currentUserNotifications, unreadNotificationCount, familyQuestBoard } = props.computed;
+  const { goToTab, toggleChore } = props.actions;
+
   const todayKey = getTodayKey();
   const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
   const openTodayChores = todayChores.filter((chore) => !chore.done);
@@ -585,13 +524,10 @@ function DashboardPage({
   );
 }
 
-function InboxPage({
-  currentUserNotifications,
-  unreadNotificationCount,
-  markAllNotificationsRead,
-  markNotificationRead,
-  openNotification,
-}: PageProps) {
+function InboxPage(props: WorkspacePageSectionsProps) {
+  const { currentUserNotifications, unreadNotificationCount } = props.computed;
+  const { markAllNotificationsRead, markNotificationRead, openNotification } = props.actions;
+
   const newestAlert = currentUserNotifications[0];
   const unreadAlerts = currentUserNotifications.filter((notification) => !notification.readAt);
   const olderAlerts = currentUserNotifications.filter((notification) => notification.readAt);
@@ -645,7 +581,7 @@ function InboxPage({
                   </div>
                   <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{notification.detail}</p>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                    {formatNotificationTime(notification.createdAt)}
+                    {formatTimestamp(notification.createdAt)}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button type="button" onClick={() => openNotification(notification)} className="family-btn family-btn-primary">
@@ -683,7 +619,7 @@ function InboxPage({
                   </div>
                   <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{notification.detail}</p>
                   <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                    {formatNotificationTime(notification.createdAt)}
+                    {formatTimestamp(notification.createdAt)}
                   </p>
                 </button>
               ))
@@ -697,44 +633,69 @@ function InboxPage({
   );
 }
 
-function OperationsPage({
-  state,
-  memberNames,
-  choreTitle,
-  setChoreTitle,
-  choreAssignee,
-  setChoreAssignee,
-  choreCadence,
-  setChoreCadence,
-  choreDueTime,
-  setChoreDueTime,
-  chorePoints,
-  setChorePoints,
-  choreDays,
-  toggleChoreDay,
-  addChore,
-  completedChores,
-  toggleChore,
-  reminderTitle,
-  setReminderTitle,
-  reminderWhen,
-  setReminderWhen,
-  reminderCadence,
-  setReminderCadence,
-  reminderScheduledFor,
-  setReminderScheduledFor,
-  reminderAudience,
-  setReminderAudience,
-  reminderInApp,
-  setReminderInApp,
-  reminderBrowser,
-  setReminderBrowser,
-  reminderEmail,
-  setReminderEmail,
-  addReminder,
-  removeReminder,
-  enableBrowserAlerts,
-}: PageProps) {
+function OperationsPage(props: WorkspacePageSectionsProps) {
+  const { state, memberNames } = props;
+  const { completedChores } = props.computed;
+  const { addChore, toggleChore, addReminder, removeReminder, enableBrowserAlerts } = props.actions;
+
+  const [opsSheetOpen, setOpsSheetOpen] = useState(false);
+
+  const choreForm = useFormEditor({
+    defaults: {
+      title: "",
+      assignee: memberNames[0] ?? "",
+      cadence: "daily" as ChoreCadence,
+      dueTime: "09:00",
+      points: "5",
+      customDays: [] as number[],
+    },
+    onSubmit: (fields) => {
+      addChore({
+        title: fields.title,
+        assignee: fields.assignee,
+        cadence: fields.cadence,
+        dueTime: fields.dueTime,
+        points: Number(fields.points) || 5,
+        customDays: fields.customDays,
+      });
+      setOpsSheetOpen(false);
+    },
+    validate: (fields) => fields.title.trim().length > 0,
+  });
+
+  const reminderForm = useFormEditor({
+    defaults: {
+      title: "",
+      when: "",
+      cadence: "once" as "once" | "daily" | "weekdays" | "weekly",
+      scheduledFor: "",
+      audience: "Family",
+      inApp: true,
+      browser: false,
+      email: false,
+    },
+    onSubmit: (fields) => {
+      addReminder({
+        title: fields.title,
+        when: fields.when,
+        cadence: fields.cadence,
+        scheduledFor: fields.scheduledFor,
+        audience: fields.audience,
+        delivery: { inApp: fields.inApp, browser: fields.browser, email: fields.email },
+      });
+      setOpsSheetOpen(false);
+    },
+    validate: (fields) => fields.title.trim().length > 0,
+  });
+
+  function toggleChoreDay(day: number) {
+    const current = choreForm.fields.customDays;
+    choreForm.setField(
+      "customDays",
+      current.includes(day) ? current.filter((d) => d !== day) : [...current, day],
+    );
+  }
+
   const todayChores = state.chores.filter((chore) => isChoreScheduledForDate(chore, new Date()));
   const dueChores = todayChores.filter((chore) => getChoreStatus(chore, new Date()) === "due");
   const overdueChores = todayChores.filter((chore) => getChoreStatus(chore, new Date()) === "overdue");
@@ -822,24 +783,28 @@ function OperationsPage({
           </div>
         </article>
 
-        <DisclosurePanel
-          kicker="Add or schedule"
-          title="Keep setup hidden until you need it."
-          summary="One place to add chores and reminders with repeat rules and delivery choices."
-          badge="Open setup"
-          className="family-panel family-surface-accent family-ops-form-card rounded-[28px] p-5 md:p-6"
-        >
+        <div className="family-panel family-animate-rise rounded-[28px] p-5 md:p-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="family-kicker family-eyebrow">Setup</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--muted)]">Add chores and reminders with repeat rules.</p>
+          </div>
+          <button type="button" onClick={() => setOpsSheetOpen(true)} className="family-btn family-btn-primary">
+            Add / schedule
+          </button>
+        </div>
+
+        <SlideOverSheet open={opsSheetOpen} onClose={() => setOpsSheetOpen(false)} title="Add chore or reminder">
           <div className="space-y-5">
-            <form className="space-y-4" onSubmit={addChore}>
+            <form className="space-y-4" onSubmit={choreForm.handleSubmit}>
               <p className="family-kicker family-eyebrow">New chore</p>
               <label className="block text-sm font-medium text-stone-700">
                 Job
-                <input value={choreTitle} onChange={(event) => setChoreTitle(event.target.value)} placeholder="Take out recycling" className="family-input mt-2" />
+                <input value={choreForm.fields.title} onChange={(event) => choreForm.setField("title", event.target.value)} placeholder="Take out recycling" className="family-input mt-2" />
               </label>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block text-sm font-medium text-stone-700">
                   Assign to
-                  <select value={choreAssignee} onChange={(event) => setChoreAssignee(event.target.value)} className="family-select mt-2">
+                  <select value={choreForm.fields.assignee} onChange={(event) => choreForm.setField("assignee", event.target.value)} className="family-select mt-2">
                     {memberNames.map((member) => (
                       <option key={member} value={member}>
                         {member}
@@ -849,7 +814,7 @@ function OperationsPage({
                 </label>
                 <label className="block text-sm font-medium text-stone-700">
                   Repeats
-                  <select value={choreCadence} onChange={(event) => setChoreCadence(event.target.value as ChoreCadence)} className="family-select mt-2">
+                  <select value={choreForm.fields.cadence} onChange={(event) => choreForm.setField("cadence", event.target.value as ChoreCadence)} className="family-select mt-2">
                     <option value="daily">Every day</option>
                     <option value="weekdays">Weekdays</option>
                     <option value="weekly">Once a week</option>
@@ -857,7 +822,7 @@ function OperationsPage({
                   </select>
                 </label>
               </div>
-              {(choreCadence === "custom" || choreCadence === "weekly") ? (
+              {(choreForm.fields.cadence === "custom" || choreForm.fields.cadence === "weekly") ? (
                 <div>
                   <p className="text-sm font-medium text-stone-700">Days</p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -866,7 +831,7 @@ function OperationsPage({
                         key={day.value}
                         type="button"
                         onClick={() => toggleChoreDay(day.value)}
-                        className={`family-nav-pill ${choreDays.includes(day.value) ? "family-nav-pill-active" : ""}`}
+                        className={`family-nav-pill ${choreForm.fields.customDays.includes(day.value) ? "family-nav-pill-active" : ""}`}
                       >
                         {day.shortLabel}
                       </button>
@@ -877,11 +842,11 @@ function OperationsPage({
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block text-sm font-medium text-stone-700">
                   Due time
-                  <input type="time" value={choreDueTime} onChange={(event) => setChoreDueTime(event.target.value)} className="family-input mt-2" />
+                  <input type="time" value={choreForm.fields.dueTime} onChange={(event) => choreForm.setField("dueTime", event.target.value)} className="family-input mt-2" />
                 </label>
                 <label className="block text-sm font-medium text-stone-700">
                   Points
-                  <input type="number" min="1" step="1" value={chorePoints} onChange={(event) => setChorePoints(event.target.value)} className="family-input mt-2" />
+                  <input type="number" min="1" step="1" value={choreForm.fields.points} onChange={(event) => choreForm.setField("points", event.target.value)} className="family-input mt-2" />
                 </label>
               </div>
               <button type="submit" className="family-btn family-btn-primary">
@@ -889,28 +854,27 @@ function OperationsPage({
               </button>
             </form>
 
-            <form className="space-y-4 border-t border-[var(--line-soft)] pt-5" onSubmit={addReminder}>
+            <form className="space-y-4 border-t border-[var(--line-soft)] pt-5" onSubmit={reminderForm.handleSubmit}>
               <p className="family-kicker family-eyebrow">New reminder</p>
               <label className="block text-sm font-medium text-stone-700">
                 Reminder
-                <input value={reminderTitle} onChange={(event) => setReminderTitle(event.target.value)} placeholder="Dentist forms in backpack" className="family-input mt-2" />
+                <input value={reminderForm.fields.title} onChange={(event) => reminderForm.setField("title", event.target.value)} placeholder="Dentist forms in backpack" className="family-input mt-2" />
               </label>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block text-sm font-medium text-stone-700">
                   Date and time
                   <input
                     type="datetime-local"
-                    value={reminderScheduledFor}
+                    value={reminderForm.fields.scheduledFor}
                     onChange={(event) => {
-                      setReminderScheduledFor(event.target.value);
-                      setReminderWhen(event.target.value);
+                      reminderForm.setFields({ scheduledFor: event.target.value, when: event.target.value });
                     }}
                     className="family-input mt-2"
                   />
                 </label>
                 <label className="block text-sm font-medium text-stone-700">
                   Repeat
-                  <select value={reminderCadence} onChange={(event) => setReminderCadence(event.target.value as "once" | "daily" | "weekdays" | "weekly")} className="family-select mt-2">
+                  <select value={reminderForm.fields.cadence} onChange={(event) => reminderForm.setField("cadence", event.target.value as "once" | "daily" | "weekdays" | "weekly")} className="family-select mt-2">
                     <option value="once">One time</option>
                     <option value="daily">Every day</option>
                     <option value="weekdays">Weekdays</option>
@@ -920,7 +884,7 @@ function OperationsPage({
               </div>
               <label className="block text-sm font-medium text-stone-700">
                 Who gets it
-                <select value={reminderAudience} onChange={(event) => setReminderAudience(event.target.value)} className="family-select mt-2">
+                <select value={reminderForm.fields.audience} onChange={(event) => reminderForm.setField("audience", event.target.value)} className="family-select mt-2">
                   <option value="Family">Family</option>
                   {memberNames.map((member) => (
                     <option key={member} value={member}>
@@ -932,15 +896,15 @@ function OperationsPage({
               <div className="space-y-3">
                 <p className="text-sm font-medium text-stone-700">How it should show up</p>
                 <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
-                  <input type="checkbox" checked={reminderInApp} onChange={(event) => setReminderInApp(event.target.checked)} />
+                  <input type="checkbox" checked={reminderForm.fields.inApp} onChange={(event) => reminderForm.setField("inApp", event.target.checked)} />
                   In the app inbox
                 </label>
                 <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
-                  <input type="checkbox" checked={reminderBrowser} onChange={(event) => setReminderBrowser(event.target.checked)} />
+                  <input type="checkbox" checked={reminderForm.fields.browser} onChange={(event) => reminderForm.setField("browser", event.target.checked)} />
                   Browser alert
                 </label>
                 <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
-                  <input type="checkbox" checked={reminderEmail} onChange={(event) => setReminderEmail(event.target.checked)} />
+                  <input type="checkbox" checked={reminderForm.fields.email} onChange={(event) => reminderForm.setField("email", event.target.checked)} />
                   Email reminder
                 </label>
                 <div className="flex flex-wrap gap-3">
@@ -954,7 +918,7 @@ function OperationsPage({
               </div>
             </form>
           </div>
-        </DisclosurePanel>
+        </SlideOverSheet>
       </div>
 
       <article className="family-panel family-animate-rise rounded-[30px] p-6 md:p-7 family-reminder-shell">
@@ -1001,19 +965,25 @@ function OperationsPage({
   );
 }
 
-function MealsPage({
-  state,
-  ingredientInput,
-  setIngredientInput,
-  addPantryItems,
-  bestRecipe,
-  recipeMatches,
-  aiTask,
-  generateMealPlan,
-}: PageProps) {
+function MealsPage(props: WorkspacePageSectionsProps) {
+  const { state } = props;
+  const { recipeMatches, bestRecipe } = props.computed;
+  const { addPantryItems, generateMealPlan } = props.actions;
+  const { aiTask } = props.uiState;
+
+  const [ingredientInput, setIngredientInput] = useState("");
+
   const topRecipeMatches = recipeMatches.slice(0, 4);
   const tonightRecipe = bestRecipe ?? topRecipeMatches[0];
   const tonightMissingCount = tonightRecipe?.missing.length ?? 0;
+
+  function handleAddPantryItems(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (ingredientInput.trim()) {
+      addPantryItems(ingredientInput);
+      setIngredientInput("");
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -1091,7 +1061,7 @@ function MealsPage({
           badge={`${state.pantry.length} items`}
           className="family-panel family-surface-warm family-meals-form-card rounded-[28px] p-5 md:p-6"
         >
-          <form className="space-y-4" onSubmit={addPantryItems}>
+          <form className="space-y-4" onSubmit={handleAddPantryItems}>
             <label className="block text-sm font-medium text-stone-700">
               Pantry items
               <input value={ingredientInput} onChange={(event) => setIngredientInput(event.target.value)} placeholder="Tomatoes, rice, tortillas" className="family-input mt-2" />
@@ -1207,15 +1177,12 @@ function MealsPage({
   );
 }
 
-function BudgetPage({
-  state,
-  updateBudget,
-  budgetPlan,
-  aiTask,
-  generateBudgetCoach,
-  savingsPercent,
-  savingsAmount,
-}: PageProps) {
+function BudgetPage(props: WorkspacePageSectionsProps) {
+  const { state } = props;
+  const { budgetPlan, savingsPercent, savingsAmount } = props.computed;
+  const { updateBudget, generateBudgetCoach } = props.actions;
+  const { aiTask } = props.uiState;
+
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--budget family-animate-rise rounded-[34px] p-6 md:p-8">
@@ -1363,36 +1330,40 @@ function BudgetPage({
   );
 }
 
-function FamilyPage({
-  state,
-  currentUserId,
-  role,
-  memberList,
-  memberActionId,
-  updateMember,
-  removeMember,
-  canManageRoles,
-  canRemoveMembers,
-  canManageHousehold,
-  householdNameInput,
-  setHouseholdNameInput,
-  saveHouseholdDetails,
-  savingHouseholdName,
-  inviteCode,
-  rotatingInvite,
-  rotateInviteCode,
-  routineName,
-  setRoutineName,
-  routineTimeWindow,
-  setRoutineTimeWindow,
-  routineItems,
-  setRoutineItems,
-  addRoutine,
-  ownerCount,
-  adminCount,
-  openMemberProfile,
-}: PageProps) {
+function FamilyPage(props: WorkspacePageSectionsProps) {
+  const { state, currentUserId, role, memberList } = props;
+  const { ownerCount, adminCount } = props.computed;
+  const { updateMember, removeMember, saveHouseholdDetails, rotateInviteCode, addRoutine, openMemberProfile } = props.actions;
+  const {
+    memberActionId,
+    canManageRoles,
+    canRemoveMembers,
+    canManageHousehold,
+    householdNameInput,
+    setHouseholdNameInput,
+    savingHouseholdName,
+    inviteCode,
+    rotatingInvite,
+  } = props.uiState;
+
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [routineName, setRoutineName] = useState("");
+  const [routineTimeWindow, setRoutineTimeWindow] = useState("");
+  const [routineItems, setRoutineItems] = useState("");
+
+  function handleAddRoutine(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (routineName.trim()) {
+      addRoutine({
+        name: routineName,
+        timeWindow: routineTimeWindow,
+        items: routineItems.split(",").map((item) => item.trim()).filter(Boolean),
+      });
+      setRoutineName("");
+      setRoutineTimeWindow("");
+      setRoutineItems("");
+    }
+  }
 
   function getInviteLink() {
     if (typeof window === "undefined") {
@@ -1617,7 +1588,7 @@ function FamilyPage({
       >
         <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <form className="space-y-4" onSubmit={addRoutine}>
+            <form className="space-y-4" onSubmit={handleAddRoutine}>
               <label className="block text-sm font-medium text-stone-700">
                 Routine name
                 <input value={routineName} onChange={(event) => setRoutineName(event.target.value)} placeholder="Saturday reset" className="family-input mt-2" />
@@ -1661,15 +1632,13 @@ function FamilyPage({
   );
 }
 
-function AiStudioPage({
-  state,
-  chatInput,
-  setChatInput,
-  handleAssistantPrompt,
-  aiTask,
-  assistantSuggestions,
-  openAiChatFocus,
-}: PageProps) {
+function AiStudioPage(props: WorkspacePageSectionsProps) {
+  const { state } = props;
+  const { handleAssistantPrompt, openAiChatFocus } = props.actions;
+  const { aiTask, assistantSuggestions } = props.uiState;
+
+  const [chatInput, setChatInput] = useState("");
+
   return (
     <div className="space-y-5">
       <article className="family-route-shell family-route-shell--ai family-animate-rise rounded-[30px] p-5 md:p-6">

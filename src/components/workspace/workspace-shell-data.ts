@@ -97,17 +97,55 @@ type BuildWorkspaceShellDataArgs = {
   };
 };
 
+export type WorkspaceNavGroup = {
+  label: string;
+  items: WorkspaceNavigationItem[];
+};
+
 export const WORKSPACE_NAVIGATION: WorkspaceNavigationItem[] = [
   { value: "dashboard", label: "Today", detail: "Home" },
-  { value: "games", label: "Game Room", detail: "Play" },
-  { value: "help", label: "Help", detail: "Guide" },
   { value: "inbox", label: "Family Inbox", detail: "Alerts" },
   { value: "ops", label: "Family Ops", detail: "Tasks" },
+  { value: "family", label: "Family Room", detail: "Family" },
   { value: "meals", label: "Meal Planner", detail: "Meals" },
   { value: "budget", label: "Budget Lab", detail: "Money" },
-  { value: "family", label: "Family Room", detail: "Family" },
+  { value: "games", label: "Game Room", detail: "Play" },
   { value: "partner", label: "Partner Space", detail: "Private" },
   { value: "ai", label: "Ask AI", detail: "Questions" },
+  { value: "help", label: "Help", detail: "Guide" },
+];
+
+export const WORKSPACE_NAV_GROUPS: WorkspaceNavGroup[] = [
+  {
+    label: "Home",
+    items: [
+      { value: "dashboard", label: "Today", detail: "Home" },
+      { value: "inbox", label: "Family Inbox", detail: "Alerts" },
+    ],
+  },
+  {
+    label: "Family",
+    items: [
+      { value: "ops", label: "Family Ops", detail: "Tasks" },
+      { value: "family", label: "Family Room", detail: "Family" },
+    ],
+  },
+  {
+    label: "Lifestyle",
+    items: [
+      { value: "meals", label: "Meal Planner", detail: "Meals" },
+      { value: "budget", label: "Budget Lab", detail: "Money" },
+    ],
+  },
+  {
+    label: "More",
+    items: [
+      { value: "games", label: "Game Room", detail: "Play" },
+      { value: "partner", label: "Partner Space", detail: "Private" },
+      { value: "ai", label: "Ask AI", detail: "Questions" },
+      { value: "help", label: "Help", detail: "Guide" },
+    ],
+  },
 ];
 
 export const WORKSPACE_TAB_META: Record<ActiveTab, WorkspaceTabMeta> = {

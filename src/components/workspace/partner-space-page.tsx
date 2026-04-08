@@ -6,6 +6,8 @@ import { DisclosurePanel } from "@/components/workspace/disclosure-panel";
 import type { AppState, PartnerRewardCategory } from "@/lib/familyflow";
 import type { HouseholdMember } from "@/lib/workspace";
 import { EditableMessageThread } from "@/components/workspace/editable-message-thread";
+import { formatTimestamp, formatDateValue, getConnectionStreak, getDaysUntil } from "@/lib/format";
+import { useFormEditor } from "@/hooks/useFormEditor";
 
 type PartnerTab = "chat" | "date-night" | "private-rewards" | "milestones" | "closer";
 type PartnerSpaceState = NonNullable<AppState["partnerSpace"]>;
@@ -85,89 +87,12 @@ type Props = {
   onDeleteBucketListItem: (itemId: string) => void;
 };
 
-function formatTimestamp(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
 function formatPartnerLabel(members: HouseholdMember[]) {
   if (members.length === 2) {
     return `${members[0]?.name} + ${members[1]?.name}`;
   }
 
   return "Partner Space";
-}
-
-function formatDateValue(value: string) {
-  if (!value) {
-    return "Pick a time";
-  }
-
-  const parsed = new Date(value);
-  if (!Number.isNaN(parsed.getTime())) {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(parsed);
-  }
-
-  return value;
-}
-
-function getUniqueConnectionDays(values: string[]) {
-  return Array.from(
-    new Set(
-      values
-        .map((value) => value.slice(0, 10))
-        .filter(Boolean),
-    ),
-  ).sort((left, right) => right.localeCompare(left));
-}
-
-function getConnectionStreak(values: string[]) {
-  const days = getUniqueConnectionDays(values);
-  if (days.length === 0) {
-    return 0;
-  }
-
-  let streak = 1;
-  for (let index = 1; index < days.length; index += 1) {
-    const previous = new Date(`${days[index - 1]}T12:00:00`);
-    const next = new Date(`${days[index]}T12:00:00`);
-    const diff = Math.round((previous.getTime() - next.getTime()) / (24 * 60 * 60 * 1000));
-    if (diff !== 1) {
-      break;
-    }
-    streak += 1;
-  }
-
-  return streak;
-}
-
-function getDaysUntil(dateValue: string) {
-  if (!dateValue) {
-    return null;
-  }
-
-  const target = new Date(`${dateValue}T12:00:00`);
-  if (Number.isNaN(target.getTime())) {
-    return null;
-  }
-
-  const today = new Date();
-  const todayAtNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0);
-  return Math.round((target.getTime() - todayAtNoon.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 const QUICK_PARTNER_MESSAGES = [
@@ -254,35 +179,79 @@ export function PartnerSpacePage({
   const [activeTab, setActiveTab] = useState<PartnerTab>("chat");
   const [pairA, setPairA] = useState(partnerSpace?.memberIds[0] ?? members[0]?.id ?? "");
   const [pairB, setPairB] = useState(partnerSpace?.memberIds[1] ?? members[1]?.id ?? "");
-  const [rewardTitle, setRewardTitle] = useState("");
-  const [rewardDetail, setRewardDetail] = useState("");
-  const [rewardCost, setRewardCost] = useState("50");
-  const [rewardCategory, setRewardCategory] = useState<PartnerRewardCategory>("romance");
-  const [rewardFavorite, setRewardFavorite] = useState(false);
   const [rewardFilter, setRewardFilter] = useState<RewardFilter>("all");
   const [surpriseRewardId, setSurpriseRewardId] = useState<string | null>(null);
-  const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
-  const [dateTitle, setDateTitle] = useState("");
-  const [dateWhen, setDateWhen] = useState("");
-  const [dateLocation, setDateLocation] = useState("");
-  const [dateDetail, setDateDetail] = useState("");
-  const [dateBudget, setDateBudget] = useState("");
-  const [dateStatus, setDateStatus] = useState<"idea" | "planned" | "booked">("idea");
-  const [editingDatePlanId, setEditingDatePlanId] = useState<string | null>(null);
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteContent, setNoteContent] = useState("");
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [anniversaryTitle, setAnniversaryTitle] = useState("");
-  const [anniversaryDate, setAnniversaryDate] = useState("");
-  const [anniversaryDetail, setAnniversaryDetail] = useState("");
-  const [anniversaryMemory, setAnniversaryMemory] = useState("");
-  const [editingAnniversaryId, setEditingAnniversaryId] = useState<string | null>(null);
-  const [bucketTitle, setBucketTitle] = useState("");
-  const [bucketDetail, setBucketDetail] = useState("");
-  const [bucketWhen, setBucketWhen] = useState("");
-  const [bucketMemory, setBucketMemory] = useState("");
-  const [bucketStatus, setBucketStatus] = useState<"idea" | "planned" | "done">("idea");
-  const [editingBucketId, setEditingBucketId] = useState<string | null>(null);
+
+  const datePlanForm = useFormEditor<{ title: string; when: string; location: string; detail: string; budget: string; status: "idea" | "planned" | "booked" }>({
+    defaults: { title: "", when: "", location: "", detail: "", budget: "", status: "idea" },
+    onSubmit: (fields, editingId) => {
+      if (editingId) {
+        onUpdateDatePlan(editingId, fields);
+      } else {
+        onAddDatePlan(fields);
+      }
+    },
+    validate: (fields) => Boolean(fields.title.trim()),
+  });
+
+  const connectionNoteForm = useFormEditor({
+    defaults: { title: "", content: "" },
+    onSubmit: (fields, editingId) => {
+      const note = {
+        title: fields.title.trim() || "A little love note",
+        content: fields.content.trim(),
+      };
+      if (editingId) {
+        onUpdateConnectionNote(editingId, note);
+      } else {
+        onAddConnectionNote(note);
+      }
+    },
+    validate: (fields) => Boolean(fields.content.trim()),
+  });
+
+  const rewardForm = useFormEditor({
+    defaults: { title: "", detail: "", cost: "50", category: "romance" as PartnerRewardCategory, favorite: false },
+    onSubmit: (fields, editingId) => {
+      const nextReward: PartnerRewardInput = {
+        title: fields.title.trim(),
+        detail: fields.detail.trim(),
+        cost: Number(fields.cost) || 50,
+        category: fields.category,
+        favorite: fields.favorite,
+      };
+      if (editingId) {
+        onUpdatePrivateReward(editingId, nextReward);
+      } else {
+        onAddPrivateReward(nextReward);
+      }
+    },
+    validate: (fields) => Boolean(fields.title.trim()),
+  });
+
+  const anniversaryForm = useFormEditor({
+    defaults: { title: "", date: "", detail: "", memory: "" },
+    onSubmit: (fields, editingId) => {
+      if (editingId) {
+        onUpdateAnniversary(editingId, fields);
+      } else {
+        onAddAnniversary(fields);
+      }
+    },
+    validate: (fields) => Boolean(fields.title.trim() && fields.date),
+  });
+
+  const bucketForm = useFormEditor<{ title: string; detail: string; targetWhen: string; memory: string; status: "idea" | "planned" | "done" }>({
+    defaults: { title: "", detail: "", targetWhen: "", memory: "", status: "idea" },
+    onSubmit: (fields, editingId) => {
+      if (editingId) {
+        onUpdateBucketListItem(editingId, fields);
+      } else {
+        onAddBucketListItem(fields);
+      }
+    },
+    validate: (fields) => Boolean(fields.title.trim()),
+  });
 
   const currentProfile = memberProfiles.find((profile) => profile.memberId === currentUserId);
   const partnerPointCards = useMemo(
@@ -336,187 +305,6 @@ export function PartnerSpacePage({
     onConfigurePartnerSpace([pairA, pairB]);
   }
 
-  function submitReward(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!rewardTitle.trim()) {
-      return;
-    }
-
-    const nextReward = {
-      title: rewardTitle.trim(),
-      detail: rewardDetail.trim(),
-      cost: Number(rewardCost) || 50,
-      category: rewardCategory,
-      favorite: rewardFavorite,
-    };
-
-    if (editingRewardId) {
-      onUpdatePrivateReward(editingRewardId, nextReward);
-    } else {
-      onAddPrivateReward(nextReward);
-    }
-    setRewardTitle("");
-    setRewardDetail("");
-    setRewardCost("50");
-    setRewardCategory("romance");
-    setRewardFavorite(false);
-    setEditingRewardId(null);
-  }
-
-  function submitDatePlan(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!dateTitle.trim()) {
-      return;
-    }
-
-    const nextPlan = {
-      title: dateTitle.trim(),
-      when: dateWhen.trim(),
-      location: dateLocation.trim(),
-      detail: dateDetail.trim(),
-      budget: dateBudget.trim(),
-      status: dateStatus,
-    };
-
-    if (editingDatePlanId) {
-      onUpdateDatePlan(editingDatePlanId, nextPlan);
-    } else {
-      onAddDatePlan(nextPlan);
-    }
-    setDateTitle("");
-    setDateWhen("");
-    setDateLocation("");
-    setDateDetail("");
-    setDateBudget("");
-    setDateStatus("idea");
-    setEditingDatePlanId(null);
-  }
-
-  function submitConnectionNote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!noteContent.trim()) {
-      return;
-    }
-
-    const nextNote = {
-      title: noteTitle.trim() || "A little love note",
-      content: noteContent.trim(),
-    };
-
-    if (editingNoteId) {
-      onUpdateConnectionNote(editingNoteId, nextNote);
-    } else {
-      onAddConnectionNote(nextNote);
-    }
-    setNoteTitle("");
-    setNoteContent("");
-    setEditingNoteId(null);
-  }
-
-  function submitAnniversary(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!anniversaryTitle.trim() || !anniversaryDate) {
-      return;
-    }
-
-    const nextEntry = {
-      title: anniversaryTitle.trim(),
-      date: anniversaryDate,
-      detail: anniversaryDetail.trim(),
-      memory: anniversaryMemory.trim(),
-    };
-
-    if (editingAnniversaryId) {
-      onUpdateAnniversary(editingAnniversaryId, nextEntry);
-    } else {
-      onAddAnniversary(nextEntry);
-    }
-
-    setAnniversaryTitle("");
-    setAnniversaryDate("");
-    setAnniversaryDetail("");
-    setAnniversaryMemory("");
-    setEditingAnniversaryId(null);
-  }
-
-  function submitBucketItem(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!bucketTitle.trim()) {
-      return;
-    }
-
-    const nextEntry = {
-      title: bucketTitle.trim(),
-      detail: bucketDetail.trim(),
-      targetWhen: bucketWhen.trim(),
-      memory: bucketMemory.trim(),
-      status: bucketStatus,
-    };
-
-    if (editingBucketId) {
-      onUpdateBucketListItem(editingBucketId, nextEntry);
-    } else {
-      onAddBucketListItem(nextEntry);
-    }
-
-    setBucketTitle("");
-    setBucketDetail("");
-    setBucketWhen("");
-    setBucketMemory("");
-    setBucketStatus("idea");
-    setEditingBucketId(null);
-  }
-
-  function startEditingDatePlan(plan: PartnerDatePlan) {
-    setEditingDatePlanId(plan.id);
-    setDateTitle(plan.title);
-    setDateWhen(plan.when);
-    setDateLocation(plan.location);
-    setDateDetail(plan.detail);
-    setDateBudget(plan.budget);
-    setDateStatus(plan.status);
-  }
-
-  function resetDatePlanEditor() {
-    setEditingDatePlanId(null);
-    setDateTitle("");
-    setDateWhen("");
-    setDateLocation("");
-    setDateDetail("");
-    setDateBudget("");
-    setDateStatus("idea");
-  }
-
-  function startEditingConnectionNote(note: PartnerConnectionNote) {
-    setEditingNoteId(note.id);
-    setNoteTitle(note.title);
-    setNoteContent(note.content);
-  }
-
-  function resetConnectionNoteEditor() {
-    setEditingNoteId(null);
-    setNoteTitle("");
-    setNoteContent("");
-  }
-
-  function startEditingReward(reward: PartnerReward) {
-    setEditingRewardId(reward.id);
-    setRewardTitle(reward.title);
-    setRewardDetail(reward.detail);
-    setRewardCost(String(reward.cost));
-    setRewardCategory(reward.category);
-    setRewardFavorite(reward.favorite);
-  }
-
-  function resetRewardEditor() {
-    setEditingRewardId(null);
-    setRewardTitle("");
-    setRewardDetail("");
-    setRewardCost("50");
-    setRewardCategory("romance");
-    setRewardFavorite(false);
-  }
-
   function pickSurpriseReward() {
     const pool =
       affordableRewards.length > 0
@@ -532,40 +320,6 @@ export function PartnerSpacePage({
 
     const picked = prioritizedPool[Math.floor(Math.random() * prioritizedPool.length)];
     setSurpriseRewardId(picked?.id ?? null);
-  }
-
-  function startEditingAnniversary(entry: PartnerAnniversary) {
-    setEditingAnniversaryId(entry.id);
-    setAnniversaryTitle(entry.title);
-    setAnniversaryDate(entry.date);
-    setAnniversaryDetail(entry.detail);
-    setAnniversaryMemory(entry.memory);
-  }
-
-  function resetAnniversaryEditor() {
-    setEditingAnniversaryId(null);
-    setAnniversaryTitle("");
-    setAnniversaryDate("");
-    setAnniversaryDetail("");
-    setAnniversaryMemory("");
-  }
-
-  function startEditingBucketItem(entry: PartnerBucketListItem) {
-    setEditingBucketId(entry.id);
-    setBucketTitle(entry.title);
-    setBucketDetail(entry.detail);
-    setBucketWhen(entry.targetWhen);
-    setBucketMemory(entry.memory);
-    setBucketStatus(entry.status);
-  }
-
-  function resetBucketEditor() {
-    setEditingBucketId(null);
-    setBucketTitle("");
-    setBucketDetail("");
-    setBucketWhen("");
-    setBucketMemory("");
-    setBucketStatus("idea");
   }
 
   return (
@@ -713,12 +467,14 @@ export function PartnerSpacePage({
                       key={plan.title}
                       type="button"
                       onClick={() => {
-                        setDateTitle(plan.title);
-                        setDateWhen(plan.when);
-                        setDateLocation(plan.location);
-                        setDateDetail(plan.detail);
-                        setDateBudget(plan.budget);
-                        setDateStatus(plan.status);
+                        datePlanForm.setFields({
+                          title: plan.title,
+                          when: plan.when,
+                          location: plan.location,
+                          detail: plan.detail,
+                          budget: plan.budget,
+                          status: plan.status,
+                        });
                       }}
                       className="family-btn family-btn-soft"
                     >
@@ -726,22 +482,22 @@ export function PartnerSpacePage({
                     </button>
                   ))}
                 </div>
-                <form className="family-profile-form-grid" onSubmit={submitDatePlan}>
-                  <input value={dateTitle} onChange={(event) => setDateTitle(event.target.value)} placeholder="Sunset walk and dessert" className="family-input" />
-                  <input value={dateWhen} onChange={(event) => setDateWhen(event.target.value)} placeholder="Friday 7:30 PM" className="family-input" />
-                  <input value={dateLocation} onChange={(event) => setDateLocation(event.target.value)} placeholder="Downtown or at home" className="family-input" />
-                  <input value={dateBudget} onChange={(event) => setDateBudget(event.target.value)} placeholder="$40" className="family-input" />
-                  <select value={dateStatus} onChange={(event) => setDateStatus(event.target.value as "idea" | "planned" | "booked")} className="family-select">
+                <form className="family-profile-form-grid" onSubmit={datePlanForm.handleSubmit}>
+                  <input value={datePlanForm.fields.title} onChange={(event) => datePlanForm.setField("title", event.target.value)} placeholder="Sunset walk and dessert" className="family-input" />
+                  <input value={datePlanForm.fields.when} onChange={(event) => datePlanForm.setField("when", event.target.value)} placeholder="Friday 7:30 PM" className="family-input" />
+                  <input value={datePlanForm.fields.location} onChange={(event) => datePlanForm.setField("location", event.target.value)} placeholder="Downtown or at home" className="family-input" />
+                  <input value={datePlanForm.fields.budget} onChange={(event) => datePlanForm.setField("budget", event.target.value)} placeholder="$40" className="family-input" />
+                  <select value={datePlanForm.fields.status} onChange={(event) => datePlanForm.setField("status", event.target.value as "idea" | "planned" | "booked")} className="family-select">
                     <option value="idea">Idea</option>
                     <option value="planned">Planned</option>
                     <option value="booked">Booked</option>
                   </select>
-                  <textarea value={dateDetail} onChange={(event) => setDateDetail(event.target.value)} rows={4} placeholder="What would make this date feel special?" className="family-textarea family-profile-form-grid__wide" />
+                  <textarea value={datePlanForm.fields.detail} onChange={(event) => datePlanForm.setField("detail", event.target.value)} rows={4} placeholder="What would make this date feel special?" className="family-textarea family-profile-form-grid__wide" />
                   <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">
-                    {editingDatePlanId ? "Update date plan" : "Save date plan"}
+                    {datePlanForm.isEditing ? "Update date plan" : "Save date plan"}
                   </button>
-                  {editingDatePlanId ? (
-                    <button type="button" onClick={resetDatePlanEditor} className="family-btn family-btn-soft family-profile-form-grid__wide">
+                  {datePlanForm.isEditing ? (
+                    <button type="button" onClick={datePlanForm.reset} className="family-btn family-btn-soft family-profile-form-grid__wide">
                       Cancel edit
                     </button>
                   ) : null}
@@ -782,7 +538,7 @@ export function PartnerSpacePage({
                           <span className={`family-badge ${plan.status === "booked" ? "family-badge-accent" : "family-badge-warm"}`}>{plan.status}</span>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
-                          <button type="button" onClick={() => startEditingDatePlan(plan)} className="family-btn family-btn-soft">
+                          <button type="button" onClick={() => datePlanForm.startEditing(plan.id, { title: plan.title, when: plan.when, location: plan.location, detail: plan.detail, budget: plan.budget, status: plan.status })} className="family-btn family-btn-soft">
                             Edit
                           </button>
                           <button type="button" onClick={() => onDeleteDatePlan(plan.id)} className="family-btn family-btn-secondary">
@@ -816,11 +572,13 @@ export function PartnerSpacePage({
                       key={reward.title}
                       type="button"
                       onClick={() => {
-                        setRewardTitle(reward.title);
-                        setRewardDetail(reward.detail);
-                        setRewardCost(String(reward.cost));
-                        setRewardCategory(reward.category);
-                        setRewardFavorite(false);
+                        rewardForm.setFields({
+                          title: reward.title,
+                          detail: reward.detail,
+                          cost: String(reward.cost),
+                          category: reward.category,
+                          favorite: false,
+                        });
                       }}
                       className="family-btn family-btn-soft"
                     >
@@ -828,10 +586,10 @@ export function PartnerSpacePage({
                     </button>
                   ))}
                 </div>
-                <form className="family-profile-form-grid" onSubmit={submitReward}>
-                  <input value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} placeholder="Late-sleep Saturday" className="family-input" />
-                  <input type="number" min="1" value={rewardCost} onChange={(event) => setRewardCost(event.target.value)} placeholder="Points cost" className="family-input" />
-                  <select value={rewardCategory} onChange={(event) => setRewardCategory(event.target.value as PartnerRewardCategory)} className="family-select">
+                <form className="family-profile-form-grid" onSubmit={rewardForm.handleSubmit}>
+                  <input value={rewardForm.fields.title} onChange={(event) => rewardForm.setField("title", event.target.value)} placeholder="Late-sleep Saturday" className="family-input" />
+                  <input type="number" min="1" value={rewardForm.fields.cost} onChange={(event) => rewardForm.setField("cost", event.target.value)} placeholder="Points cost" className="family-input" />
+                  <select value={rewardForm.fields.category} onChange={(event) => rewardForm.setField("category", event.target.value as PartnerRewardCategory)} className="family-select">
                     {PARTNER_REWARD_CATEGORIES.map((category) => (
                       <option key={category.value} value={category.value}>
                         {category.label}
@@ -839,15 +597,15 @@ export function PartnerSpacePage({
                     ))}
                   </select>
                   <label className="flex items-center gap-3 rounded-[20px] border border-[var(--line-soft)] bg-white/72 px-4 py-3 text-sm text-[var(--muted)]">
-                    <input type="checkbox" checked={rewardFavorite} onChange={(event) => setRewardFavorite(event.target.checked)} />
+                    <input type="checkbox" checked={rewardForm.fields.favorite} onChange={(event) => rewardForm.setField("favorite", event.target.checked)} />
                     Save as a favorite
                   </label>
-                  <textarea value={rewardDetail} onChange={(event) => setRewardDetail(event.target.value)} rows={4} placeholder="Keep it romantic, relaxing, playful, or just for the two of you." className="family-textarea family-profile-form-grid__wide" />
+                  <textarea value={rewardForm.fields.detail} onChange={(event) => rewardForm.setField("detail", event.target.value)} rows={4} placeholder="Keep it romantic, relaxing, playful, or just for the two of you." className="family-textarea family-profile-form-grid__wide" />
                   <button type="submit" className="family-btn family-btn-primary family-profile-form-grid__wide">
-                    {editingRewardId ? "Update private reward" : "Save private reward"}
+                    {rewardForm.isEditing ? "Update private reward" : "Save private reward"}
                   </button>
-                  {editingRewardId ? (
-                    <button type="button" onClick={resetRewardEditor} className="family-btn family-btn-soft family-profile-form-grid__wide">
+                  {rewardForm.isEditing ? (
+                    <button type="button" onClick={rewardForm.reset} className="family-btn family-btn-soft family-profile-form-grid__wide">
                       Cancel edit
                     </button>
                   ) : null}
@@ -970,7 +728,7 @@ export function PartnerSpacePage({
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
-                          <button type="button" onClick={() => startEditingReward(reward)} className="family-btn family-btn-soft">
+                          <button type="button" onClick={() => rewardForm.startEditing(reward.id, { title: reward.title, detail: reward.detail, cost: String(reward.cost), category: reward.category, favorite: reward.favorite })} className="family-btn family-btn-soft">
                             Edit
                           </button>
                           <button type="button" onClick={() => onDeletePrivateReward(reward.id)} className="family-btn family-btn-secondary">
@@ -998,16 +756,16 @@ export function PartnerSpacePage({
                 badge={`${anniversaries.length} saved`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
-                <form className="space-y-4" onSubmit={submitAnniversary}>
-                  <input value={anniversaryTitle} onChange={(event) => setAnniversaryTitle(event.target.value)} placeholder="Our wedding day" className="family-input" />
-                  <input type="date" value={anniversaryDate} onChange={(event) => setAnniversaryDate(event.target.value)} className="family-input" />
-                  <input value={anniversaryDetail} onChange={(event) => setAnniversaryDetail(event.target.value)} placeholder="Why this date matters" className="family-input" />
-                  <textarea value={anniversaryMemory} onChange={(event) => setAnniversaryMemory(event.target.value)} rows={4} placeholder="Favorite memory from this day" className="family-textarea" />
+                <form className="space-y-4" onSubmit={anniversaryForm.handleSubmit}>
+                  <input value={anniversaryForm.fields.title} onChange={(event) => anniversaryForm.setField("title", event.target.value)} placeholder="Our wedding day" className="family-input" />
+                  <input type="date" value={anniversaryForm.fields.date} onChange={(event) => anniversaryForm.setField("date", event.target.value)} className="family-input" />
+                  <input value={anniversaryForm.fields.detail} onChange={(event) => anniversaryForm.setField("detail", event.target.value)} placeholder="Why this date matters" className="family-input" />
+                  <textarea value={anniversaryForm.fields.memory} onChange={(event) => anniversaryForm.setField("memory", event.target.value)} rows={4} placeholder="Favorite memory from this day" className="family-textarea" />
                   <button type="submit" className="family-btn family-btn-primary">
-                    {editingAnniversaryId ? "Update anniversary" : "Save anniversary"}
+                    {anniversaryForm.isEditing ? "Update anniversary" : "Save anniversary"}
                   </button>
-                  {editingAnniversaryId ? (
-                    <button type="button" onClick={resetAnniversaryEditor} className="family-btn family-btn-soft">
+                  {anniversaryForm.isEditing ? (
+                    <button type="button" onClick={anniversaryForm.reset} className="family-btn family-btn-soft">
                       Cancel edit
                     </button>
                   ) : null}
@@ -1030,7 +788,7 @@ export function PartnerSpacePage({
                             </span>
                           </div>
                           <div className="mt-4 flex flex-wrap gap-3">
-                            <button type="button" onClick={() => startEditingAnniversary(entry)} className="family-btn family-btn-soft">
+                            <button type="button" onClick={() => anniversaryForm.startEditing(entry.id, { title: entry.title, date: entry.date, detail: entry.detail, memory: entry.memory })} className="family-btn family-btn-soft">
                               Edit
                             </button>
                             <button type="button" onClick={() => onDeleteAnniversary(entry.id)} className="family-btn family-btn-secondary">
@@ -1055,21 +813,21 @@ export function PartnerSpacePage({
                 badge={`${doneBucketCount}/${bucketList.length} done`}
                 className="family-panel rounded-[28px] p-5 md:p-6"
               >
-                <form className="space-y-4" onSubmit={submitBucketItem}>
-                  <input value={bucketTitle} onChange={(event) => setBucketTitle(event.target.value)} placeholder="Weekend cabin trip" className="family-input" />
-                  <input value={bucketWhen} onChange={(event) => setBucketWhen(event.target.value)} placeholder="This fall or next spring" className="family-input" />
-                  <select value={bucketStatus} onChange={(event) => setBucketStatus(event.target.value as "idea" | "planned" | "done")} className="family-select">
+                <form className="space-y-4" onSubmit={bucketForm.handleSubmit}>
+                  <input value={bucketForm.fields.title} onChange={(event) => bucketForm.setField("title", event.target.value)} placeholder="Weekend cabin trip" className="family-input" />
+                  <input value={bucketForm.fields.targetWhen} onChange={(event) => bucketForm.setField("targetWhen", event.target.value)} placeholder="This fall or next spring" className="family-input" />
+                  <select value={bucketForm.fields.status} onChange={(event) => bucketForm.setField("status", event.target.value as "idea" | "planned" | "done")} className="family-select">
                     <option value="idea">Idea</option>
                     <option value="planned">Planned</option>
                     <option value="done">Done</option>
                   </select>
-                  <textarea value={bucketDetail} onChange={(event) => setBucketDetail(event.target.value)} rows={3} placeholder="Why this is on your list" className="family-textarea" />
-                  <textarea value={bucketMemory} onChange={(event) => setBucketMemory(event.target.value)} rows={3} placeholder="Memory note after you do it" className="family-textarea" />
+                  <textarea value={bucketForm.fields.detail} onChange={(event) => bucketForm.setField("detail", event.target.value)} rows={3} placeholder="Why this is on your list" className="family-textarea" />
+                  <textarea value={bucketForm.fields.memory} onChange={(event) => bucketForm.setField("memory", event.target.value)} rows={3} placeholder="Memory note after you do it" className="family-textarea" />
                   <button type="submit" className="family-btn family-btn-primary">
-                    {editingBucketId ? "Update bucket item" : "Save bucket item"}
+                    {bucketForm.isEditing ? "Update bucket item" : "Save bucket item"}
                   </button>
-                  {editingBucketId ? (
-                    <button type="button" onClick={resetBucketEditor} className="family-btn family-btn-soft">
+                  {bucketForm.isEditing ? (
+                    <button type="button" onClick={bucketForm.reset} className="family-btn family-btn-soft">
                       Cancel edit
                     </button>
                   ) : null}
@@ -1090,7 +848,7 @@ export function PartnerSpacePage({
                           </span>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
-                          <button type="button" onClick={() => startEditingBucketItem(entry)} className="family-btn family-btn-soft">
+                          <button type="button" onClick={() => bucketForm.startEditing(entry.id, { title: entry.title, detail: entry.detail, targetWhen: entry.targetWhen, memory: entry.memory, status: entry.status })} className="family-btn family-btn-soft">
                             Edit
                           </button>
                           <button type="button" onClick={() => onDeleteBucketListItem(entry.id)} className="family-btn family-btn-secondary">
@@ -1120,25 +878,25 @@ export function PartnerSpacePage({
               >
                 <div className="mb-4 flex flex-wrap gap-2">
                   {CLOSER_NOTE_PROMPTS.map((prompt) => (
-                    <button key={prompt} type="button" onClick={() => setNoteTitle(prompt)} className="family-btn family-btn-soft">
+                    <button key={prompt} type="button" onClick={() => connectionNoteForm.setField("title", prompt)} className="family-btn family-btn-soft">
                       {prompt}
                     </button>
                   ))}
                 </div>
-                <form className="space-y-4" onSubmit={submitConnectionNote}>
-                  <input value={noteTitle} onChange={(event) => setNoteTitle(event.target.value)} placeholder="What I loved today" className="family-input" />
+                <form className="space-y-4" onSubmit={connectionNoteForm.handleSubmit}>
+                  <input value={connectionNoteForm.fields.title} onChange={(event) => connectionNoteForm.setField("title", event.target.value)} placeholder="What I loved today" className="family-input" />
                   <textarea
-                    value={noteContent}
-                    onChange={(event) => setNoteContent(event.target.value)}
+                    value={connectionNoteForm.fields.content}
+                    onChange={(event) => connectionNoteForm.setField("content", event.target.value)}
                     rows={5}
                     placeholder="Write a kind note, thank-you, dream for the two of you, or something you noticed and appreciated."
                     className="family-textarea"
                   />
                   <button type="submit" className="family-btn family-btn-primary">
-                    {editingNoteId ? "Update connection note" : "Save connection note"}
+                    {connectionNoteForm.isEditing ? "Update connection note" : "Save connection note"}
                   </button>
-                  {editingNoteId ? (
-                    <button type="button" onClick={resetConnectionNoteEditor} className="family-btn family-btn-soft">
+                  {connectionNoteForm.isEditing ? (
+                    <button type="button" onClick={connectionNoteForm.reset} className="family-btn family-btn-soft">
                       Cancel edit
                     </button>
                   ) : null}
@@ -1158,7 +916,7 @@ export function PartnerSpacePage({
                         <p className="mt-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{formatTimestamp(note.createdAt)}</p>
                         {note.authorId === currentUserId ? (
                           <div className="mt-4 flex flex-wrap gap-3">
-                            <button type="button" onClick={() => startEditingConnectionNote(note)} className="family-btn family-btn-soft">
+                            <button type="button" onClick={() => connectionNoteForm.startEditing(note.id, { title: note.title, content: note.content })} className="family-btn family-btn-soft">
                               Edit
                             </button>
                             <button type="button" onClick={() => onDeleteConnectionNote(note.id)} className="family-btn family-btn-secondary">
