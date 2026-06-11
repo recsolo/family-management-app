@@ -23,7 +23,7 @@ export default function Page() {
         <div className="family-stage__glow family-stage__glow--one" />
         <div className="family-stage__glow family-stage__glow--two" />
         <div className="family-stage__glow family-stage__glow--three" />
-        <div className="mx-auto max-w-3xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
+        <div className="mx-auto max-w-3xl rounded-[36px] border border-[var(--line-strong)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
           <div className="family-panel rounded-[32px] p-8 md:p-10">
             <p className="family-kicker family-eyebrow">FamilyFlow AI</p>
             <h1 className="mt-4 font-serif text-5xl leading-tight">Opening your profile...</h1>

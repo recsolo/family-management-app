@@ -18,6 +18,14 @@ export default function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="antialiased">
         {setupIssues.length > 0 ? (
           <main className="family-stage overflow-hidden px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
@@ -27,7 +35,7 @@ export default function RootLayout({
 
             <div className="mx-auto max-w-5xl space-y-5">
               <section className="family-card family-card-dark family-grid-lines rounded-[40px] p-8 md:p-10">
-                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Local setup required</p>
+                <p className="family-kicker text-[var(--on-bold-kicker)]">Local setup required</p>
                 <h1 className="mt-4 max-w-3xl font-serif text-5xl leading-[0.95] text-white md:text-6xl">
                   FamilyFlow can&apos;t start local auth yet because the new PostgreSQL setup is incomplete.
                 </h1>

@@ -300,7 +300,7 @@ export function MemberProfilePage({
           </div>
           <div className="family-profile-stat-grid">
             <div className="family-side-stat">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Points</p>
+              <p className="family-kicker text-[var(--on-bold-kicker)]">Points</p>
               <p className="mt-3 font-serif text-5xl text-white">{profile.pointsBalance}</p>
             </div>
             <div className="family-sidebar-note">

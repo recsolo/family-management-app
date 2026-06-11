@@ -70,23 +70,23 @@ export function WorkspaceRecoveryPanel({ error, onRecovered }: Props) {
       <div className="family-stage__glow family-stage__glow--two" />
       <div className="family-stage__glow family-stage__glow--three" />
 
-      <div className="mx-auto max-w-5xl rounded-[36px] border border-[rgba(228,192,92,0.22)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
+      <div className="mx-auto max-w-5xl rounded-[36px] border border-[var(--line-strong)] bg-white/82 p-4 shadow-[var(--shadow-panel)] backdrop-blur md:p-5">
         <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="family-card family-card-dark family-grid-lines rounded-[32px] p-8 text-stone-50">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Family setup</p>
+            <p className="family-kicker text-[var(--on-bold-kicker)]">Family setup</p>
             <h1 className="mt-4 max-w-lg font-serif text-5xl leading-tight">
               You&apos;re signed in.
             </h1>
             <p className="mt-5 max-w-lg text-base leading-7 text-stone-200">Choose a family to open.</p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
-                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Create</p>
+              <div className="rounded-[24px] border border-[var(--line-on-bold)] bg-white/8 p-5">
+                <p className="family-kicker text-[var(--on-bold-kicker)]">Create</p>
                 <h2 className="mt-3 font-serif text-3xl">New family</h2>
                 <p className="mt-3 text-sm leading-6 text-stone-200">Start a new family.</p>
               </div>
-              <div className="rounded-[24px] border border-[rgba(241,214,136,0.18)] bg-white/8 p-5">
-                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Join</p>
+              <div className="rounded-[24px] border border-[var(--line-on-bold)] bg-white/8 p-5">
+                <p className="family-kicker text-[var(--on-bold-kicker)]">Join</p>
                 <h2 className="mt-3 font-serif text-3xl">Join family</h2>
                 <p className="mt-3 text-sm leading-6 text-stone-200">Use your invite code.</p>
               </div>
