@@ -327,7 +327,7 @@ export function PartnerSpacePage({
       <article className="family-panel family-surface-ink family-animate-rise rounded-[30px] p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Partner</p>
+            <p className="family-kicker text-[var(--on-bold-kicker)]">Partner</p>
             <h2 className="mt-4 font-serif text-5xl leading-[0.95] text-white">Partner Space</h2>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -341,16 +341,16 @@ export function PartnerSpacePage({
         {partnerSpace ? (
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Connection streak</p>
+              <p className="family-kicker text-[var(--on-bold-kicker)]">Connection streak</p>
               <p className="mt-3 font-serif text-3xl text-white">{connectionStreak} days</p>
             </div>
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Next date</p>
+              <p className="family-kicker text-[var(--on-bold-kicker)]">Next date</p>
               <p className="mt-3 font-serif text-3xl text-white">{nextDate ? nextDate.title : "Nothing booked"}</p>
               <p className="mt-2 text-sm leading-6 text-stone-200">{nextDate ? formatDateValue(nextDate.when) : "No plan yet."}</p>
             </div>
             <div className="family-dark-note">
-              <p className="family-kicker text-[rgba(241,214,136,0.76)]">Milestones</p>
+              <p className="family-kicker text-[var(--on-bold-kicker)]">Milestones</p>
               <p className="mt-3 font-serif text-3xl text-white">{nextAnniversary ? nextAnniversary.entry.title : `${doneBucketCount}/${bucketList.length}`}</p>
               <p className="mt-2 text-sm leading-6 text-stone-200">
                 {nextAnniversary
@@ -651,7 +651,7 @@ export function PartnerSpacePage({
                   </div>
                 </div>
                 {surpriseReward ? (
-                  <div className="mt-4 rounded-[24px] border border-[rgba(214,178,92,0.32)] bg-[rgba(255,248,232,0.82)] p-4">
+                  <div className="mt-4 rounded-[24px] border border-[rgba(255,178,36,0.5)] bg-[var(--accent-pale)] p-4">
                     <p className="family-kicker family-eyebrow">Tonight&apos;s surprise pick</p>
                     <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
                       <div>

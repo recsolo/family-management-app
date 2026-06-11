@@ -155,7 +155,7 @@ export function AuthPanel({ onSuccess }: Props) {
 
       <div className="mx-auto max-w-2xl">
         <section className="family-panel family-animate-rise rounded-[40px] p-5 md:p-6">
-          <div className="rounded-[32px] border border-[rgba(228,192,92,0.22)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
+          <div className="rounded-[32px] border border-[var(--line-strong)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
             <p className="family-kicker family-eyebrow">FamilyFlow</p>
             <h1 className="mt-4 font-serif text-5xl leading-[0.95]">{modeCopy.title}</h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--muted)]">{modeCopy.detail}</p>

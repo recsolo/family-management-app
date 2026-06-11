@@ -60,7 +60,7 @@ function ResetPasswordPageContent() {
 
       <div className="mx-auto max-w-xl">
         <section className="family-panel rounded-[40px] p-6 md:p-8">
-          <div className="rounded-[32px] border border-[rgba(228,192,92,0.22)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
+          <div className="rounded-[32px] border border-[var(--line-strong)] bg-white/88 p-7 shadow-[var(--shadow-soft)] backdrop-blur md:p-9">
             <p className="family-kicker family-eyebrow">FamilyFlow</p>
             <h1 className="mt-4 font-serif text-5xl leading-[0.95]">Reset password</h1>
             <p className="mt-4 text-sm leading-6 text-[var(--muted)]">

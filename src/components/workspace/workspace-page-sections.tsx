@@ -123,7 +123,7 @@ function RouteMetricStrip({ items, tone = "light" }: { items: RouteMetric[]; ton
     <div className="family-route-metrics">
       {items.map((item) => (
         <div key={item.label} className={tone === "dark" ? "family-dark-note" : "family-sidebar-note"}>
-          <p className={`family-kicker ${tone === "dark" ? "text-[rgba(241,214,136,0.76)]" : "family-eyebrow"}`}>{item.label}</p>
+          <p className={`family-kicker ${tone === "dark" ? "text-[var(--on-bold-kicker)]" : "family-eyebrow"}`}>{item.label}</p>
           <p className={`mt-3 font-serif text-3xl ${tone === "dark" ? "text-white" : "text-[var(--foreground)]"}`}>{item.value}</p>
           {item.note ? <p className={`mt-2 text-sm leading-6 ${tone === "dark" ? "text-stone-200" : "text-[var(--muted)]"}`}>{item.note}</p> : null}
         </div>
@@ -135,7 +135,7 @@ function RouteMetricStrip({ items, tone = "light" }: { items: RouteMetric[]; ton
 function InsightCard({ kicker, title, body, className, children }: InsightCardProps) {
   return (
     <article className={`${className ?? "family-panel"} rounded-[28px] p-6 md:p-7`}>
-      <p className={`family-kicker ${className?.includes("dark") || className?.includes("accent") ? "text-[rgba(241,214,136,0.76)]" : "family-eyebrow"}`}>{kicker}</p>
+      <p className={`family-kicker ${className?.includes("dark") || className?.includes("accent") ? "text-[var(--on-bold-kicker)]" : "family-eyebrow"}`}>{kicker}</p>
       <h3 className={`mt-4 font-serif text-4xl leading-tight ${className?.includes("dark") || className?.includes("accent") ? "text-white" : "text-[var(--foreground)]"}`}>{title}</h3>
       <p className={`mt-4 text-sm leading-7 ${className?.includes("dark") || className?.includes("accent") ? "text-stone-200" : "text-[var(--muted)]"}`}>{body}</p>
       {children}
@@ -998,7 +998,7 @@ function MealsPage(props: WorkspacePageSectionsProps) {
         </div>
         <div className="mt-6 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
           <div className="family-route-notice family-route-notice--dark family-meals-match-card">
-            <p className="family-kicker text-[rgba(241,214,136,0.76)]">Best match</p>
+            <p className="family-kicker text-[var(--on-bold-kicker)]">Best match</p>
             <h4 className="mt-4 font-serif text-3xl text-white">{tonightRecipe ? tonightRecipe.name : "No dinner pick yet"}</h4>
             <p className="mt-3 text-sm leading-6 text-stone-200">
               {tonightRecipe
@@ -1010,15 +1010,15 @@ function MealsPage(props: WorkspacePageSectionsProps) {
             {tonightRecipe ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Ready</p>
+                  <p className="family-kicker text-[var(--on-bold-kicker)]">Ready</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{tonightRecipe.matches}</p>
                 </div>
                 <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Buy</p>
+                  <p className="family-kicker text-[var(--on-bold-kicker)]">Buy</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{tonightMissingCount}</p>
                 </div>
                 <div className="rounded-[18px] bg-white/8 px-4 py-3">
-                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Type</p>
+                  <p className="family-kicker text-[var(--on-bold-kicker)]">Type</p>
                   <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-stone-100">
                     {tonightRecipe.tags[0] ?? "Dinner"}
                   </p>
@@ -1027,7 +1027,7 @@ function MealsPage(props: WorkspacePageSectionsProps) {
             ) : null}
             {tonightRecipe?.missing.length ? (
               <div className="mt-4 rounded-[18px] bg-white/8 px-4 py-3">
-                <p className="family-kicker text-[rgba(241,214,136,0.76)]">Need to buy</p>
+                <p className="family-kicker text-[var(--on-bold-kicker)]">Need to buy</p>
                 <p className="mt-2 text-sm leading-6 text-stone-100">{tonightRecipe.missing.join(", ")}</p>
               </div>
             ) : null}
@@ -1296,7 +1296,7 @@ function BudgetPage(props: WorkspacePageSectionsProps) {
               </div>
               <div className="grid gap-5 lg:grid-cols-3">
                 <div className="family-card family-card-dark rounded-[24px] p-5">
-                  <p className="family-kicker text-[rgba(241,214,136,0.76)]">Wins</p>
+                  <p className="family-kicker text-[var(--on-bold-kicker)]">Wins</p>
                   <ul className="mt-4 space-y-2 text-sm leading-7 text-stone-100">
                     {state.latestBudgetCoach.wins.map((item) => (
                       <li key={item}>{item}</li>
