@@ -1,4 +1,4 @@
-import { sendVerificationEmail } from "@/lib/account-security";
+import { isAccountEmailConfigured, sendVerificationEmail } from "@/lib/account-security";
 import { createRouteContext, errorResponse, jsonWithRequestId } from "@/lib/observability";
 import { consumeRateLimit, getRequestClientId } from "@/lib/rate-limit";
 import { findUserByEmail } from "@/lib/workspace";
@@ -19,11 +19,19 @@ export async function POST(request: Request) {
     return errorResponse(context, 429, "Please wait a few minutes before asking for another email.");
   }
 
-  const email = validateEmail(body.email);
+  let email: string;
+  try {
+    email = validateEmail(body.email);
+  } catch (error) {
+    return errorResponse(context, 400, error instanceof Error ? error.message : "Email is required.");
+  }
+
   const user = await findUserByEmail(email);
 
   if (!user || user.emailVerifiedAt) {
-    return jsonWithRequestId(context, { ok: true, sent: false });
+    // Mirror the success response so the endpoint can't be used to probe
+    // which addresses have unverified accounts.
+    return jsonWithRequestId(context, { ok: true, sent: isAccountEmailConfigured() });
   }
 
   const sent = await sendVerificationEmail({

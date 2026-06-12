@@ -1,8 +1,8 @@
 import { db } from "@/lib/db";
-import { sendReminderEmail } from "@/lib/email";
+import { escapeHtml, sendReminderEmail } from "@/lib/email";
 import { getAppUrl } from "@/lib/env";
 import { formatReminderWhen, getReminderOccurrenceKey, getReminderStatus, syncStateWithMembers, type AppState } from "@/lib/familyflow";
-import { householdToAppState, saveHouseholdState, type HouseholdMember } from "@/lib/workspace";
+import { householdToAppState, type HouseholdMember } from "@/lib/workspace";
 
 type ReminderDispatchWorkspace = {
   householdId: string;
@@ -12,12 +12,57 @@ type ReminderDispatchWorkspace = {
 
 function reminderEmailHtml(title: string, when: string, audience: string) {
   return `<div style="font-family:Segoe UI, Arial, sans-serif; line-height:1.6; color:#111;">
-    <h2 style="margin-bottom:12px;">${title}</h2>
-    <p><strong>When:</strong> ${when}</p>
-    <p><strong>For:</strong> ${audience}</p>
+    <h2 style="margin-bottom:12px;">${escapeHtml(title)}</h2>
+    <p><strong>When:</strong> ${escapeHtml(when)}</p>
+    <p><strong>For:</strong> ${escapeHtml(audience)}</p>
     <p>Open FamilyFlow to see the full plan and clear the reminder.</p>
-    <p><a href="${getAppUrl()}/family-ops" style="color:#b8871f;">Open Family Ops</a></p>
+    <p><a href="${getAppUrl()}/family-ops" style="color:#1f75fe;">Open Family Ops</a></p>
   </div>`;
+}
+
+/*
+ * Updates only remindersJson (re-read fresh) instead of writing back the whole
+ * stale state snapshot, which would silently erase any chores/messages other
+ * family members saved while the emails were being sent.
+ */
+async function markReminderEmailsDelivered(householdId: string, deliveredOccurrences: Map<string, string>) {
+  const household = await db.household.findUnique({
+    where: { id: householdId },
+    select: { remindersJson: true },
+  });
+
+  if (!household) {
+    return;
+  }
+
+  let reminders: unknown;
+  try {
+    reminders = JSON.parse(household.remindersJson);
+  } catch {
+    return;
+  }
+
+  if (!Array.isArray(reminders)) {
+    return;
+  }
+
+  const next = reminders.map((reminder) => {
+    if (!reminder || typeof reminder !== "object") {
+      return reminder;
+    }
+
+    const id = (reminder as { id?: unknown }).id;
+    const occurrenceKey = typeof id === "string" ? deliveredOccurrences.get(id) : undefined;
+    return occurrenceKey ? { ...reminder, lastEmailDeliveredAt: occurrenceKey } : reminder;
+  });
+
+  await db.household.update({
+    where: { id: householdId },
+    data: {
+      remindersJson: JSON.stringify(next),
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function dispatchReminderEmailsForWorkspace(
@@ -26,13 +71,18 @@ export async function dispatchReminderEmailsForWorkspace(
 ) {
   const now = new Date();
   const sentReminderIds = new Set<string>();
+  const deliveredOccurrences = new Map<string, string>();
 
   for (const reminder of workspace.state.reminders) {
     if (requestedReminderIds && !requestedReminderIds.includes(reminder.id)) {
       continue;
     }
 
-    if (!reminder.delivery.email || getReminderStatus(reminder, now) !== "due") {
+    // "delivered" only reflects the in-app marker (lastDeliveredAt); the email
+    // leg tracks lastEmailDeliveredAt separately via the occurrence check below,
+    // so a reminder someone already saw in the app must still get its email.
+    const status = getReminderStatus(reminder, now);
+    if (!reminder.delivery.email || (status !== "due" && status !== "delivered")) {
       continue;
     }
 
@@ -62,21 +112,12 @@ export async function dispatchReminderEmailsForWorkspace(
 
     if (results.some(Boolean)) {
       sentReminderIds.add(reminder.id);
+      deliveredOccurrences.set(reminder.id, occurrenceKey);
     }
   }
 
-  if (sentReminderIds.size > 0) {
-    await saveHouseholdState(workspace.householdId, {
-      ...workspace.state,
-      reminders: workspace.state.reminders.map((reminder) =>
-        sentReminderIds.has(reminder.id)
-          ? {
-              ...reminder,
-              lastEmailDeliveredAt: getReminderOccurrenceKey(reminder, now) ?? now.toISOString(),
-            }
-          : reminder,
-      ),
-    });
+  if (deliveredOccurrences.size > 0) {
+    await markReminderEmailsDelivered(workspace.householdId, deliveredOccurrences);
   }
 
   return { sentReminderIds: Array.from(sentReminderIds) };

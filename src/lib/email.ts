@@ -7,6 +7,15 @@ type AppEmailInput = {
   text?: string;
 };
 
+export function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function htmlToText(html: string) {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, "")

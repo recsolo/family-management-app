@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
 
 import { isAccountEmailConfigured } from "@/lib/account-security";
@@ -82,8 +82,17 @@ function safeParse<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
+/* No 0/O/1/I/L to keep codes easy to read aloud and retype. */
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
 function generateInviteCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+  const bytes = randomBytes(8);
+  let code = "";
+  for (const byte of bytes) {
+    code += INVITE_CODE_ALPHABET[byte % INVITE_CODE_ALPHABET.length];
+  }
+
+  return code;
 }
 
 function householdStatePayload(baseState: AppState) {
@@ -151,7 +160,7 @@ async function listHouseholdMembers(householdId: string) {
   })) satisfies HouseholdMember[];
 }
 
-async function getMembershipForUser(userId: string) {
+export async function getMembershipForUser(userId: string) {
   return db.membership.findFirst({
     where: { userId },
     include: { household: true },
@@ -242,17 +251,33 @@ export async function saveHouseholdState(householdId: string, state: AppState) {
 }
 
 export async function regenerateInviteCode(householdId: string) {
-  const nextCode = generateInviteCode();
+  let lastError: unknown;
 
-  await db.household.update({
-    where: { id: householdId },
-    data: {
-      inviteCode: nextCode,
-      updatedAt: new Date(),
-    },
-  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const nextCode = generateInviteCode();
 
-  return nextCode;
+    try {
+      await db.household.update({
+        where: { id: householdId },
+        data: {
+          inviteCode: nextCode,
+          updatedAt: new Date(),
+        },
+      });
+
+      return nextCode;
+    } catch (error) {
+      // P2002 = unique-constraint collision on inviteCode; retry with a new code.
+      if ((error as { code?: string }).code === "P2002") {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
 }
 
 export async function updateHouseholdName(userId: string, name: string) {
@@ -371,14 +396,18 @@ export async function getWorkspaceForUser(userId: string) {
 }
 
 export async function attachUserToHousehold(input: AttachHouseholdInput) {
-  const existingMembership = await getMembershipForUser(input.userId);
-  if (existingMembership) {
-    throw new Error("This account is already linked to a household.");
-  }
-
   const createdAt = new Date();
 
   await db.$transaction(async (tx) => {
+    // Checked inside the transaction so two concurrent bootstrap calls
+    // cannot both pass and create duplicate memberships/orphan households.
+    const existingMembership = await tx.membership.findFirst({
+      where: { userId: input.userId },
+    });
+    if (existingMembership) {
+      throw new Error("This account is already linked to a household.");
+    }
+
     if ("inviteCode" in input) {
       const joinedHousehold = await tx.household.findUnique({
         where: { inviteCode: input.inviteCode.trim().toUpperCase() },

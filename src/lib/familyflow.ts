@@ -1887,6 +1887,22 @@ export function cloneDefaultState() {
   return JSON.parse(JSON.stringify(DEFAULT_STATE)) as AppState;
 }
 
+/*
+ * Pass-through blobs (meal plan, budget coach) are stored as-is, so cap their
+ * serialized size to keep one member from bloating the shared household row.
+ */
+function capJsonSize<T>(value: T | null | undefined, maxChars: number): T | null {
+  if (value == null) {
+    return null;
+  }
+
+  try {
+    return JSON.stringify(value).length <= maxChars ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 export function sanitizeState(raw: unknown): AppState {
   const defaults = cloneDefaultState();
   const todayKey = getTodayKey();
@@ -1901,7 +1917,13 @@ export function sanitizeState(raw: unknown): AppState {
   return {
     ...defaults,
     ...parsed,
-    pantry: Array.isArray(parsed.pantry) ? parsed.pantry.filter((item): item is string => typeof item === "string") : defaults.pantry,
+    pantry: Array.isArray(parsed.pantry)
+      ? parsed.pantry
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim().slice(0, 200))
+          .filter(Boolean)
+          .slice(0, 500)
+      : defaults.pantry,
     budget: {
       income: clampNumber(budget.income, defaults.budget.income, 0, 1_000_000),
       familySize: clampNumber(budget.familySize, defaults.budget.familySize, 1, 20),
@@ -1978,11 +2000,11 @@ export function sanitizeState(raw: unknown): AppState {
     assistantHistory: Array.isArray(parsed.assistantHistory)
       ? parsed.assistantHistory.filter(isRecord).map<ChatMessage>((message) => ({
           role: message.role === "user" ? "user" : "assistant",
-          content: toTrimmedString(message.content),
-        })).filter((message) => message.content)
+          content: toTrimmedString(message.content).slice(0, 4_000),
+        })).filter((message) => message.content).slice(-100)
       : defaults.assistantHistory,
-    latestMealPlan: parsed.latestMealPlan ?? defaults.latestMealPlan,
-    latestBudgetCoach: parsed.latestBudgetCoach ?? defaults.latestBudgetCoach,
+    latestMealPlan: capJsonSize(parsed.latestMealPlan ?? defaults.latestMealPlan, 200_000),
+    latestBudgetCoach: capJsonSize(parsed.latestBudgetCoach ?? defaults.latestBudgetCoach, 200_000),
     memberProfiles: Array.isArray(parsed.memberProfiles) ? parsed.memberProfiles.map(sanitizeProfile).filter(isDefined) : defaults.memberProfiles,
     familyAchievements: Array.isArray(parsed.familyAchievements) ? parsed.familyAchievements.map(sanitizeAchievement).filter(isDefined) : defaults.familyAchievements,
     directThreads: Array.isArray(parsed.directThreads) ? parsed.directThreads.map(sanitizeDirectThread).filter(isDefined) : defaults.directThreads,

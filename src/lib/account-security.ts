@@ -2,8 +2,18 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { hash } from "bcryptjs";
 
 import { db } from "@/lib/db";
-import { sendAppEmail } from "@/lib/email";
+import { escapeHtml, sendAppEmail } from "@/lib/email";
 import { getAppUrl, getAuthSecret, getMailConfig } from "@/lib/env";
+
+/*
+ * Hash-then-compare keeps the comparison constant-time even when the inputs
+ * have different lengths, so secrets can't be recovered byte-by-byte.
+ */
+export function constantTimeEquals(provided: string, expected: string) {
+  const providedDigest = createHash("sha256").update(provided).digest();
+  const expectedDigest = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(providedDigest, expectedDigest);
+}
 
 type AccountActionPurpose = "verify-email" | "reset-password";
 
@@ -127,7 +137,7 @@ export async function sendVerificationEmail(user: VerificationEmailUser) {
     subject: "Verify your FamilyFlow email",
     html: emailLayout(
       "Verify your email",
-      `Hi ${user.name}, tap below to finish setting up your FamilyFlow account.`,
+      `Hi ${escapeHtml(user.name)}, tap below to finish setting up your FamilyFlow account.`,
       "Verify email",
       url,
       "After that, you can sign in and open your profile.",
@@ -154,7 +164,7 @@ export async function sendPasswordResetEmail(user: PasswordResetUser) {
     subject: "Reset your FamilyFlow password",
     html: emailLayout(
       "Reset your password",
-      `Hi ${user.name}, tap below to choose a new FamilyFlow password.`,
+      `Hi ${escapeHtml(user.name)}, tap below to choose a new FamilyFlow password.`,
       "Reset password",
       url,
       "This reset link stays active for one hour.",

@@ -27,7 +27,11 @@ export async function POST(request: Request) {
       inviteCode?: string;
       mode?: "create" | "join";
     };
+  } catch {
+    return errorResponse(context, 400, "Invalid request payload.");
+  }
 
+  try {
     const clientId = getRequestClientId(request);
     const rateLimit = consumeRateLimit({
       key: `register:${clientId}`,
@@ -62,7 +66,19 @@ export async function POST(request: Request) {
       inviteCode: body.mode === "join" ? validateInviteCode(body.inviteCode) : undefined,
     });
 
-    const verificationSent = createdUser.verificationRequired ? await sendVerificationEmail(createdUser) : false;
+    // The account is already committed at this point: a failed email send must
+    // not fail registration, or the user is stranded behind "email exists".
+    let verificationSent = false;
+    if (createdUser.verificationRequired) {
+      try {
+        verificationSent = await sendVerificationEmail(createdUser);
+      } catch (emailError) {
+        logRouteWarning(context, "Verification email failed after registration.", {
+          mode: body?.mode,
+          reason: emailError instanceof Error ? emailError.message : "unknown",
+        });
+      }
+    }
 
     return jsonWithRequestId(context, {
       ok: true,
@@ -70,10 +86,19 @@ export async function POST(request: Request) {
       verificationSent,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Registration failed.";
     logRouteWarning(context, "Registration rejected.", {
       mode: body?.mode,
     });
+
+    // Prisma errors carry P-codes and multi-line internals; never echo those.
+    const prismaCode = (error as { code?: string }).code;
+    if (typeof prismaCode === "string" && prismaCode.startsWith("P")) {
+      const message =
+        prismaCode === "P2002" ? "An account with that email already exists." : "Registration failed. Please try again.";
+      return errorResponse(context, 400, message);
+    }
+
+    const message = error instanceof Error ? error.message : "Registration failed.";
     return errorResponse(context, 400, message);
   }
 }

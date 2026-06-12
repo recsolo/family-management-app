@@ -27,8 +27,21 @@ function cleanupExpiredBuckets(now: number) {
   }
 }
 
+/*
+ * The left-most X-Forwarded-For entries are client-supplied and spoofable;
+ * only the right-most entry was appended by our own proxy layer.
+ */
+function lastForwardedHop(value: string | null | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parts = value.split(",");
+  return parts[parts.length - 1]?.trim() || undefined;
+}
+
 export function getRequestClientId(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwardedFor = lastForwardedHop(request.headers.get("x-forwarded-for"));
   const realIp = request.headers.get("x-real-ip")?.trim();
 
   return forwardedFor || realIp || "anonymous";
@@ -44,7 +57,7 @@ export function getHeaderClientId(headers?: Record<string, string | string[] | u
   const forwardedValue = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
   const realIpValue = Array.isArray(realIp) ? realIp[0] : realIp;
 
-  return forwardedValue?.split(",")[0]?.trim() || realIpValue?.trim() || "anonymous";
+  return lastForwardedHop(forwardedValue) || realIpValue?.trim() || "anonymous";
 }
 
 export function consumeRateLimit({ key, windowMs, max }: RateLimitOptions) {

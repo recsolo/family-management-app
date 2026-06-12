@@ -1,3 +1,4 @@
+import { constantTimeEquals } from "@/lib/account-security";
 import { auth } from "@/lib/auth";
 import { getReminderDispatchSecret, getReminderEmailConfig } from "@/lib/env";
 import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError } from "@/lib/observability";
@@ -12,10 +13,12 @@ export async function POST(request: Request) {
   const context = createRouteContext("/api/reminders/dispatch", request);
   const session = await auth();
   const dispatchSecret = getReminderDispatchSecret();
+  const headerSecret = request.headers.get("x-familyflow-reminder-secret");
+  const bearerSecret = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   const authorizedBySecret =
     Boolean(dispatchSecret) &&
-    (request.headers.get("x-familyflow-reminder-secret") === dispatchSecret ||
-      request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") === dispatchSecret);
+    ((headerSecret != null && constantTimeEquals(headerSecret, dispatchSecret!)) ||
+      (bearerSecret != null && constantTimeEquals(bearerSecret, dispatchSecret!)));
 
   if (!session?.user?.id && !authorizedBySecret) {
     return errorResponse(context, 401, "Unauthorized");

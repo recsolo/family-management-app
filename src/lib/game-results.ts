@@ -66,7 +66,9 @@ export function markProcessedGameLaunchSession(state: AppState, sessionId: strin
     ...state,
     gameRoom: {
       ...state.gameRoom,
-      processedSessionIds: [sessionId, ...state.gameRoom.processedSessionIds.filter((entry) => entry !== sessionId)].slice(0, 80),
+      // Keep enough history that a session id can't be evicted (and its launch
+      // token replayed for duplicate points) within the token's 15-minute TTL.
+      processedSessionIds: [sessionId, ...state.gameRoom.processedSessionIds.filter((entry) => entry !== sessionId)].slice(0, 500),
     },
   };
 }

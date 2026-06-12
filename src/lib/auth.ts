@@ -80,8 +80,15 @@ export const authOptions: NextAuthOptions = {
           windowMs: 15 * 60 * 1000,
           max: 8,
         });
+        // Second bucket keyed by email alone so spoofed client IPs cannot
+        // brute-force a single account by rotating the per-IP bucket.
+        const emailRateLimit = consumeRateLimit({
+          key: `login-email:${normalizedEmail}`,
+          windowMs: 15 * 60 * 1000,
+          max: 20,
+        });
 
-        if (!rateLimit.allowed) {
+        if (!rateLimit.allowed || !emailRateLimit.allowed) {
           console.warn("[FamilyFlow]", {
             scope: "familyflow-auth",
             level: "warn",

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError, logRouteWarning } from "@/lib/observability";
 import {
+  getMembershipForUser,
   getWorkspaceForUser,
   regenerateInviteCodeForUser,
   removeMemberFromHousehold,
@@ -9,6 +10,8 @@ import {
   updateMemberRole,
   type HouseholdRole,
 } from "@/lib/workspace";
+
+const MAX_WORKSPACE_PAYLOAD_BYTES = 2_000_000;
 import { validateHouseholdRole, validateHouseholdName, validateWorkspaceState } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -31,8 +34,20 @@ export async function PUT(request: Request) {
   const context = createRouteContext("/api/workspace", request);
   const session = await auth();
 
-  if (!session?.user?.id || !session.user.householdId) {
+  if (!session?.user?.id) {
     return errorResponse(context, 401, "Unauthorized");
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_WORKSPACE_PAYLOAD_BYTES) {
+    return errorResponse(context, 413, "Workspace payload is too large.");
+  }
+
+  // The JWT's householdId can be up to 14 days stale (e.g. after the user was
+  // removed from the household), so re-verify membership against the database.
+  const membership = await getMembershipForUser(session.user.id);
+  if (!membership) {
+    return errorResponse(context, 403, "You are no longer a member of this household.");
   }
 
   let body: { state?: unknown };
@@ -47,7 +62,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    await saveHouseholdState(session.user.householdId, validateWorkspaceState(body.state));
+    await saveHouseholdState(membership.householdId, validateWorkspaceState(body.state));
   } catch (error) {
     if (error instanceof Error) {
       logRouteWarning(context, "Workspace save rejected.", {
@@ -81,8 +96,12 @@ export async function PATCH(request: Request) {
       return jsonWithRequestId(context, { householdName });
     }
 
-    const inviteCode = await regenerateInviteCodeForUser(session.user.id);
-    return jsonWithRequestId(context, { inviteCode });
+    if (body?.action === "rotate-invite") {
+      const inviteCode = await regenerateInviteCodeForUser(session.user.id);
+      return jsonWithRequestId(context, { inviteCode });
+    }
+
+    return errorResponse(context, 400, "Unsupported workspace action.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace update failed.";
     logRouteWarning(context, "Workspace patch rejected.", { userId: session.user.id });

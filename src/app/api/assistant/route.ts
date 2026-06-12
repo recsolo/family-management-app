@@ -23,6 +23,28 @@ type RequestBody = {
 
 const SUPPORTED_KINDS = new Set<RequestBody["kind"]>(["assistant", "meal-plan", "budget-coach"]);
 
+const MAX_HISTORY_MESSAGES = 40;
+const MAX_HISTORY_MESSAGE_CHARS = 4_000;
+
+/*
+ * body.history is attacker-controllable and gets persisted into shared
+ * household state, so it must be reduced to well-formed, bounded messages.
+ */
+function sanitizeClientHistory(history: unknown): ChatMessage[] {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter((message): message is Record<string, unknown> => Boolean(message) && typeof message === "object")
+    .map<ChatMessage>((message) => ({
+      role: message.role === "user" ? "user" : "assistant",
+      content: typeof message.content === "string" ? message.content.trim().slice(0, MAX_HISTORY_MESSAGE_CHARS) : "",
+    }))
+    .filter((message) => message.content)
+    .slice(-MAX_HISTORY_MESSAGES);
+}
+
 const assistantSchema = {
   type: "object",
   additionalProperties: false,
@@ -185,7 +207,9 @@ export async function POST(request: Request) {
 
   let prompt: string | undefined;
   try {
-    const history = Array.isArray(body.history) ? body.history.slice(-8) : workspace.state.assistantHistory.slice(-8);
+    const historyProvided = Array.isArray(body.history);
+    const clientHistory = sanitizeClientHistory(body.history);
+    const history = (historyProvided ? clientHistory : workspace.state.assistantHistory).slice(-8);
     prompt = validateAssistantPrompt(body.prompt);
 
     const response = await client.responses.create({
@@ -214,10 +238,10 @@ export async function POST(request: Request) {
 
     if (body.kind === "assistant") {
       const assistant = parsed as { reply: string; suggestions: string[] };
-      const baseHistory = body.history ?? workspace.state.assistantHistory;
+      const baseHistory = historyProvided ? clientHistory : workspace.state.assistantHistory;
       await saveHouseholdState(workspace.householdId, {
         ...workspace.state,
-        assistantHistory: [...baseHistory, { role: "assistant", content: assistant.reply }],
+        assistantHistory: [...baseHistory, { role: "assistant" as const, content: assistant.reply }].slice(-100),
       });
     }
 

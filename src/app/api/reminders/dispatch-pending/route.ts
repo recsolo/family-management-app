@@ -1,3 +1,4 @@
+import { constantTimeEquals } from "@/lib/account-security";
 import { getReminderDispatchSecret } from "@/lib/env";
 import { createRouteContext, errorResponse, jsonWithRequestId, logRouteError } from "@/lib/observability";
 import { dispatchReminderEmailsAcrossHouseholds } from "@/lib/reminders";
@@ -8,9 +9,12 @@ function hasDispatchSecret(request: Request) {
     return false;
   }
 
+  const headerSecret = request.headers.get("x-familyflow-reminder-secret");
+  const bearerSecret = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+
   return (
-    request.headers.get("x-familyflow-reminder-secret") === expectedSecret ||
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") === expectedSecret
+    (headerSecret != null && constantTimeEquals(headerSecret, expectedSecret)) ||
+    (bearerSecret != null && constantTimeEquals(bearerSecret, expectedSecret))
   );
 }
 
